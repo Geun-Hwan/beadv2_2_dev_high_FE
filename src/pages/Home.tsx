@@ -76,7 +76,7 @@ const Home: React.FC = () => {
       <Stack direction="row" spacing={2} sx={{ mt: 4 }}>
         <Button
           component={RouterLink}
-          to="/product/new"
+          to="/products/new"
           variant="contained"
           color="success"
           size="large"
@@ -85,7 +85,7 @@ const Home: React.FC = () => {
         </Button>
         <Button
           component={RouterLink}
-          to="/auction/new"
+          to="/auctions/new"
           variant="contained"
           color="success"
           size="large"

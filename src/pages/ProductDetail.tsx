@@ -116,7 +116,7 @@ const ProductDetail: React.FC = () => {
               variant="contained"
               color="secondary"
               component={RouterLink}
-              to={`/product/edit/${product.id}`}
+              to={`/products/edit/${product.id}`}
             >
               상품 수정
             </Button>

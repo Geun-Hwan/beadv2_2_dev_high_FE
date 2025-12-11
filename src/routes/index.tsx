@@ -39,40 +39,6 @@ export const router = createBrowserRouter([
         element: <SignUp />,
       },
       {
-        // 판매자 등록 페이지는 인증된 사용자만 접근 가능
-        element: <ProtectedRoute />, // TODO: 실제 인증 상태 연결
-        children: [
-          {
-            path: "seller/register",
-            element: <SellerRegistration />,
-          },
-          {
-            path: "product/new",
-            element: <ProductRegistration />,
-          },
-          {
-            path: "product/edit/:productId",
-            element: <ProductRegistration />,
-          },
-          {
-            path: "auction/new",
-            element: <AuctionRegistration />,
-          },
-          {
-            path: "auction/edit/:auctionId",
-            element: <AuctionRegistration />,
-          },
-          {
-            path: "notifications",
-            element: <Notifications />,
-          },
-          {
-            path: "mypage",
-            element: <MyPage />,
-          },
-        ],
-      },
-      {
         path: "products",
         element: <Products />,
       },
@@ -87,6 +53,42 @@ export const router = createBrowserRouter([
       {
         path: "auctions/:id",
         element: <AuctionDetail />,
+      },
+      {
+        // 판매자 등록 페이지는 인증된 사용자만 접근 가능
+        element: <ProtectedRoute />, // TODO: 실제 인증 상태 연결
+        children: [
+          {
+            path: "seller/register",
+            element: <SellerRegistration />,
+          },
+          {
+            path: "products/edit/:productId",
+            element: <ProductRegistration />,
+          },
+          {
+            path: "products/new",
+            element: <ProductRegistration />,
+          },
+
+          {
+            path: "auctions/edit/:auctionId",
+            element: <AuctionRegistration />,
+          },
+          {
+            path: "auctions/new",
+            element: <AuctionRegistration />,
+          },
+
+          {
+            path: "notifications",
+            element: <Notifications />,
+          },
+          {
+            path: "mypage",
+            element: <MyPage />,
+          },
+        ],
       },
     ],
   },
