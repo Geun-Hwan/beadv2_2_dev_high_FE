@@ -15,8 +15,12 @@ interface UseStompProps {
  */
 export const useStomp = ({ topic, onMessage }: UseStompProps) => {
   const [isConnected, setIsConnected] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
+
   const clientRef = useRef<Client | null>(null);
   const subscriptionRef = useRef<StompSubscription | null>(null);
+  const MAX_RETRIES = 5;
+  const retryCountRef = useRef(0);
 
   useEffect(() => {
     // topic이 없으면 연결 시도하지 않음
@@ -44,7 +48,7 @@ export const useStomp = ({ topic, onMessage }: UseStompProps) => {
             import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"
           }/ws-auction`
         ),
-      reconnectDelay: 5000,
+      reconnectDelay: 0,
       heartbeatIncoming: 10000,
       heartbeatOutgoing: 10000,
       debug: (str) => console.log(new Date(), str), // debug 로그에 시간 추가
@@ -52,6 +56,8 @@ export const useStomp = ({ topic, onMessage }: UseStompProps) => {
 
     client.onConnect = () => {
       setIsConnected(true);
+      retryCountRef.current = 0; // 연결 성공 시 초기화
+
       subscriptionRef.current = client.subscribe(topic, (msg) => {
         onMessage(msg);
       });
@@ -64,6 +70,24 @@ export const useStomp = ({ topic, onMessage }: UseStompProps) => {
           destination: `/auctions/join/${auctionIdFromTopic}`,
           body: JSON.stringify({}),
         });
+      }
+    };
+    client.onWebSocketClose = (event) => {
+      console.log("웹소켓 연결 종료:", event);
+      setIsConnected(false);
+
+      if (retryCountRef.current < MAX_RETRIES) {
+        setIsRetrying(false);
+        retryCountRef.current += 1;
+        console.log(
+          `STOMP: 재연결 시도 ${retryCountRef.current}/${MAX_RETRIES}`
+        );
+        setTimeout(() => {
+          client.activate();
+          setIsRetrying(false);
+        }, 5000);
+      } else {
+        console.log("STOMP: 재연결 최대 시도 도달, 연결 중지");
       }
     };
 
@@ -115,5 +139,5 @@ export const useStomp = ({ topic, onMessage }: UseStompProps) => {
     }
   };
 
-  return { isConnected, sendMessage };
+  return { isConnected, sendMessage, isRetrying };
 };

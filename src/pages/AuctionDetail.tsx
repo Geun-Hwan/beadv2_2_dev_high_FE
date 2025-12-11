@@ -33,13 +33,16 @@ import {
   type AuctionParticipationResponse,
   AuctionStatus,
 } from "../types/auction";
+import { depositApi } from "../apis/depositApi";
+import { DepositType } from "../types/deposit";
 
 // 보증금 및 참여 상태를 표시하는 컴포넌트
 const AuctionParticipationStatus: React.FC<{
   participationStatus: AuctionParticipationResponse;
   depositAmount: number;
-  handleWithdraw: () => void;
-}> = ({ participationStatus, depositAmount, handleWithdraw }) => {
+  setOpenPopup: () => void;
+  refundRequest: () => void;
+}> = ({ participationStatus, depositAmount, setOpenPopup, refundRequest }) => {
   const { isParticipated, isWithdrawn, isRefund, lastBidPrice } =
     participationStatus;
 
@@ -61,7 +64,7 @@ const AuctionParticipationStatus: React.FC<{
   }
 
   return (
-    <Paper sx={{ p: 2, mt: 2, backgroundColor: "grey.50" }}>
+    <Paper sx={{ p: 2, mt: 2, backgroundColor: "background.paper" }}>
       <Box
         display="flex"
         justifyContent="space-between"
@@ -73,7 +76,9 @@ const AuctionParticipationStatus: React.FC<{
         </Typography>
         {isWithdrawn && !isRefund && (
           <Box display="flex" gap={1}>
-            <Button variant="contained">환불요청</Button>
+            <Button variant="contained" loading={false} onClick={refundRequest}>
+              환불요청
+            </Button>
           </Box>
         )}
       </Box>
@@ -94,11 +99,9 @@ const AuctionParticipationStatus: React.FC<{
         >
           {statusChip}
 
-          {lastBidPrice && lastBidPrice > 0 && (
-            <Typography variant="h5" sx={{ mt: 1 }}>
-              마지막 입찰가: {lastBidPrice.toLocaleString()}원
-            </Typography>
-          )}
+          <Typography variant="h5" sx={{ mt: 1 }}>
+            마지막 입찰가: {lastBidPrice?.toLocaleString()}원
+          </Typography>
         </Box>
 
         <Box
@@ -116,7 +119,7 @@ const AuctionParticipationStatus: React.FC<{
             <Button
               variant="contained"
               color="error"
-              onClick={handleWithdraw}
+              onClick={setOpenPopup}
               size="medium"
             >
               경매 포기하기
@@ -161,6 +164,8 @@ const AuctionDetail: React.FC = () => {
 
   const [openLoginPrompt, setOpenLoginPrompt] = useState(false);
   const [openDepositPrompt, setOpenDepositPrompt] = useState(false);
+  const [openWithdrawnPopup, setOpenWithdrawnPopup] = useState(false);
+
   const [participationStatus, setParticipationStatus] =
     useState<AuctionParticipationResponse>({
       isParticipated: false,
@@ -172,6 +177,7 @@ const AuctionDetail: React.FC = () => {
   const [bidHistory, setBidHistory] = useState<AuctionBidMessage[]>([]);
   const [bidHistoryPage, setBidHistoryPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
+  const [bidLoading, setBidLoading] = useState(false);
 
   const fetchAuctionDetail = async () => {
     try {
@@ -292,7 +298,7 @@ const AuctionDetail: React.FC = () => {
     [setBidHistory]
   );
 
-  const { isConnected } = useStomp({
+  const { isConnected, isRetrying } = useStomp({
     topic: auctionId ? `/topic/auction.${auctionId}` : "",
     onMessage: handleNewMessage,
   });
@@ -329,6 +335,7 @@ const AuctionDetail: React.FC = () => {
     }
 
     try {
+      setBidLoading(true);
       await auctionApi.placeBid(auctionId!, bid);
       setNewBidAmount("");
 
@@ -339,6 +346,8 @@ const AuctionDetail: React.FC = () => {
       alert("입찰이 성공적으로 접수되었습니다.");
     } catch (err: any) {
       alert(`입찰 실패: ${err.response?.data?.message || err.message}`);
+    } finally {
+      setBidLoading(false);
     }
   };
 
@@ -358,16 +367,48 @@ const AuctionDetail: React.FC = () => {
     navigate("/login");
   };
 
-  const handleCloseDepositPrompt = () => {
-    setOpenDepositPrompt(false);
-    auctionApi
-      .createParticipation(auctionId!, {
-        depositAmount: auctionDetail?.depositAmount,
-      })
-      .then((res) => {
-        setParticipationStatus(res.data);
-        alert("보증금 결제가 완료되었습니다. 이제 입찰할 수 있습니다.");
+  const refundRequest = () => {
+    alert("ㄱㄷ");
+  };
+
+  const handleCloseDepositPrompt = async () => {
+    try {
+      setOpenDepositPrompt(false);
+
+      // 1. 잔액 조회
+      const accountRes = await depositApi.getAccount(user?.id);
+
+      if (accountRes.balance < Number(auctionDetail?.depositAmount ?? 0)) {
+        alert("보증금이 부족합니다.");
+        return;
+      }
+
+      // 2. 보증금 기록 생성
+      const depositRes = await depositApi.createDepositHst({
+        amount: Number(auctionDetail?.depositAmount),
+        userId: user?.id,
+        type: DepositType.USAGE,
       });
+
+      if (!depositRes.balance) {
+        alert("보증금 기록 생성에 실패했습니다.");
+        return;
+      }
+
+      // 3. 경매 참여 생성
+      const participationRes = await auctionApi.createParticipation(
+        auctionId!,
+        {
+          depositAmount: auctionDetail?.depositAmount,
+        }
+      );
+
+      setParticipationStatus(participationRes.data);
+      alert("보증금 결제가 완료되었습니다. 이제 입찰할 수 있습니다.");
+    } catch (error) {
+      console.error(error);
+      alert("보증금 결제 중 오류가 발생했습니다.");
+    }
   };
 
   if (loading)
@@ -416,8 +457,14 @@ const AuctionDetail: React.FC = () => {
               color={isAuctionInProgress ? "success" : "default"}
             />
             <Chip
-              label={isConnected ? "실시간 연결 중" : "연결 끊김"}
-              color={isConnected ? "success" : "warning"}
+              label={
+                isConnected
+                  ? "실시간 연결 중"
+                  : isRetrying
+                  ? "재연결중"
+                  : "연결 끊김"
+              }
+              color={isConnected ? "success" : isRetrying ? "warning" : "error"}
             />
             {canEdit && (
               <Button
@@ -511,7 +558,8 @@ const AuctionDetail: React.FC = () => {
           <AuctionParticipationStatus
             participationStatus={participationStatus}
             depositAmount={auctionDetail.depositAmount}
-            handleWithdraw={handleWithdraw}
+            setOpenPopup={handleWithdraw}
+            refundRequest={refundRequest}
           />
         )}
       </Paper>
@@ -542,6 +590,7 @@ const AuctionDetail: React.FC = () => {
               type="submit"
               variant="contained"
               size="large"
+              loading={bidLoading}
               disabled={!isConnected || participationStatus.isWithdrawn}
               sx={{ p: 2 }}
             >
@@ -667,6 +716,39 @@ const AuctionDetail: React.FC = () => {
           <Button onClick={() => setOpenDepositPrompt(false)}>취소</Button>
           <Button onClick={handleCloseDepositPrompt} autoFocus>
             보증금 결제
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={openWithdrawnPopup}
+        onClose={() => setOpenWithdrawnPopup(false)}
+      >
+        <DialogTitle>경매 포기</DialogTitle>
+        <DialogContent>
+          {highestBidderInfo?.id === user?.id ? (
+            <Typography color="error">
+              현재 최고 입찰자이므로 경매를 포기할 수 없습니다.
+            </Typography>
+          ) : (
+            <Typography>
+              경매에 처음 입찰하시려면 보증금{" "}
+              <Typography component="span" fontWeight="bold">
+                {auctionDetail.depositAmount.toLocaleString()}원
+              </Typography>
+              이 필요합니다. 포기하면 보증금이 즉시 환불되며, 해당 경매에는 다시
+              참여할 수 없습니다.
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenWithdrawnPopup(false)}>취소</Button>
+          <Button
+            onClick={handleWithdraw}
+            autoFocus
+            disabled={highestBidderInfo?.id === user?.id} // 최고입찰자는 버튼 비활성
+          >
+            보증금 결제 / 포기
           </Button>
         </DialogActions>
       </Dialog>

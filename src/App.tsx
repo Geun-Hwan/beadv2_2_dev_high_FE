@@ -1,11 +1,15 @@
 import {
   AppBar,
+  Badge,
   Box,
   Button,
   Container,
+  IconButton,
   Toolbar,
   Typography,
 } from "@mui/material";
+import AccountCircle from "@mui/icons-material/AccountCircle";
+import NotificationsIcon from "@mui/icons-material/Notifications";
 import React from "react";
 import { Outlet, Link as RouterLink } from "react-router-dom";
 import { useAuth } from "./hooks/useAuth";
@@ -54,6 +58,22 @@ function App() {
                   <Typography variant="body1" color="inherit">
                     {user?.nickname}님 환영합니다!
                   </Typography>
+                  <IconButton
+                    component={RouterLink}
+                    to="/notifications"
+                    color="inherit"
+                  >
+                    <Badge badgeContent={3} color="error">
+                      <NotificationsIcon />
+                    </Badge>
+                  </IconButton>
+                  <IconButton
+                    component={RouterLink}
+                    to="/mypage"
+                    color="inherit"
+                  >
+                    <AccountCircle />
+                  </IconButton>
                   {user?.role === UserRole.USER && (
                     <Button
                       color="inherit"
@@ -88,10 +108,8 @@ function App() {
         sx={{
           mt: 4,
           mb: 4,
-          // display, flexDirection, alignItems, justifyContent는 Outlet 콘텐츠에 직접 적용되지 않으므로 제거
         }}
       >
-        {/* 라우터에 의해 선택된 자식 컴포넌트가 이곳에 렌더링됩니다. */}
         <Outlet />
       </Container>
     </React.Fragment>
@@ -99,3 +117,4 @@ function App() {
 }
 
 export default App;
+

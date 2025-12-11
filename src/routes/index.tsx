@@ -11,6 +11,8 @@ import AuctionDetail from "../pages/AuctionDetail";
 import ProtectedRoute from "./ProtectedRoute";
 import ProductRegistration from "../pages/ProductRegistration";
 import AuctionRegistration from "../pages/AuctionRegistration";
+import Notifications from "../pages/Notifications";
+import MyPage from "../pages/MyPage";
 
 /**
  * React Router v6.4+의 createBrowserRouter를 사용한 라우터 설정입니다.
@@ -59,6 +61,14 @@ export const router = createBrowserRouter([
           {
             path: "auction/edit/:auctionId",
             element: <AuctionRegistration />,
+          },
+          {
+            path: "notifications",
+            element: <Notifications />,
+          },
+          {
+            path: "mypage",
+            element: <MyPage />,
           },
         ],
       },

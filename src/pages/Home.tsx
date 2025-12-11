@@ -1,8 +1,18 @@
 import React from "react";
-import { Box, Typography, Button, Stack } from "@mui/material";
+import {
+  Box,
+  Typography,
+  Button,
+  Stack,
+  Switch,
+  FormControlLabel,
+} from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
+import { useThemeContext } from "../contexts/ThemeProvider";
 
 const Home: React.FC = () => {
+  const { mode, toggleColorMode } = useThemeContext();
+
   return (
     <Box
       sx={{
@@ -13,6 +23,13 @@ const Home: React.FC = () => {
         mt: 8,
       }}
     >
+      <FormControlLabel
+        control={
+          <Switch checked={mode === "dark"} onChange={toggleColorMode} />
+        }
+        label={mode === "dark" ? "다크 모드" : "라이트 모드"}
+        sx={{ mb: 4 }}
+      />
       <Typography variant="h3" component="h1" gutterBottom>
         프로젝트에 오신 것을 환영합니다
       </Typography>
@@ -47,9 +64,21 @@ const Home: React.FC = () => {
         </Button>
         <Button
           component={RouterLink}
+          to="/notifications"
+          variant="contained"
+          size="large"
+          color="info"
+        >
+          알림 보기
+        </Button>
+      </Stack>
+
+      <Stack direction="row" spacing={2} sx={{ mt: 4 }}>
+        <Button
+          component={RouterLink}
           to="/product/new"
           variant="contained"
-          color="primary"
+          color="success"
           size="large"
         >
           상품 등록
@@ -58,7 +87,7 @@ const Home: React.FC = () => {
           component={RouterLink}
           to="/auction/new"
           variant="contained"
-          color="primary"
+          color="success"
           size="large"
         >
           경매 등록
@@ -66,21 +95,30 @@ const Home: React.FC = () => {
         <Button
           component={RouterLink}
           to="/products"
-          variant="contained"
+          variant="outlined"
           size="large"
+          color="success"
         >
           상품 목록
         </Button>
         <Button
           component={RouterLink}
           to="/auctions"
-          variant="contained"
+          variant="outlined"
           size="large"
+          color="success"
         >
           경매 목록
         </Button>
       </Stack>
-      <Stack></Stack>
+      <Stack direction="row" spacing={2} sx={{ mt: 4 }}>
+        <Button variant="contained" color="primary" size="large">
+          예치금계좌등록
+        </Button>
+        <Button color="primary" size="large" variant="contained">
+          예치금충전
+        </Button>
+      </Stack>
     </Box>
   );
 };

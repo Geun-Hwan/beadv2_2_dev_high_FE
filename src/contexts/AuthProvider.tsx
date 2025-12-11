@@ -1,10 +1,8 @@
 // src/contexts/AuthProvider.tsx
-import React, { useState, type ReactNode, useEffect } from "react";
-import { type User, type UserRole, AuthContext } from "./AuthContext";
-import { jwtDecode } from "jwt-decode"; // jwt-decode 임포트
 import CircularProgress from "@mui/material/CircularProgress"; // CircularProgress 임포트
+import React, { type ReactNode, useEffect, useState } from "react";
 import type { LoginResponse } from "../apis/userApi";
-import { set } from "date-fns";
+import { type User, AuthContext } from "./AuthContext";
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -27,7 +25,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // 초기 로드 시 localStorage에서 토큰 및 사용자 정보 복구
   useEffect(() => {
-    const initializeAuth = async () => {
+    const initializeAuth = () => {
       const storedToken = localStorage.getItem("accessToken");
       const storedRefresh = localStorage.getItem("refreshToken");
 
@@ -47,9 +45,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             console.error("Failed to decode token on initialization:", error);
           }
         }
-        if (storedRefresh) {
-          setRefreshToken(storedRefresh);
-        }
+      }
+      if (storedRefresh) {
+        setRefreshToken(storedRefresh);
       }
       setIsAuthenticating(false); // 인증 초기화 완료
     };
