@@ -116,9 +116,9 @@ const ProductDetail: React.FC = () => {
               variant="contained"
               color="secondary"
               component={RouterLink}
-              to={`/products/edit/${product.id}`}
+              to={`/products/${product.id}/edit`}
             >
-              상품 수정
+              상품 및 경매 수정
             </Button>
           )}
         </Box>
@@ -197,9 +197,9 @@ const ProductDetail: React.FC = () => {
                         size="small"
                         color="secondary"
                         component={RouterLink}
-                        to={`/auction/edit/${auction.auctionId}`}
+                        to={`/auctions/${auction.auctionId}/edit`}
                       >
-                        수정
+                        상품 및 경매 수정
                       </Button>
                     )}
                 </Box>

@@ -375,10 +375,9 @@ const AuctionDetail: React.FC = () => {
     try {
       setOpenDepositPrompt(false);
 
-      // 1. 잔액 조회
-      const accountRes = await depositApi.getAccount(user?.id);
+      const balance = 0;
 
-      if (accountRes.balance < Number(auctionDetail?.depositAmount ?? 0)) {
+      if (balance < Number(auctionDetail?.depositAmount ?? 0)) {
         alert("보증금이 부족합니다.");
         return;
       }
@@ -395,17 +394,18 @@ const AuctionDetail: React.FC = () => {
         return;
       }
 
-      // 3. 경매 참여 생성
-      const participationRes = await auctionApi.createParticipation(
-        auctionId!,
-        {
-          depositAmount: auctionDetail?.depositAmount,
-        }
-      );
+      // 3. 경매 참여 생성 --이부분은 보증금 차감이 완료되면 서버단에서 처리하기
+      // const participationRes = await auctionApi.createParticipation(
+      //   auctionId!,
+      //   {
+      //     depositAmount: auctionDetail?.depositAmount,
+      //   }
+      // );
 
-      setParticipationStatus(participationRes.data);
+      // setParticipationStatus(participationRes.data);
       alert("보증금 결제가 완료되었습니다. 이제 입찰할 수 있습니다.");
     } catch (error) {
+      // error핸들 > 예치금 부족 ,서버 error등
       console.error(error);
       alert("보증금 결제 중 오류가 발생했습니다.");
     }
@@ -468,9 +468,9 @@ const AuctionDetail: React.FC = () => {
                 variant="contained"
                 color="secondary"
                 component={RouterLink}
-                to={`/auction/edit/${auctionId}`}
+                to={`/auctions/${auctionId}/edit`}
               >
-                수정
+                상품 및 경매 수정
               </Button>
             )}
           </Box>
@@ -554,7 +554,7 @@ const AuctionDetail: React.FC = () => {
           <AuctionParticipationStatus
             participationStatus={participationStatus}
             depositAmount={auctionDetail.depositAmount}
-            setOpenPopup={handleWithdraw}
+            setOpenPopup={() => setOpenWithdrawnPopup(true)}
             refundRequest={refundRequest}
           />
         )}
@@ -728,12 +728,8 @@ const AuctionDetail: React.FC = () => {
             </Typography>
           ) : (
             <Typography>
-              경매에 처음 입찰하시려면 보증금{" "}
-              <Typography component="span" fontWeight="bold">
-                {auctionDetail.depositAmount.toLocaleString()}원
-              </Typography>
-              이 필요합니다. 포기하면 보증금이 즉시 환불되며, 해당 경매에는 다시
-              참여할 수 없습니다.
+              포기하면 보증금이 즉시 환불되며, 해당 경매에는 다시 참여할 수
+              없습니다.
             </Typography>
           )}
         </DialogContent>
@@ -744,7 +740,7 @@ const AuctionDetail: React.FC = () => {
             autoFocus
             disabled={highestBidderInfo?.id === user?.id} // 최고입찰자는 버튼 비활성
           >
-            보증금 결제 / 포기
+            포기
           </Button>
         </DialogActions>
       </Dialog>

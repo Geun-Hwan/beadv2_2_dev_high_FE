@@ -63,7 +63,7 @@ export const router = createBrowserRouter([
             element: <SellerRegistration />,
           },
           {
-            path: "products/edit/:productId",
+            path: "products/:productId/edit",
             element: <ProductRegistration />,
           },
           {
@@ -72,8 +72,8 @@ export const router = createBrowserRouter([
           },
 
           {
-            path: "auctions/edit/:auctionId",
-            element: <AuctionRegistration />,
+            path: "auctions/:auctionId/edit",
+            element: <ProductRegistration />,
           },
           {
             path: "auctions/new",

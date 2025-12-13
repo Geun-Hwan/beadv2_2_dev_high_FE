@@ -31,6 +31,7 @@ export interface AuctionLiveState {
  */
 export interface Auction {
   auctionId: string;
+  productId?: string;
   productName: string;
   status: AuctionStatus;
   startBid: number;

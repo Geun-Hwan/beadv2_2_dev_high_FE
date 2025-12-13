@@ -91,7 +91,7 @@ export const userApi = {
     email: string
   ): Promise<ApiResponseDto<any>> => {
     console.log(`이메일 인증 코드 전송 시도: ${email}`);
-    const response = await client.post("/auth/send/mail", { email });
+    const response = await client.post("/auth/send/email", { email });
     return response.data;
   },
 
@@ -105,7 +105,7 @@ export const userApi = {
     code: string
   ): Promise<ApiResponseDto<any>> => {
     console.log(`이메일 인증 코드 확인 시도: ${email}, 코드: ${code}`);
-    const response = await client.post("/auth/verify/mail", { email, code });
+    const response = await client.post("/auth/verify/email", { email, code });
     return response.data;
   },
 };
