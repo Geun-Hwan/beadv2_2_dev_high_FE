@@ -7,6 +7,7 @@ import {
   IconButton,
   Badge,
   Container,
+  Tooltip,
 } from "@mui/material";
 import {
   Search as SearchIcon,
@@ -17,17 +18,20 @@ import {
   FavoriteBorder as FavoriteBorderIcon, // 찜화면 아이콘 추가
   Receipt as ReceiptIcon, // 결제대기(주문서) 아이콘 추가
   Gavel as GavelIcon,
+  Logout as LogoutIcon,
 } from "@mui/icons-material";
 import { Link as RouterLink } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useThemeContext } from "../contexts/ThemeProvider";
 import { useEffect, useState } from "react";
 import { notificationApi } from "../apis/notificationApi";
+import { depositApi } from "../apis/depositApi";
 
 export const AppHeader: React.FC = () => {
   const { isAuthenticated, user, logout } = useAuth();
   const { mode, toggleColorMode } = useThemeContext();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [depositBalance, setDepositBalance] = useState<number | null>(null);
 
   // 로그인된 경우에만 미확인 알림 개수 조회
   useEffect(() => {
@@ -63,6 +67,81 @@ export const AppHeader: React.FC = () => {
       cancelled = true;
     };
   }, [isAuthenticated, user?.userId]);
+
+  useEffect(() => {
+    const handleNotificationRead = () => {
+      setUnreadCount((prev) => Math.max(prev - 1, 0));
+    };
+    window.addEventListener("notification:read", handleNotificationRead);
+    return () => {
+      window.removeEventListener("notification:read", handleNotificationRead);
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchBalance = async () => {
+      if (!isAuthenticated || !user?.userId) {
+        setDepositBalance(null);
+        return;
+      }
+      try {
+        const info = await depositApi.getAccount();
+        if (!cancelled) {
+          setDepositBalance(info?.balance ?? 0);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error("예치금 잔액 조회 실패:", err);
+          setDepositBalance(null);
+        }
+      }
+    };
+    fetchBalance();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, user?.userId]);
+
+  useEffect(() => {
+    const applyDelta = (delta: number) => {
+      setDepositBalance((prev) => {
+        const base = typeof prev === "number" ? prev : 0;
+        return Math.max(base + delta, 0);
+      });
+    };
+
+    const handleIncrement = (event: Event) => {
+      const delta = (event as CustomEvent<number>).detail ?? 0;
+      if (typeof delta !== "number" || Number.isNaN(delta)) return;
+      applyDelta(delta);
+    };
+
+    const handleDecrement = (event: Event) => {
+      const delta = (event as CustomEvent<number>).detail ?? 0;
+      if (typeof delta !== "number" || Number.isNaN(delta)) return;
+      applyDelta(-delta);
+    };
+
+    window.addEventListener(
+      "deposit:increment",
+      handleIncrement as EventListener
+    );
+    window.addEventListener(
+      "deposit:decrement",
+      handleDecrement as EventListener
+    );
+    return () => {
+      window.removeEventListener(
+        "deposit:increment",
+        handleIncrement as EventListener
+      );
+      window.removeEventListener(
+        "deposit:decrement",
+        handleDecrement as EventListener
+      );
+    };
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -115,74 +194,110 @@ export const AppHeader: React.FC = () => {
           </Box>
 
           {/* 우측: 검색 + 로그인/회원정보 + 테마 토글 */}
-          <Box display="flex" alignItems="center" gap={2}>
+          <Box display="flex" alignItems="center" gap={1.5}>
+            {isAuthenticated && (
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{
+                  minWidth: 120,
+                  textAlign: "right",
+                  fontWeight: 600,
+                }}
+              >
+                예치금{" "}
+                {depositBalance != null
+                  ? `${depositBalance.toLocaleString()}원`
+                  : "0원"}
+              </Typography>
+            )}
+
             {/* 검색 페이지로 이동 */}
-            <IconButton
-              component={RouterLink}
-              to="/search"
-              color="inherit"
-              size="small"
-            >
-              <SearchIcon />
-            </IconButton>
+            <Tooltip title="검색하기">
+              <IconButton
+                component={RouterLink}
+                to="/search"
+                color="inherit"
+                size="small"
+              >
+                <SearchIcon />
+              </IconButton>
+            </Tooltip>
 
             {isAuthenticated ? (
               <>
                 {/* 찜화면 아이콘 */}
-                <IconButton
-                  component={RouterLink}
-                  to="/wishlist"
-                  color="inherit"
-                >
-                  <FavoriteBorderIcon />
-                </IconButton>
-                {/* 결제대기(주문서) 아이콘 */}
-                <IconButton
-                  component={RouterLink}
-                  to="/pending-orders"
-                  color="inherit"
-                >
-                  <ReceiptIcon />
-                </IconButton>
-
-                <IconButton
-                  component={RouterLink}
-                  to="/notifications"
-                  color="inherit"
-                >
-                  <Badge
-                    badgeContent={unreadCount}
-                    color="error"
-                    invisible={unreadCount === 0}
+                <Tooltip title="찜">
+                  <IconButton
+                    component={RouterLink}
+                    to="/wishlist"
+                    color="inherit"
                   >
-                    <NotificationsIcon />
-                  </Badge>
-                </IconButton>
-                <IconButton component={RouterLink} to="/mypage" color="inherit">
-                  <AccountCircle />
-                </IconButton>
-                {/* 테마 토글: 마이페이지 아이콘 오른쪽 */}
-                <IconButton
-                  size="small"
-                  onClick={toggleColorMode}
-                  color="inherit"
-                >
-                  {mode === "dark" ? <LightIcon /> : <DarkIcon />}
-                </IconButton>
-                <Button color="inherit" onClick={handleLogout}>
-                  로그아웃
-                </Button>
+                    <FavoriteBorderIcon />
+                  </IconButton>
+                </Tooltip>
+                {/* 결제대기(주문서) 아이콘 */}
+                <Tooltip title="주문서">
+                  <IconButton
+                    component={RouterLink}
+                    to="/orders"
+                    color="inherit"
+                  >
+                    <ReceiptIcon />
+                  </IconButton>
+                </Tooltip>
+
+                <Tooltip title="알림">
+                  <IconButton
+                    component={RouterLink}
+                    to="/notifications"
+                    color="inherit"
+                  >
+                    <Badge
+                      badgeContent={unreadCount}
+                      color="error"
+                      invisible={unreadCount === 0}
+                    >
+                      <NotificationsIcon />
+                    </Badge>
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="마이페이지">
+                  <IconButton
+                    component={RouterLink}
+                    to="/mypage"
+                    color="inherit"
+                  >
+                    <AccountCircle />
+                  </IconButton>
+                </Tooltip>
+
+                <Tooltip title="다크/라이트 모드 전환">
+                  <IconButton
+                    size="small"
+                    onClick={toggleColorMode}
+                    color="inherit"
+                  >
+                    {mode === "dark" ? <LightIcon /> : <DarkIcon />}
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="로그아웃">
+                  <IconButton color="inherit" onClick={handleLogout}>
+                    <LogoutIcon />
+                  </IconButton>
+                </Tooltip>
               </>
             ) : (
               <>
-                {/* 비로그인 상태에서도 테마 토글은 노출 */}
-                <IconButton
-                  size="small"
-                  onClick={toggleColorMode}
-                  color="inherit"
-                >
-                  {mode === "dark" ? <LightIcon /> : <DarkIcon />}
-                </IconButton>
+                <Tooltip title="다크/라이트 모드 전환">
+                  <IconButton
+                    size="small"
+                    onClick={toggleColorMode}
+                    color="inherit"
+                  >
+                    {mode === "dark" ? <LightIcon /> : <DarkIcon />}
+                  </IconButton>
+                </Tooltip>
                 <Button color="inherit" component={RouterLink} to="/login">
                   로그인
                 </Button>

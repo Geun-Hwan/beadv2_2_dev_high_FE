@@ -58,7 +58,8 @@ export interface Auction {
   createdAt: string;
   updatedBy: string;
   updatedAt: string;
-  imageUrl?: string; // 임시 이미지 URL 필드
+  imageUrl?: string;
+  filePath?: string;
 }
 
 /**
@@ -111,7 +112,7 @@ export interface AuctionDetailResponse {
   auctionEndAt: string; // LocalDateTime → ISO 문자열
   depositAmount: number; // BigDecimal → number
   deletedYn: boolean;
-  fileImgUrl: string;
+  files: string;
 }
 
 export interface AuctionParticipationResponse {

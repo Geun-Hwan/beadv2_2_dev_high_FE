@@ -11,7 +11,7 @@ export const settlementApi = {
     ApiResponseDto<SettlementResponse[]>
   > => {
     const res = await client.get<ApiResponseDto<SettlementResponse[]>>(
-      "/settle/history"
+      "/settle"
     );
     return res.data;
   },

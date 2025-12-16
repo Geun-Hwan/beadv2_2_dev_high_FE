@@ -41,6 +41,9 @@ export default function PaymentSuccess() {
 
       try {
         await depositApi.paymentSuccess({ paymentKey, orderId, amount });
+        window.dispatchEvent(
+          new CustomEvent("deposit:increment", { detail: amount })
+        );
         setStatus("success");
         setTitle("결제가 완료되었어요");
         setDescription(

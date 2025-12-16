@@ -225,7 +225,11 @@ const Home: React.FC = () => {
             </Button>
           </Stack>
 
-          <AuctionList status={[AuctionStatus.READY]} sortOption="START_SOON" />
+          <AuctionList
+            status={[AuctionStatus.READY]}
+            sortOption="START_SOON"
+            linkDestination="product"
+          />
         </Container>
       </Box>
       {/* 서비스 특징 요약 섹션 */}

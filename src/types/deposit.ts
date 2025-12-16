@@ -3,6 +3,8 @@ import type { PagedApiResponse } from "./common";
 export const DepositType = {
   CHARGE: "CHARGE", // 경매 대기 (시작 전)
   USAGE: "USAGE", // 경매 진행
+  DEPOSIT: "DEPOSIT",
+  REFUND: "REFUND",
 } as const;
 
 export type DepositType = (typeof DepositType)[keyof typeof DepositType];

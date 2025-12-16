@@ -1,28 +1,30 @@
 import {
   Alert,
   Box,
-  Card,
-  CardActionArea,
-  CardContent,
-  CardMedia,
   Container,
+  IconButton,
+  List,
+  ListItem,
+  ListItemText,
   Paper,
   Skeleton,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import React, { useEffect, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import { wishlistApi } from "../apis/wishlistApi";
 import { productApi } from "../apis/productApi";
-import { ProductStatus, type Product } from "../types/product";
+import type { Product } from "../types/product";
 import { useAuth } from "../contexts/AuthContext";
-import { getCommonStatusText } from "../utils/statusText";
+import CloseIcon from "@mui/icons-material/Close";
 
 const Wishlist: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -63,11 +65,24 @@ const Wishlist: React.FC = () => {
           })
         );
 
-        setProducts(
-          productResults.filter(
-            (p): p is Product => p !== null
-          )
-        );
+        const hydratedProducts = productResults
+          .map((result) => {
+            if (!result?.product) return null;
+            const latestAuction = result.auctions?.[0];
+            const mergedProduct: Product = {
+              ...result.product,
+              startBid: result.product.startBid ?? latestAuction?.startBid,
+              currentBid:
+                result.product.currentBid ??
+                latestAuction?.currentBid ??
+                result.product.startBid ??
+                latestAuction?.startBid,
+            };
+            return mergedProduct;
+          })
+          .filter((p): p is Product => p !== null);
+
+        setProducts(hydratedProducts);
       } catch (err) {
         console.error("찜 목록 조회 실패:", err);
         setError("찜 목록을 불러오는데 실패했습니다.");
@@ -78,26 +93,17 @@ const Wishlist: React.FC = () => {
     load();
   }, [isAuthenticated, user]);
 
-  const formatAuctionPrice = (product: Product) => {
-    switch (product.status) {
-      case ProductStatus.IN_PROGESS: {
-        const amount = product.currentBid ?? product.startBid ?? 0;
-        return {
-          label: "현재가",
-          amount,
-          color: "error.main" as const,
-        };
-      }
-      case ProductStatus.READY: {
-        const amount = product.startBid ?? 0;
-        return {
-          label: "시작가",
-          amount,
-          color: "primary.main" as const,
-        };
-      }
-      default:
-        return null;
+  const handleRemoveWishlist = async (productId: string) => {
+    if (removingId) return;
+    try {
+      setRemovingId(productId);
+      await wishlistApi.remove(productId);
+      setProducts((prev) => prev.filter((product) => product.id !== productId));
+    } catch (err) {
+      console.error("찜 삭제 실패:", err);
+      alert("찜 삭제에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+    } finally {
+      setRemovingId(null);
     }
   };
 
@@ -126,142 +132,70 @@ const Wishlist: React.FC = () => {
         </Typography>
         <Paper sx={{ p: 2 }}>
           {loading && products.length === 0 && !error && (
-            <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: {
-                  xs: "1fr",
-                  sm: "repeat(2, 1fr)",
-                  md: "repeat(3, 1fr)",
-                },
-                gap: 3,
-                mt: 1,
-              }}
-            >
-              {Array.from({ length: 6 }).map((_, idx) => (
-                <Card key={idx} sx={{ height: 320 }}>
-                  <Skeleton variant="rectangular" height={180} />
-                  <CardContent>
-                    <Skeleton variant="text" width="80%" />
-                    <Skeleton variant="text" width="60%" />
-                  </CardContent>
-                </Card>
+            <List>
+              {Array.from({ length: 5 }).map((_, idx) => (
+                <ListItem key={idx} divider>
+                  <ListItemText
+                    primary={<Skeleton width="60%" />}
+                    secondary={<Skeleton width="30%" />}
+                  />
+                </ListItem>
               ))}
-            </Box>
+            </List>
           )}
 
-          {!loading && error && (
-            <Alert severity="error">{error}</Alert>
-          )}
+          {!loading && error && <Alert severity="error">{error}</Alert>}
           {!loading && !error && products.length === 0 && (
             <Alert severity="info">
               찜한 상품이 없습니다. 마음에 드는 상품을 찜해보세요.
             </Alert>
           )}
           {!loading && !error && products.length > 0 && (
-            <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: {
-                  xs: "1fr",
-                  sm: "repeat(2, 1fr)",
-                  md: "repeat(3, 1fr)",
-                },
-                gap: 3,
-                mt: 1,
-              }}
-            >
-              {products.map((product) => {
-                const price = formatAuctionPrice(product);
-                return (
-                  <Card
-                    key={product.id}
-                    sx={{
-                      height: 320,
-                      borderRadius: 2,
-                      boxShadow: 1,
-                      overflow: "hidden",
-                      transition: "all 0.2s ease",
-                      "&:hover": {
-                        boxShadow: 4,
-                        transform: "translateY(-4px)",
-                      },
-                    }}
-                  >
-                    <CardActionArea
-                      component={RouterLink}
-                      to={`/products/${product.id}`}
-                      sx={{
-                        display: "flex",
-                        flexDirection: "column",
-                        height: "100%",
-                        alignItems: "stretch",
-                        textAlign: "left",
-                      }}
-                    >
-                      <CardMedia
-                        component="img"
-                        height="180"
-                        image={product.imageUrl || "/images/no_image.png"}
-                        alt={product.name}
+            <List>
+              {products.map((product) => (
+                <ListItem
+                  key={product.id}
+                  divider
+                  secondaryAction={
+                    <Tooltip title="찜 삭제">
+                      <span>
+                        <IconButton
+                          edge="end"
+                          aria-label="delete"
+                          onClick={() => handleRemoveWishlist(product.id)}
+                          disabled={removingId === product.id}
+                          size="small"
+                        >
+                          <CloseIcon fontSize="small" />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                  }
+                >
+                  <ListItemText
+                    primary={
+                      <Typography
+                        fontWeight={600}
+                        component={RouterLink}
+                        to={`/products/${product.id}`}
                         sx={{
-                          objectFit: "cover",
-                          width: "100%",
-                        }}
-                      />
-                      <CardContent
-                        sx={{
-                          flex: 1,
-                          flexDirection: "column",
-                          display: "flex",
+                          textDecoration: "none",
+                          color: "inherit",
+                          "&:hover": { textDecoration: "underline" },
                         }}
                       >
-                        <Typography
-                          gutterBottom
-                          variant="subtitle1"
-                          sx={{
-                            fontWeight: 600,
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                          }}
-                          title={product.name}
-                        >
-                          {product.name}
-                        </Typography>
-                        {/* 경매 가격 요약 */}
-                        {price && (
-                          <Typography
-                            variant="subtitle2"
-                            sx={{
-                              mt: 0.5,
-                              fontWeight: 600,
-                              color: price.color,
-                              textAlign: "right",
-                            }}
-                          >
-                            {price.label} {price.amount.toLocaleString()}원
-                          </Typography>
-                        )}
-                        {/* 상품 상태 */}
-                        <Box sx={{ mt: "auto", pt: 1 }}>
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              color: "success.main",
-                              fontWeight: 500,
-                              textAlign: "right",
-                            }}
-                          >
-                            {getCommonStatusText(product.status)}
-                          </Typography>
-                        </Box>
-                      </CardContent>
-                    </CardActionArea>
-                  </Card>
-                );
-              })}
-            </Box>
+                        {product.name}
+                      </Typography>
+                    }
+                    secondary={`등록일: ${
+                      product.createdAt
+                        ? new Date(product.createdAt).toLocaleDateString()
+                        : "-"
+                    }`}
+                  />
+                </ListItem>
+              ))}
+            </List>
           )}
         </Paper>
       </Box>

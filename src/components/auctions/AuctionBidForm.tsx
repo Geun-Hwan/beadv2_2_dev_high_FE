@@ -58,7 +58,8 @@ const AuctionBidForm: React.FC<AuctionBidFormProps> = ({
           )}
           {isAuthenticated && !isConnected && (
             <Alert severity="warning">
-              실시간 서버와 연결이 끊어졌습니다. 입찰을 시도할 수 없습니다.
+              실시간 서버와 연결이 끊어졌습니다. 입찰은 접수되지만 현재가/내역
+              갱신이 늦을 수 있습니다.
             </Alert>
           )}
         </Box>
@@ -72,7 +73,7 @@ const AuctionBidForm: React.FC<AuctionBidFormProps> = ({
           onFocus={() =>
             !newBidAmount && setNewBidAmount(String(currentBidPrice + 100))
           }
-          disabled={!isConnected || isWithdrawn}
+          disabled={isWithdrawn || !isAuctionInProgress}
           inputProps={{ min: currentBidPrice + 100, step: 100 }}
         />
 
@@ -81,7 +82,7 @@ const AuctionBidForm: React.FC<AuctionBidFormProps> = ({
           variant="contained"
           size="large"
           disabled={
-            !isConnected || isWithdrawn || bidLoading || !isAuctionInProgress
+            isWithdrawn || bidLoading || !isAuctionInProgress
           }
           fullWidth
         >

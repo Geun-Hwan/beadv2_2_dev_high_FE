@@ -9,9 +9,15 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   Typography,
+  Box,
+  Button,
 } from "@mui/material";
 import React, { useMemo, useState } from "react";
-import { DepositType, type DepositHistory } from "../../types/deposit";
+import {
+  DepositType,
+  type DepositHistory,
+  type DepositInfo,
+} from "../../types/deposit";
 
 type HistoryFilter = "ALL" | "CHARGE" | "USAGE";
 
@@ -19,6 +25,11 @@ interface DepositHistoryTabProps {
   loading: boolean;
   error: string | null;
   history: DepositHistory[];
+  balanceInfo: DepositInfo | null;
+  balanceLoading: boolean;
+  balanceError?: string | null;
+  onOpenChargeDialog: () => void;
+  onCreateAccount: () => void;
 }
 
 const typeMap = {
@@ -31,6 +42,11 @@ export const DepositHistoryTab: React.FC<DepositHistoryTabProps> = ({
   loading,
   error,
   history,
+  balanceInfo,
+  balanceLoading,
+  balanceError,
+  onOpenChargeDialog,
+  onCreateAccount,
 }) => {
   const [filter, setFilter] = useState<HistoryFilter>("ALL");
 
@@ -59,6 +75,60 @@ export const DepositHistoryTab: React.FC<DepositHistoryTabProps> = ({
       <Typography variant="h6" sx={{ mb: 2 }}>
         예치금 내역
       </Typography>
+
+      <Box
+        sx={{
+          mb: 2,
+          display: "flex",
+          flexDirection: { xs: "column", sm: "row" },
+          gap: 2,
+          justifyContent: "space-between",
+          alignItems: { xs: "flex-start", sm: "center" },
+        }}
+      >
+        <Box>
+          <Typography variant="subtitle2" color="text.secondary">
+            현재 잔액
+          </Typography>
+          {balanceLoading && !balanceInfo ? (
+            <Skeleton width={120} />
+          ) : (
+            <Typography variant="h5" fontWeight={700}>
+              {balanceInfo?.balance?.toLocaleString() ?? "0"}원
+            </Typography>
+          )}
+          {balanceError && (
+            <Alert severity="warning" sx={{ mt: 1 }}>
+              예치금 잔액을 불러오지 못했습니다.
+            </Alert>
+          )}
+          {!balanceLoading && !balanceInfo && (
+            <Alert
+              severity="info"
+              action={
+                <Button
+                  color="inherit"
+                  size="small"
+                  onClick={onCreateAccount}
+                >
+                  계좌 생성
+                </Button>
+              }
+              sx={{ mt: 1 }}
+            >
+              아직 예치금 계좌가 없습니다. 계좌를 생성해 주세요.
+            </Alert>
+          )}
+        </Box>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={onOpenChargeDialog}
+          disabled={balanceLoading || !balanceInfo}
+        >
+          예치금 충전
+        </Button>
+      </Box>
 
       <ToggleButtonGroup
         size="small"

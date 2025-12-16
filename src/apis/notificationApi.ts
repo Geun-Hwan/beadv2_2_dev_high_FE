@@ -19,4 +19,13 @@ export const notificationApi = {
     });
     return res.data;
   },
+  getUnreadCount: async (): Promise<number> => {
+    const res = await client.get<number>("/notifications/unread/count");
+    return res.data;
+  },
+
+  getNotifi: async (notificationId: string): Promise<number> => {
+    const res = await client.get<number>(`/notifications/${notificationId}`);
+    return res.data;
+  },
 };

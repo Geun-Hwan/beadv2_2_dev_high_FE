@@ -10,33 +10,42 @@ import {
   Skeleton,
   Typography,
 } from "@mui/material";
-import type { DepositInfo } from "../../types/deposit";
 import type { UserRole } from "../../types/user";
 
 interface DepositSummaryTabProps {
   loading: boolean;
   error: string | null;
-  depositInfo: DepositInfo | null;
   sellerInfo: { bankName?: string; bankAccount?: string } | null;
   role?: UserRole;
   onCreateAccount: () => void;
-  onOpenChargeDialog: () => void;
 }
 
 export const DepositSummaryTab: React.FC<DepositSummaryTabProps> = ({
   loading,
   error,
-  depositInfo,
   sellerInfo,
   role,
   onCreateAccount,
-  onOpenChargeDialog,
 }) => {
   const isBuyerOnly = role === "USER";
+
+  if (isBuyerOnly) {
+    return (
+      <Paper sx={{ p: 2 }}>
+        <Typography variant="h6" sx={{ mb: 2 }}>
+          정산 계좌 정보
+        </Typography>
+        <Alert severity="info">
+          판매자 등록을 완료하면 정산 계좌 정보를 관리할 수 있습니다.
+        </Alert>
+      </Paper>
+    );
+  }
+
   return (
     <Paper sx={{ p: 2 }}>
       <Typography variant="h6" sx={{ mb: 2 }}>
-        예치금 정보
+        정산 계좌 정보
       </Typography>
 
       {error && (
@@ -48,67 +57,43 @@ export const DepositSummaryTab: React.FC<DepositSummaryTabProps> = ({
       <List>
         <ListItem>
           <ListItemText
-            primary="현재 잔액"
+            primary="은행명"
             secondary={
-              loading && !depositInfo ? (
-                <Skeleton width="40%" />
+              loading && !sellerInfo ? (
+                <Skeleton width="60%" />
               ) : (
-                `${depositInfo?.balance?.toLocaleString() || 0}원`
+                sellerInfo?.bankName || "등록되지 않음"
               )
             }
           />
         </ListItem>
-        {!isBuyerOnly && (
-          <>
-            <Divider />
 
-            <ListItem>
-              <ListItemText
-                primary="은행명"
-                secondary={
-                  loading && !sellerInfo ? (
-                    <Skeleton width="60%" />
-                  ) : (
-                    sellerInfo?.bankName || "정보 없음"
-                  )
-                }
-              />
-            </ListItem>
+        <Divider />
 
-            <Divider />
-
-            <ListItem>
-              <ListItemText
-                primary="계좌 번호"
-                secondary={
-                  loading && !sellerInfo ? (
-                    <Skeleton width="60%" />
-                  ) : (
-                    sellerInfo?.bankAccount || "정보 없음"
-                  )
-                }
-              />
-            </ListItem>
-          </>
-        )}
+        <ListItem>
+          <ListItemText
+            primary="계좌 번호"
+            secondary={
+              loading && !sellerInfo ? (
+                <Skeleton width="60%" />
+              ) : (
+                sellerInfo?.bankAccount || "등록되지 않음"
+              )
+            }
+          />
+        </ListItem>
       </List>
-      <Box sx={{ mt: 2 }}>
-        <Button
-          variant="contained"
-          onClick={onCreateAccount}
-          sx={{ mr: 3 }}
-          disabled={loading}
-        >
-          예치금 계좌 생성
-        </Button>
-        <Button
-          variant="contained"
-          onClick={onOpenChargeDialog}
-          disabled={loading}
-        >
-          예치금 충전
-        </Button>
-      </Box>
+      {!sellerInfo && (
+        <Box sx={{ mt: 2 }}>
+          <Button
+            variant="contained"
+            onClick={onCreateAccount}
+            disabled={loading}
+          >
+            정산 계좌 등록/갱신
+          </Button>
+        </Box>
+      )}
     </Paper>
   );
 };

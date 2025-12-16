@@ -1,35 +1,20 @@
-/**
- * Vercel 서버리스 프록시 (REST API용)
- *
- * - 클라이언트는 항상 /api/v1/... 으로 호출
- * - 이 함수는 GATEWAY_API_BASE_URL 환경변수를 읽어서 실제 게이트웨이로 포워딩
- *
- * 예: /api/v1/products?page=0 -> {GATEWAY_API_BASE_URL}/products?page=0
- */
-
+import type { VercelRequest, VercelResponse } from "@vercel/node";
 const GATEWAY_API_BASE_URL = process.env.GATEWAY_API_BASE_URL;
 
-export default async function handler(req: any, res: any) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!GATEWAY_API_BASE_URL) {
-    res
-      .status(500)
-      .json({ message: "GATEWAY_API_BASE_URL environment variable is not set" });
+    res.status(500).json({
+      message: "GATEWAY_API_BASE_URL environment variable is not set",
+    });
     return;
   }
 
   try {
-    const { path } = req.query;
-    const pathSuffix = Array.isArray(path) ? path.join("/") : path || "";
-
-    const base = GATEWAY_API_BASE_URL.replace(/\/$/, "");
-    const targetPath = pathSuffix ? `${base}/${pathSuffix}` : base;
-
-    const originalUrl = req.url || "";
-    const queryIndex = originalUrl.indexOf("?");
-    const queryString = queryIndex >= 0 ? originalUrl.substring(queryIndex) : "";
-
-    const targetUrl = `${targetPath}${queryString}`;
-
+    const pathAfterApi = req.url?.replace(/^\/api\/v1/, "") || "";
+    const targetUrl = `${GATEWAY_API_BASE_URL}/api/v1${pathAfterApi}`;
+    console.log("req.query.path:", req.query.path);
+    console.log("req.url:", req.url);
+    console.log("targetUrl:", targetUrl);
     const headers: Record<string, string> = {};
     for (const [key, value] of Object.entries(req.headers)) {
       if (value == null) continue;
@@ -71,4 +56,3 @@ export default async function handler(req: any, res: any) {
     res.status(502).json({ message: "Bad gateway", error: String(error) });
   }
 }
-

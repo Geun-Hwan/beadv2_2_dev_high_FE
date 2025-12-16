@@ -1,4 +1,5 @@
 import {
+  Alert,
   Box,
   Button,
   Card,
@@ -13,6 +14,7 @@ import { auctionApi } from "../apis/auctionApi";
 import {
   type AuctionQueryParams,
   type PagedAuctionResponse,
+  AuctionStatus,
 } from "../types/auction";
 import { getCommonStatusText } from "../utils/statusText";
 import RemainingTime from "./RemainingTime";
@@ -34,18 +36,26 @@ interface AuctionListProps extends AuctionQueryParams {
   sortOption?: AuctionSortOption;
   /** 최대 표시 개수 (예: 홈에서는 4개만) */
   limit?: number;
+  /**
+   * 카드 클릭 시 이동 목적지
+   * - auction: 경매 상세
+   * - product: 상품 상세
+   */
+  linkDestination?: "auction" | "product";
 }
 
 const AuctionList: React.FC<AuctionListProps> = ({
   status = [],
   sortOption = "ENDING_SOON",
   limit = 4,
+  linkDestination = "auction",
 }) => {
   const [auctionData, setAuctionData] = useState<PagedAuctionResponse | null>(
     null
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const statusKey = Array.isArray(status) ? status.join(",") : "";
 
   useEffect(() => {
     const fetchAuctions = async () => {
@@ -70,7 +80,7 @@ const AuctionList: React.FC<AuctionListProps> = ({
     };
 
     fetchAuctions();
-  }, [status]);
+  }, []);
 
   return (
     <Box
@@ -86,9 +96,9 @@ const AuctionList: React.FC<AuctionListProps> = ({
       }}
     >
       {error && !loading && (auctionData?.content?.length ?? 0) === 0 && (
-        <Typography color="error" sx={{ gridColumn: "1 / -1" }}>
+        <Alert severity="error" sx={{ gridColumn: "1 / -1" }}>
           {error}
-        </Typography>
+        </Alert>
       )}
 
       {loading && (auctionData?.content?.length ?? 0) === 0
@@ -135,7 +145,7 @@ const AuctionList: React.FC<AuctionListProps> = ({
                 <CardMedia
                   component="img"
                   height="200"
-                  image={auction.imageUrl ?? "/images/no_image.png"}
+                  image={auction.filePath ?? "/images/no_image.png"}
                   alt={auction.productName}
                 />
                 <CardContent
@@ -197,6 +207,19 @@ const AuctionList: React.FC<AuctionListProps> = ({
                         status={auction.status}
                       />
                     </Typography>
+                    {auction.status === AuctionStatus.READY && (
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: "primary.main",
+                          fontWeight: 500,
+                          textAlign: "right",
+                          display: "block",
+                        }}
+                      >
+                        시작 예정: {formatDateTime(auction.auctionStartAt)}
+                      </Typography>
+                    )}
                     <Typography
                       variant="caption"
                       sx={{
@@ -214,7 +237,11 @@ const AuctionList: React.FC<AuctionListProps> = ({
                   size="small"
                   color="primary"
                   component={RouterLink}
-                  to={`/auctions/${auction.id || auction.auctionId}`}
+                  to={
+                    linkDestination === "product"
+                      ? `/products/${auction?.productId}`
+                      : `/auctions/${auction.id || auction.auctionId}`
+                  }
                   sx={{ m: 1 }}
                 >
                   자세히 보기
@@ -227,3 +254,9 @@ const AuctionList: React.FC<AuctionListProps> = ({
 };
 
 export default AuctionList;
+const formatDateTime = (value?: string) => {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleString();
+};

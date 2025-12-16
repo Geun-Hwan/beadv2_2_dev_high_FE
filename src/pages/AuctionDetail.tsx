@@ -88,6 +88,22 @@ const AuctionDetail: React.FC = () => {
     }
   };
 
+  const refreshBidHistoryFirstPage = useCallback(async () => {
+    if (!auctionId) return;
+    try {
+      const response = await auctionApi.getAuctionBidHistory(auctionId, {
+        page: 0,
+        size: 20,
+      });
+      const data = response.data;
+      setBidHistory(data.content);
+      setHasMore(!data.last);
+      setBidHistoryPage(1);
+    } catch (err) {
+      console.error("입찰 내역 새로고침 실패:", err);
+    }
+  }, [auctionId]);
+
   const fetchAuctionParticipation = async () => {
     try {
       const res = await auctionApi.checkParticipationStatus(
@@ -217,6 +233,11 @@ const AuctionDetail: React.FC = () => {
         ...prev,
         lastBidPrice: bid,
       }));
+
+      if (!isConnected) {
+        await fetchAuctionDetail();
+        await refreshBidHistoryFirstPage();
+      }
       alert("입찰이 성공적으로 접수되었습니다.");
     } catch (err: any) {
       alert(`입찰 실패: ${err.response?.data?.message || err.message}`);
@@ -256,24 +277,26 @@ const AuctionDetail: React.FC = () => {
   const handleCloseDepositPrompt = async () => {
     if (depositLoading) return;
     try {
-      setOpenDepositPrompt(false);
       setDepositLoading(true);
 
-      /* 임시 */
-      const balance = 1000;
+      const depositAmount = Number(auctionDetail?.depositAmount ?? 0);
+      const account = await depositApi.getAccount();
 
-      if (balance < Number(auctionDetail?.depositAmount ?? 0)) {
-        alert("보증금이 부족합니다.");
+      if ((account?.balance ?? 0) < depositAmount) {
+        alert("보증금이 부족합니다. 예치금을 충전해 주세요.");
         return;
       }
-      // 2. 보증금 기록 생성
-      await depositApi.createDepositHst({
-        amount: Number(auctionDetail?.depositAmount),
-        userId: user?.userId,
-        type: DepositType.USAGE,
+
+      const res = await auctionApi.createParticipation(auctionId as string, {
+        depositAmount,
       });
 
-      setParticipationStatus({ ...participationStatus, isParticipated: true });
+      window.dispatchEvent(
+        new CustomEvent("deposit:decrement", { detail: depositAmount })
+      );
+
+      setParticipationStatus(res.data);
+      setOpenDepositPrompt(false);
       alert("보증금 결제가 완료되었습니다. 이제 입찰할 수 있습니다.");
     } catch (error: any) {
       alert(error?.data?.message ?? "보증금 결제중 에러가 발생했습니다.");
@@ -303,10 +326,7 @@ const AuctionDetail: React.FC = () => {
                   pb: 2,
                 }}
               >
-                <CardHeader
-                  title={<Skeleton width="40%" />}
-                  sx={{ pb: 0 }}
-                />
+                <CardHeader title={<Skeleton width="40%" />} sx={{ pb: 0 }} />
                 <CardContent
                   sx={{
                     flex: 1,
@@ -321,10 +341,7 @@ const AuctionDetail: React.FC = () => {
                 </CardContent>
               </Card>
               <Card>
-                <CardHeader
-                  title={<Skeleton width="30%" />}
-                  sx={{ pb: 0 }}
-                />
+                <CardHeader title={<Skeleton width="30%" />} sx={{ pb: 0 }} />
                 <CardContent>
                   <Skeleton variant="text" width="60%" />
                   <Skeleton variant="text" width="50%" />

@@ -12,13 +12,13 @@ import {
 } from "@mui/material";
 import React from "react";
 import { Link as RouterLink } from "react-router-dom";
-import type { Product } from "../../types/product";
+import type { Product, ProductAndAuction } from "../../types/product";
 import { getCommonStatusText } from "../../utils/statusText";
 
 interface MyProductsTabProps {
   loading: boolean;
   error: string | null;
-  products: Product[];
+  products: ProductAndAuction[];
 }
 
 export const MyProductsTab: React.FC<MyProductsTabProps> = ({
@@ -72,7 +72,7 @@ export const MyProductsTab: React.FC<MyProductsTabProps> = ({
         <Alert severity="info">등록된 상품이 없습니다.</Alert>
       ) : (
         <List>
-          {products.map((product) => {
+          {products.map(({ product, auctions }) => {
             const priceInfo = formatPriceInfo(product);
             const statusText = getCommonStatusText(product.status);
             return (

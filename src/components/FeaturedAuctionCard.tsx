@@ -1,4 +1,5 @@
 import {
+  Alert,
   Box,
   Button,
   Card,
@@ -76,11 +77,7 @@ const FeaturedAuctionCard: React.FC = () => {
         />
       )}
       <CardContent sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-        {error && (
-          <Typography color="error" variant="body2">
-            {error}
-          </Typography>
-        )}
+        {error && <Alert severity="error">{error}</Alert>}
         {!error && (
           <>
             <Stack direction="row" alignItems="center" spacing={1}>

@@ -23,4 +23,11 @@ export const orderApi = {
     const res = await client.get("/order/bought");
     return res.data;
   },
+
+  getOrderDetail: async (
+    orderId: string
+  ): Promise<ApiResponseDto<OrderResponse>> => {
+    const res = await client.get(`/order/${orderId}`);
+    return res.data;
+  },
 };

@@ -7,11 +7,27 @@ import {
   Box,
   Skeleton,
   Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { notificationApi } from "../apis/notificationApi";
 import type { NotificationInfo } from "../types/notification";
+
+const sortNotifications = (items: NotificationInfo[]) => {
+  return [...items].sort((a, b) => {
+    if (!!a.readYn === !!b.readYn) {
+      const aTime = new Date(a.createdAt ?? 0).getTime();
+      const bTime = new Date(b.createdAt ?? 0).getTime();
+      return bTime - aTime;
+    }
+    return a.readYn ? 1 : -1;
+  });
+};
 
 const Notifications: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
@@ -20,6 +36,9 @@ const Notifications: React.FC = () => {
   const [notifications, setNotifications] = useState<NotificationInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [selectedNotification, setSelectedNotification] =
+    useState<NotificationInfo | null>(null);
 
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -37,7 +56,7 @@ const Notifications: React.FC = () => {
           page: 0,
           size: 20,
         });
-        setNotifications(pageRes.content || []);
+        setNotifications(sortNotifications(pageRes.content || []));
       } catch (err) {
         console.error("알림 조회 실패:", err);
         setError("알림을 불러오는데 실패했습니다.");
@@ -49,10 +68,39 @@ const Notifications: React.FC = () => {
     fetchNotifications();
   }, [isAuthenticated, user]);
 
-  const handleClickNotification = (notification: NotificationInfo) => {
-    if (notification.relatedUrl) {
-      // 관련 URL이 있으면 해당 화면으로 이동
-      navigate(notification.relatedUrl);
+  const markAsRead = async (notification: NotificationInfo) => {
+    if (!notification.id || notification.readYn) return false;
+    try {
+      await notificationApi.getNotifi(notification.id);
+      setNotifications((prev) =>
+        sortNotifications(
+          prev.map((n) =>
+            n.id === notification.id ? { ...n, readYn: true } : n
+          )
+        )
+      );
+      window.dispatchEvent(new CustomEvent("notification:read"));
+      return true;
+    } catch (err) {
+      console.error("알림 읽음 처리 실패:", err);
+      return false;
+    }
+  };
+
+  const handleClickNotification = async (notification: NotificationInfo) => {
+    const target = notification;
+    if (target.id) {
+      await markAsRead(target);
+    }
+
+    if (target.relatedUrl) {
+      navigate(target.relatedUrl);
+    } else {
+      setSelectedNotification({
+        ...target,
+        readYn: true,
+      });
+      setDetailOpen(true);
     }
   };
 
@@ -149,9 +197,34 @@ const Notifications: React.FC = () => {
                 <Typography variant="body2" color="text.secondary">
                   {notification.content}
                 </Typography>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ display: "block", mt: 0.5 }}
+                >
+                  받은 시각: {formatDateTime(notification.createdAt)}
+                </Typography>
               </Box>
             ))}
         </Paper>
+        <Dialog
+          open={detailOpen}
+          onClose={() => setDetailOpen(false)}
+          fullWidth
+        >
+          <DialogTitle>{selectedNotification?.title}</DialogTitle>
+          <DialogContent dividers>
+            <Typography variant="caption" color="text.secondary">
+              받은 시각: {formatDateTime(selectedNotification?.createdAt)}
+            </Typography>
+            <Typography variant="body1" sx={{ mt: 2, whiteSpace: "pre-line" }}>
+              {selectedNotification?.content}
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setDetailOpen(false)}>닫기</Button>
+          </DialogActions>
+        </Dialog>
       </Box>
     </Container>
   );

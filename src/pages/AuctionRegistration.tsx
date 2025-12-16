@@ -26,7 +26,7 @@ import { productApi } from "../apis/productApi";
 import { useAuth } from "../contexts/AuthContext";
 import type { Auction, AuctionUpdateRequest } from "../types/auction";
 import { AuctionStatus } from "../types/auction";
-import type { Product } from "../types/product";
+import type { Product, ProductAndAuction } from "../types/product";
 
 import {
   addHours,
@@ -61,7 +61,7 @@ const AuctionRegistration: React.FC = () => {
     reset,
   } = useForm<AuctionFormData>();
 
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<ProductAndAuction[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,7 +78,7 @@ const AuctionRegistration: React.FC = () => {
           setProducts(response.data);
         } else {
           const response = await productApi.getProducts();
-          setProducts(response.data.content);
+          const mapped = setProducts(response.data.content);
         }
       } catch (err) {
         setError("상품 목록을 불러오는 데 실패했습니다.");
@@ -133,7 +133,13 @@ const AuctionRegistration: React.FC = () => {
       setLoading(true);
       try {
         const productResponse = await productApi.getProductById(productId);
-        const product = productResponse.data;
+        const { product, auctions = [] } = productResponse.data;
+
+        if (!product) {
+          setError("상품 정보를 찾을 수 없습니다.");
+          navigate("/");
+          return;
+        }
 
         if (user?.role !== UserRole.ADMIN && user?.role !== UserRole.SELLER) {
           alert("경매를 재등록할 권한이 없습니다.");
@@ -151,14 +157,7 @@ const AuctionRegistration: React.FC = () => {
           return;
         }
 
-        const auctionsResponse = await auctionApi.getAuctionsByProductId(
-          productId
-        );
-        const auctions = Array.isArray(auctionsResponse.data.content)
-          ? auctionsResponse.data.content
-          : auctionsResponse.data;
-
-        const hasActive = auctions.some(
+        const hasActive = (Array.isArray(auctions) ? auctions : []).some(
           (auction: Auction) =>
             auction.status === AuctionStatus.IN_PROGRESS ||
             auction.status === AuctionStatus.READY
@@ -214,19 +213,17 @@ const AuctionRegistration: React.FC = () => {
     user,
   ]);
 
-  const handleProductSelect = async (product: Product) => {
+  const handleProductSelect = async (data: ProductAndAuction) => {
     setLoading(true);
+    const { product, auctions } = data;
     try {
-      const response = await auctionApi.getAuctionsByProductId(product.id);
-      const existingAuctions = response.data;
-
       const conflictingStatuses: AuctionStatus[] = [
         AuctionStatus.READY,
         AuctionStatus.IN_PROGRESS,
         AuctionStatus.COMPLETED,
       ];
 
-      const hasConflict = existingAuctions.some((auction: Auction) =>
+      const hasConflict = auctions?.some((auction: Auction) =>
         conflictingStatuses.includes(auction.status)
       );
 
@@ -317,11 +314,7 @@ const AuctionRegistration: React.FC = () => {
                 <ListItem
                   secondaryAction={
                     <Button variant="contained" disabled>
-                      <Skeleton
-                        variant="rounded"
-                        width={60}
-                        height={32}
-                      />
+                      <Skeleton variant="rounded" width={60} height={32} />
                     </Button>
                   }
                 >
@@ -350,31 +343,34 @@ const AuctionRegistration: React.FC = () => {
           <Paper>
             <List>
               {products.length > 0 ? (
-                products.map((product) => (
-                  <React.Fragment key={product.id}>
-                    <ListItem
-                      secondaryAction={
-                        <Button
-                          variant="contained"
-                          onClick={() => handleProductSelect(product)}
-                          disabled={loading}
-                        >
-                          {loading ? (
-                            <CircularProgress size={24} color="inherit" />
-                          ) : (
-                            "선택"
-                          )}
-                        </Button>
-                      }
-                    >
-                      <ListItemText
-                        primary={product.name}
-                        secondary={product.description}
-                      />
-                    </ListItem>
-                    <Divider />
-                  </React.Fragment>
-                ))
+                products.map((data) => {
+                  const { product } = data;
+                  return (
+                    <React.Fragment key={product.id}>
+                      <ListItem
+                        secondaryAction={
+                          <Button
+                            variant="contained"
+                            onClick={() => handleProductSelect(data)}
+                            disabled={loading}
+                          >
+                            {loading ? (
+                              <CircularProgress size={24} color="inherit" />
+                            ) : (
+                              "선택"
+                            )}
+                          </Button>
+                        }
+                      >
+                        <ListItemText
+                          primary={product.name}
+                          secondary={product.description}
+                        />
+                      </ListItem>
+                      <Divider />
+                    </React.Fragment>
+                  );
+                })
               ) : (
                 <ListItem>
                   <ListItemText primary="경매에 등록할 수 있는 상품이 없습니다." />

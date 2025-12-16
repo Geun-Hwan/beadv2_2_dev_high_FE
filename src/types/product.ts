@@ -1,4 +1,5 @@
-import type { PagedApiResponse } from "./common";
+import type { Auction } from "./auction";
+import type { FileGroup, PagedApiResponse } from "./common";
 
 export const ProductStatus = {
   READY: "READY",
@@ -17,6 +18,15 @@ export interface ProductCategory {
   id: string;
   categoryName: string;
 }
+export interface ProductImage {
+  id: string;
+  url?: string;
+  fileUrl?: string;
+  thumbnailUrl?: string;
+  path?: string;
+  imageUrl?: string;
+  originalFilename?: string;
+}
 
 export interface ProductQueryParams {
   page?: number;
@@ -30,6 +40,10 @@ export interface ProductQueryParams {
 /**
  * 상품 정보 인터페이스 (product.product 테이블 기반) - 백엔드 Product 엔티티와 일치하도록 업데이트
  */
+export interface ProductAndAuction {
+  product: Product;
+  auctions?: Auction[];
+}
 export interface Product {
   id: string;
   name: string;
@@ -37,7 +51,6 @@ export interface Product {
   status: ProductStatus;
   deletedYn: "Y" | "N"; // 백엔드 `DeleteStatus` enum을 "Y" | "N"으로 매핑
   deletedAt?: string;
-  fileGroupId?: number;
   sellerId: string;
   createdAt?: string;
   createdBy?: string;
@@ -52,6 +65,8 @@ export interface Product {
    */
   startBid?: number;
   currentBid?: number;
+  images?: ProductImage[];
+  fileGroup?: FileGroup;
 }
 
 /**
@@ -64,11 +79,13 @@ export interface ProductResponse {
   status: ProductStatus;
   sellerId: string;
   deletedYn: "Y" | "N";
-  fileGroupId?: number;
+  fileGroupId?: number | string;
   createdAt?: string; // LocalDateTime
   createdBy?: string;
   updatedAt?: string; // LocalDateTime
   updatedBy?: string;
+  images?: ProductImage[];
+  fileGroup?: FileGroup;
 }
 
 /**
@@ -77,7 +94,7 @@ export interface ProductResponse {
 export interface ProductCreationRequest {
   name: string;
   description: string;
-  fileId?: string;
+  fileGrpId?: number | string;
   categoryIds: string[];
   sellerId?: string;
 }
@@ -88,9 +105,11 @@ export interface ProductCreationRequest {
 export interface ProductUpdateRequest {
   name: string;
   description: string;
-  fileId?: string;
+  fileGrpId?: number | string;
   categoryIds: string[];
   sellerId?: string;
 }
 
 export type PagedProductResponse = PagedApiResponse<Product>;
+export type PagedProductAndAuctionResponse =
+  PagedApiResponse<ProductAndAuction>;

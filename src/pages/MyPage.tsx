@@ -3,10 +3,9 @@ import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { depositApi } from "../apis/depositApi";
 import { orderApi } from "../apis/orderApi";
-import { settlementApi } from "../apis/settlementApi";
 import { productApi } from "../apis/productApi";
+import { settlementApi } from "../apis/settlementApi";
 import { userApi } from "../apis/userApi";
-import { requestTossPayment } from "../components/tossPay/requestTossPayment";
 import { DepositChargeDialog } from "../components/mypage/DepositChargeDialog";
 import { DepositHistoryTab } from "../components/mypage/DepositHistoryTab";
 import { DepositSummaryTab } from "../components/mypage/DepositSummaryTab";
@@ -14,12 +13,13 @@ import { MyProductsTab } from "../components/mypage/MyProductsTab";
 import { OrdersTab } from "../components/mypage/OrdersTab";
 import { ProfileTab } from "../components/mypage/ProfileTab";
 import { SettlementTab } from "../components/mypage/SettlementTab";
+import { requestTossPayment } from "../components/tossPay/requestTossPayment";
 import { useAuth } from "../contexts/AuthContext";
 import type { DepositHistory, DepositInfo } from "../types/deposit";
 import type { OrderResponse } from "../types/order";
-import type { Product } from "../types/product";
-import { UserRole, type User } from "../types/user";
+import type { ProductAndAuction } from "../types/product";
 import type { SettlementResponse } from "../types/settlement";
+import { UserRole, type User } from "../types/user";
 
 const MyPage: React.FC = () => {
   const { user } = useAuth();
@@ -35,24 +35,25 @@ const MyPage: React.FC = () => {
   const [depositHistory, setDepositHistory] = useState<DepositHistory[]>([]);
   const [soldOrders, setSoldOrders] = useState<OrderResponse[]>([]);
   const [boughtOrders, setBoughtOrders] = useState<OrderResponse[]>([]);
-  const [myProducts, setMyProducts] = useState<Product[]>([]);
+  const [myProducts, setMyProducts] = useState<ProductAndAuction[]>([]);
   // 탭별 로딩/에러 상태 분리
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
-  const [depositSummaryLoading, setDepositSummaryLoading] = useState(false);
-  const [depositSummaryError, setDepositSummaryError] = useState<string | null>(
+  const [depositInfoLoading, setDepositInfoLoading] = useState(false);
+  const [depositInfoError, setDepositInfoError] = useState<string | null>(null);
+  const [depositHistoryLoading, setDepositHistoryLoading] = useState(false);
+  const [depositHistoryError, setDepositHistoryError] = useState<string | null>(
     null
   );
-  const [depositHistoryLoading, setDepositHistoryLoading] = useState(false);
-  const [depositHistoryError, setDepositHistoryError] = useState<
-    string | null
-  >(null);
+  const [sellerInfoLoaded, setSellerInfoLoaded] = useState(false);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState<string | null>(null);
   const [settlementLoading, setSettlementLoading] = useState(false);
   const [settlementError, setSettlementError] = useState<string | null>(null);
   const [myProductsLoading, setMyProductsLoading] = useState(false);
   const [myProductsError, setMyProductsError] = useState<string | null>(null);
+  const [sellerInfoLoading, setSellerInfoLoading] = useState(false);
+  const [sellerInfoError, setSellerInfoError] = useState<string | null>(null);
 
   // 예치금 충전용 로딩
   const [chargeLoading, setChargeLoading] = useState(false);
@@ -65,7 +66,7 @@ const MyPage: React.FC = () => {
 
   // 탭별 최초 로딩 여부 (한 번 불러온 데이터는 다시 탭을 눌렀을 때 재사용)
   const [profileLoaded, setProfileLoaded] = useState(false);
-  const [depositSummaryLoaded, setDepositSummaryLoaded] = useState(false);
+  const [depositInfoLoaded, setDepositInfoLoaded] = useState(false);
   const [depositHistoryLoaded, setDepositHistoryLoaded] = useState(false);
   const [ordersLoaded, setOrdersLoaded] = useState(false);
   const [settlementLoaded, setSettlementLoaded] = useState(false);
@@ -87,19 +88,17 @@ const MyPage: React.FC = () => {
     if (tabValue === 0 && !profileLoaded) {
       loadUserProfile();
     }
-
-    if (tabValue === 1 && !depositSummaryLoaded) {
-      // 예치금 탭
+    if (tabValue === 1 && !depositInfoLoaded) {
       loadDepositInfo();
-      if (user?.role !== UserRole.USER) {
-        loadSellerInfo();
-      }
-    } else if (tabValue === 2 && !depositHistoryLoaded) {
-      // 충전 내역 탭
       loadDepositHistory();
-    } else if (tabValue === 3 && !ordersLoaded) {
+    }
+    if (tabValue === 2 && !ordersLoaded) {
       // 주문 내역 탭
       loadOrderHistory();
+    }
+
+    if (tabValue === 3 && user?.role !== UserRole.USER && !sellerInfoLoaded) {
+      loadSellerInfo();
     } else if (
       tabValue === 4 &&
       user?.role !== UserRole.USER &&
@@ -119,11 +118,12 @@ const MyPage: React.FC = () => {
     tabValue,
     user,
     profileLoaded,
-    depositSummaryLoaded,
+    depositInfoLoaded,
     depositHistoryLoaded,
     ordersLoaded,
     settlementLoaded,
     myProductsLoaded,
+    sellerInfoLoaded,
   ]);
 
   const loadUserProfile = async () => {
@@ -143,28 +143,32 @@ const MyPage: React.FC = () => {
   };
 
   const loadSellerInfo = async () => {
-    setDepositSummaryLoading(true);
+    setSellerInfoLoading(true);
+    setSellerInfoError(null);
     try {
       const res = await userApi.getSellerInfo();
       setSellerInfo(res.data);
     } catch (err: any) {
       console.error("계좌 조회 실패:", err);
+      setSellerInfoError("정산 계좌 정보를 불러오지 못했습니다.");
     } finally {
-      setDepositSummaryLoading(false);
+      setSellerInfoLoading(false);
+      setSellerInfoLoaded(true);
     }
   };
 
   const loadDepositInfo = async () => {
-    setDepositSummaryLoading(true);
-    setDepositSummaryError(null);
+    setDepositInfoLoading(true);
+    setDepositInfoError(null);
     try {
       const data = await depositApi.getAccount();
       setDepositInfo(data);
     } catch (err: any) {
       console.error("예치금 조회 실패:", err);
+      setDepositInfoError("예치금 정보를 불러오지 못했습니다.");
     } finally {
-      setDepositSummaryLoading(false);
-      setDepositSummaryLoaded(true);
+      setDepositInfoLoading(false);
+      setDepositInfoLoaded(true);
     }
   };
 
@@ -215,7 +219,7 @@ const MyPage: React.FC = () => {
       setDepositHistory(content);
     } catch (err: any) {
       console.error("충전 내역 조회 실패:", err);
-      setDepositHistoryError("충전 내역을 불러오는데 실패했습니다.");
+      setDepositHistoryError("예치금 내역을 불러오는데 실패했습니다.");
     } finally {
       setDepositHistoryLoading(false);
       setDepositHistoryLoaded(true);
@@ -236,10 +240,11 @@ const MyPage: React.FC = () => {
     try {
       const res = await depositApi.createAccount(user?.userId);
       if (res) {
-        alert("생성성공");
+        alert("예치금 계좌가 생성되었습니다.");
+        await loadDepositInfo();
       }
     } catch (err: any) {
-      alert("생성실패:" + err?.data?.message);
+      alert("계좌 생성 실패: " + (err?.data?.message ?? "알 수 없는 오류"));
     }
   };
   const handleChargeSubmit = async () => {
@@ -258,7 +263,7 @@ const MyPage: React.FC = () => {
       const depositOrder = await depositApi.createDepositOrder(amount);
 
       if (depositOrder && depositOrder.orderId) {
-        requestTossPayment("DOR00000039", depositOrder.amount);
+        requestTossPayment(depositOrder.orderId, depositOrder.amount);
         handleCloseChargeDialog();
       } else {
         setChargeError("주문 생성에 실패했습니다.");
@@ -298,39 +303,43 @@ const MyPage: React.FC = () => {
       <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
         <Tabs value={tabValue} onChange={handleTabChange}>
           <Tab label="프로필" />
-          <Tab label="예치금" />
-          <Tab label="충전 내역" />
+          <Tab label="예치금 내역" />
           <Tab label="주문 내역" />
+          {user?.role !== "USER" && <Tab label="정산 계좌" />}
           {user?.role !== "USER" && <Tab label="정산 내역" />}
           {user?.role !== "USER" && <Tab label="내 상품" />}
         </Tabs>
       </Box>
       <Box sx={{ mt: 3 }}>
         {tabValue === 0 && <ProfileTab userInfo={userInfo} role={user?.role} />}
+
         {tabValue === 1 && (
-          <DepositSummaryTab
-            loading={depositSummaryLoading}
-            error={depositSummaryError}
-            depositInfo={depositInfo}
-            sellerInfo={sellerInfo}
-            role={user?.role}
-            onCreateAccount={handleCreateAccount}
-            onOpenChargeDialog={handleDepositCharge}
-          />
-        )}
-        {tabValue === 2 && (
           <DepositHistoryTab
             loading={depositHistoryLoading}
             error={depositHistoryError}
             history={depositHistory}
+            balanceInfo={depositInfo}
+            balanceLoading={depositInfoLoading}
+            balanceError={depositInfoError}
+            onOpenChargeDialog={handleDepositCharge}
+            onCreateAccount={handleCreateAccount}
           />
         )}
-        {tabValue === 3 && (
+        {tabValue === 2 && (
           <OrdersTab
             loading={ordersLoading}
             error={ordersError}
             sold={soldOrders}
             bought={boughtOrders}
+          />
+        )}
+        {tabValue === 3 && user?.role !== "USER" && (
+          <DepositSummaryTab
+            loading={sellerInfoLoading}
+            error={sellerInfoError}
+            sellerInfo={sellerInfo}
+            role={user?.role}
+            onCreateAccount={handleCreateAccount}
           />
         )}
         {tabValue === 4 && user?.role !== "USER" && (

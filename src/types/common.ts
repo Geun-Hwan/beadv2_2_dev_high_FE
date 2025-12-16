@@ -35,3 +35,18 @@ export interface PagedApiResponse<T> {
   numberOfElements: number;
   empty: boolean;
 }
+
+export interface FileInfo {
+  id: string;
+  fileName: string;
+  fileType: string;
+  filePath: string;
+  fileGroupId: string;
+  createdBy?: string;
+  createdAt?: string;
+}
+
+export interface FileGroup {
+  fileGroupId: string;
+  files: FileInfo[];
+}

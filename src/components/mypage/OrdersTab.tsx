@@ -12,7 +12,9 @@ import {
   Typography,
 } from "@mui/material";
 import React, { useMemo, useState } from "react";
-import type { OrderResponse } from "../../types/order";
+import { getOrderStatusLabel, type OrderResponse } from "../../types/order";
+import { Link as RouterLink } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext";
 
 type OrderFilter = "BOUGHT" | "SOLD";
 
@@ -29,6 +31,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
   sold,
   bought,
 }) => {
+  const { user } = useAuth();
   const [filter, setFilter] = useState<OrderFilter>("BOUGHT");
 
   const { label, list } = useMemo(() => {
@@ -70,7 +73,9 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
         sx={{ mb: 2 }}
       >
         <ToggleButton value="BOUGHT">구매 내역</ToggleButton>
-        <ToggleButton value="SOLD">판매 내역</ToggleButton>
+        {user?.role !== "USER" && (
+          <ToggleButton value="SOLD">판매 내역</ToggleButton>
+        )}
       </ToggleButtonGroup>
 
       {showSkeleton ? (
@@ -88,14 +93,20 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
           ))}
         </List>
       ) : list.length === 0 ? (
-        <Typography>
+        <Alert severity="info">
           {filter === "BOUGHT"
             ? "구매한 주문이 없습니다."
             : "판매한 주문이 없습니다."}
-        </Typography>
+        </Alert>
       ) : (
         <List>
           {list.map((order) => {
+            const depositAmount =
+              typeof order.depositAmount === "number" ? order.depositAmount : 0;
+            const finalPurchaseAmount =
+              typeof order.depositAmount === "number"
+                ? order.winningAmount - order.depositAmount
+                : null;
             const confirmDateLabel = order.confirmDate
               ? new Date(order.confirmDate).toLocaleString()
               : null;
@@ -105,23 +116,35 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
 
             return (
               <React.Fragment key={order.id}>
-                <ListItem>
+                <ListItem
+                  component={RouterLink}
+                  to={`/orders/${order.id}`}
+                  sx={{ cursor: "pointer" }}
+                >
                   <ListItemText
-                    primary={`낙찰가: ${order.winningAmount.toLocaleString()}원`}
+                    primary={order.productName ?? "주문"}
                     secondary={[
-                      `주문 ID: ${order.id} · 경매 ID: ${order.auctionId}`,
+                      filter === "BOUGHT"
+                        ? finalPurchaseAmount != null
+                          ? `최종 구매금액: ${finalPurchaseAmount.toLocaleString()}원`
+                          : `낙찰가: ${order.winningAmount.toLocaleString()}원`
+                        : `낙찰가: ${order.winningAmount.toLocaleString()}원`,
+                      typeof order.depositAmount === "number"
+                        ? `보증금: ${depositAmount.toLocaleString()}원`
+                        : undefined,
+                      `주문 ID: ${order.id}`,
                       confirmDateLabel
-                        ? `낙찰일: ${confirmDateLabel}`
+                        ? `주문일(낙찰확정): ${confirmDateLabel}`
                         : undefined,
                       payCompleteDateLabel
-                        ? `결제완료일: ${payCompleteDateLabel}`
+                        ? `구매완료일: ${payCompleteDateLabel}`
                         : undefined,
                     ]
                       .filter(Boolean)
                       .join(" · ")}
                   />
                   <Chip
-                    label={order.status}
+                    label={getOrderStatusLabel(order.status)}
                     size="small"
                     color="default"
                     sx={{ ml: 2 }}
