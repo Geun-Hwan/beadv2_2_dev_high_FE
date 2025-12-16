@@ -54,13 +54,15 @@ export const useStomp = ({ topic, onMessage }: UseStompProps) => {
   }, []);
 
   const connect = useCallback(() => {
+    // 개발(로컬) 환경에서는 로컬 백엔드로 직접 연결,
+    // 배포(Vercel) 환경에서는 동일 출처 경로(/ws-auction)로 연결해서 프록시를 탄다.
+    const WS_URL =
+      import.meta.env.MODE === "development"
+        ? "http://localhost:8000/ws-auction"
+        : "/ws-auction";
+
     const client = new Client({
-      webSocketFactory: () =>
-        new SockJS(
-          `${
-            import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"
-          }/ws-auction`
-        ),
+      webSocketFactory: () => new SockJS(WS_URL),
       reconnectDelay: 0, // 직접 재연결 로직 사용
       heartbeatIncoming: 10000, // 운영용으로 10초 복원
       heartbeatOutgoing: 10000, // 운영용으로 10초 복원

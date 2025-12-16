@@ -2,11 +2,13 @@ import axios from "axios";
 import { updateAccessTokenOutsideReact } from "../contexts/AuthContext";
 import type { ApiResponseDto } from "../types/common";
 
-// API 서버의 기본 URL을 설정합니다.
-// 환경 변수를 통해 관리하는 것이 이상적이지만, 우선은 하드코딩합니다.
-// 예: http://localhost:8080/api
+// API 서버의 기본 URL
+// - 로컬 개발: VITE_API_BASE_URL 미설정 시 http://localhost:8000/api/v1 사용
+// - Vercel 배포: VITE_API_BASE_URL=/api/v1 로 설정 (프록시 경로)
 const API_BASE_URL =
-  (import.meta.env.VITE_API_BASE_URL || "http://localhost:8000") + "/api/v1";
+  import.meta.env.MODE === "development"
+    ? "http://localhost:8000/api/v1"
+    : (import.meta.env.VITE_API_BASE_URL as string | undefined) || "/api/v1";
 
 /**
  * 기본 axios 인스턴스입니다.

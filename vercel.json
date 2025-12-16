@@ -1,3 +1,20 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/" }]
+  "rewrites": [
+    {
+      "source": "/api/v1/(.*)",
+      "destination": "/api/proxy/$1"
+    },
+    {
+      "source": "/ws-auction",
+      "destination": "/api/ws-proxy"
+    },
+    {
+      "source": "/ws-auction/(.*)",
+      "destination": "/api/ws-proxy/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/"
+    }
+  ]
 }
