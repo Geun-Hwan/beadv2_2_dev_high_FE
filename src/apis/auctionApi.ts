@@ -9,6 +9,7 @@ import type {
   PagedAuctionResponse,
   PagedBidHistoryResponse,
 } from "../types/auction";
+import type { PagedAuctionDocument } from "../types/search";
 import type { AuctionBidMessage } from "../types/auction"; // Auction 타입 임포트
 import type { ApiResponseDto } from "../types/common";
 import { client } from "./client";
@@ -127,5 +128,34 @@ export const auctionApi = {
     }); // 예시 API 엔드포인트
 
     return response.data;
+  },
+
+  /**
+   * 엘라스틱서치 기반 경매/상품 검색
+   * 컨트롤러 시그니처:
+   *   @GetMapping()
+   *   public ApiResponseDto<Page<AuctionDocument>> searchProductDocument(
+   *       @RequestParam(defaultValue = "") String keyword,
+   *       @RequestParam(defaultValue = "") List<String> categories,
+   *       @RequestParam(defaultValue = "") String status,
+   *       Pageable pageable
+   *   )
+   *
+   * 실제 엔드포인트 경로는 백엔드 컨트롤러의 @RequestMapping에 맞춰 수정해 주세요.
+   * 여기서는 예시로 /auctions/search를 사용합니다.
+   */
+  searchAuctions: async (params: {
+    keyword?: string;
+    categories?: string[];
+    status?: string;
+    page?: number;
+    size?: number;
+  }): Promise<ApiResponseDto<PagedAuctionDocument>> => {
+    const res = await client.get("/search", {
+      params,
+      paramsSerializer: (params) =>
+        qs.stringify(params, { arrayFormat: "repeat" }),
+    });
+    return res.data;
   },
 };

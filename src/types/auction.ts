@@ -1,4 +1,4 @@
-import type { PagedApiResponse, SortOrder } from "./common";
+import type { PagedApiResponse } from "./common";
 
 /**
  * 경매 상태 (백엔드 enum과 동일)
@@ -22,7 +22,7 @@ export interface AuctionQueryParams {
   status?: AuctionStatus[];
   page?: number; // 0부터 시작
   size?: number; // 한 페이지당 데이터 수
-  sort?: SortOrder[];
+  sort?: string[];
   search?: string;
 }
 

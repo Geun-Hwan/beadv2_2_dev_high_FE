@@ -1,4 +1,5 @@
 import {
+  Alert,
   Box,
   Button,
   Container,
@@ -17,9 +18,11 @@ const PendingOrders: React.FC = () => {
   const [orders, setOrders] = useState<OrderResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const loadPendingOrders = async () => {
     setLoading(true);
+    setError(null);
     try {
       const res = await orderApi.getBoughtOrders();
       const list = Array.isArray(res.data) ? res.data : [];
@@ -27,6 +30,7 @@ const PendingOrders: React.FC = () => {
       setOrders(list.filter((o) => o.status === OrderStatus.UNPAID));
     } catch (err) {
       console.error("결제 대기 주문 조회 실패:", err);
+      setError("결제 대기 주문을 불러오는 데 실패했습니다.");
     } finally {
       setLoading(false);
     }
@@ -55,14 +59,16 @@ const PendingOrders: React.FC = () => {
   return (
     <Container maxWidth="md">
       <Box sx={{ my: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
+        <Typography variant="h4" sx={{ mb: 2 }}>
           결제 대기 주문서 (Pending Orders)
         </Typography>
-        <Paper sx={{ mt: 3, p: 2 }}>
+        <Paper sx={{ p: 2 }}>
           {loading ? (
             <Typography>로딩 중...</Typography>
+          ) : error ? (
+            <Alert severity="error">{error}</Alert>
           ) : orders.length === 0 ? (
-            <Typography>결제 대기 중인 주문이 없습니다.</Typography>
+            <Alert severity="info">결제 대기 중인 주문이 없습니다.</Alert>
           ) : (
             <List>
               {orders.map((order) => (
@@ -82,7 +88,9 @@ const PendingOrders: React.FC = () => {
                   }
                 >
                   <ListItemText
-                    primary={`주문 ID: ${order.id} - ${order.winningAmount.toLocaleString()}원`}
+                    primary={`주문 ID: ${
+                      order.id
+                    } - ${order.winningAmount.toLocaleString()}원`}
                     secondary={format(
                       new Date(order.createdAt),
                       "yyyy-MM-dd HH:mm"

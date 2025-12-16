@@ -65,10 +65,10 @@ client.interceptors.response.use(
           originalRequest.headers["Authorization"] = `Bearer ${newToken}`;
           return client(originalRequest); // 재시도
         } else {
+          // 리프레시 토큰으로도 재발급 실패 -> 실제 로그아웃 처리
+          // 세션 만료 플래그를 남겨서 AuthContext에서 한 번만 안내를 띄운다.
+          localStorage.setItem("sessionExpired", "true");
           updateAccessTokenOutsideReact(null); // 상태 갱신
-          localStorage.removeItem("refreshToken");
-          localStorage.removeItem("user");
-          // alert("로그아웃 되었습니다.");
 
           throw new Error("토큰 재발급 실패");
         }

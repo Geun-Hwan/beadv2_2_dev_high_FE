@@ -23,7 +23,7 @@ const Footer: React.FC = () => {
           spacing={1}
         >
           <Typography variant="body2" color="text.secondary">
-            © {new Date().getFullYear()} Shrimp Project. All rights reserved.
+            © {new Date().getFullYear()} More Project. All rights reserved.
           </Typography>
           <Stack direction="row" spacing={3}>
             <Link

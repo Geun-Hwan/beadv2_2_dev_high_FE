@@ -16,6 +16,7 @@ import {
   FormGroup,
   FormLabel,
   Paper,
+  Skeleton,
   TextField,
   Typography,
 } from "@mui/material";
@@ -46,6 +47,8 @@ import {
   setMinutes,
   setSeconds,
 } from "date-fns";
+import { Link as RouterLink } from "react-router-dom";
+
 import { ko } from "date-fns/locale";
 
 interface ProductAuctionFormData {
@@ -80,6 +83,7 @@ const ProductRegistration: React.FC = () => {
   const [fileId, setFileId] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMessage, setDialogMessage] = useState("");
@@ -87,11 +91,14 @@ const ProductRegistration: React.FC = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
+        setCategoriesLoading(true);
         const response = await categoryApi.getCategories();
         setAllCategories(response.data);
       } catch (err) {
         console.error("카테고리 목록 로딩 실패:", err);
         setError("카테고리 목록을 불러오는 데 실패했습니다.");
+      } finally {
+        setCategoriesLoading(false);
       }
     };
 
@@ -384,10 +391,18 @@ const ProductRegistration: React.FC = () => {
         <Typography variant="h4" sx={{ my: 4 }}>
           상품 및 경매 등록
         </Typography>
-        <Alert severity="error">
+        <Alert severity="error" sx={{ mb: 2 }}>
           상품과 경매를 등록할 권한이 없습니다. 판매자 또는 관리자만 등록할 수
           있습니다.
         </Alert>
+        <Button
+          variant="contained"
+          color="primary"
+          component={RouterLink}
+          to="/seller/register"
+        >
+          판매자 등록하러 가기
+        </Button>
       </Container>
     );
   }
@@ -451,19 +466,27 @@ const ProductRegistration: React.FC = () => {
           <FormControl component="fieldset" margin="normal" fullWidth>
             <FormLabel component="legend">카테고리</FormLabel>
             <FormGroup row>
-              {allCategories?.map((category) => (
-                <FormControlLabel
-                  key={category.id}
-                  control={
-                    <Checkbox
-                      onChange={handleCategoryChange}
-                      name={category.id}
-                      checked={selectedCategoryIds.includes(category.id)}
+              {categoriesLoading && allCategories.length === 0
+                ? Array.from({ length: 6 }).map((_, idx) => (
+                    <FormControlLabel
+                      key={idx}
+                      control={<Checkbox disabled />}
+                      label={<Skeleton width={80} />}
                     />
-                  }
-                  label={category.categoryName}
-                />
-              ))}
+                  ))
+                : allCategories?.map((category) => (
+                    <FormControlLabel
+                      key={category.id}
+                      control={
+                        <Checkbox
+                          onChange={handleCategoryChange}
+                          name={category.id}
+                          checked={selectedCategoryIds.includes(category.id)}
+                        />
+                      }
+                      label={category.categoryName}
+                    />
+                  ))}
             </FormGroup>
           </FormControl>
 
@@ -653,6 +676,7 @@ const ProductRegistration: React.FC = () => {
             variant="contained"
             sx={{ mt: 3, mb: 2, py: 1.5 }}
             disabled={loading}
+            loading={loading}
           >
             {loading ? (
               <CircularProgress size={24} />

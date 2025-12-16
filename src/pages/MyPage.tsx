@@ -1,5 +1,6 @@
 import { Box, Container, Tab, Tabs, Typography } from "@mui/material";
 import React, { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { depositApi } from "../apis/depositApi";
 import { orderApi } from "../apis/orderApi";
 import { settlementApi } from "../apis/settlementApi";
@@ -35,92 +36,141 @@ const MyPage: React.FC = () => {
   const [soldOrders, setSoldOrders] = useState<OrderResponse[]>([]);
   const [boughtOrders, setBoughtOrders] = useState<OrderResponse[]>([]);
   const [myProducts, setMyProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // 탭별 로딩/에러 상태 분리
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [depositSummaryLoading, setDepositSummaryLoading] = useState(false);
+  const [depositSummaryError, setDepositSummaryError] = useState<string | null>(
+    null
+  );
+  const [depositHistoryLoading, setDepositHistoryLoading] = useState(false);
+  const [depositHistoryError, setDepositHistoryError] = useState<
+    string | null
+  >(null);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersError, setOrdersError] = useState<string | null>(null);
+  const [settlementLoading, setSettlementLoading] = useState(false);
+  const [settlementError, setSettlementError] = useState<string | null>(null);
+  const [myProductsLoading, setMyProductsLoading] = useState(false);
+  const [myProductsError, setMyProductsError] = useState<string | null>(null);
+
+  // 예치금 충전용 로딩
+  const [chargeLoading, setChargeLoading] = useState(false);
   const [openChargeDialog, setOpenChargeDialog] = useState(false); // 다이얼로그 오픈 상태
   const [chargeAmount, setChargeAmount] = useState<string>(""); // 충전 금액 입력 상태
   const [chargeError, setChargeError] = useState<string | null>(null); // 충전 금액 유효성 에러
 
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // 탭별 최초 로딩 여부 (한 번 불러온 데이터는 다시 탭을 눌렀을 때 재사용)
+  const [profileLoaded, setProfileLoaded] = useState(false);
+  const [depositSummaryLoaded, setDepositSummaryLoaded] = useState(false);
+  const [depositHistoryLoaded, setDepositHistoryLoaded] = useState(false);
+  const [ordersLoaded, setOrdersLoaded] = useState(false);
+  const [settlementLoaded, setSettlementLoaded] = useState(false);
+  const [myProductsLoaded, setMyProductsLoaded] = useState(false);
+
   const params = new URLSearchParams(location.search);
-  const initialTab = params.get("tab") ? Number(params.get("tab")) : 0;
+  const initialTabParam = params.get("tab");
+  const initialTab = initialTabParam ? Number(initialTabParam) : 0;
   const [tabValue, setTabValue] = useState(initialTab);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
+    const newParams = new URLSearchParams(location.search);
+    newParams.set("tab", String(newValue));
+    navigate(`/mypage?${newParams.toString()}`, { replace: true });
   };
 
   useEffect(() => {
-    if (tabValue === 0) {
+    if (tabValue === 0 && !profileLoaded) {
       loadUserProfile();
     }
 
-    if (tabValue === 1) {
+    if (tabValue === 1 && !depositSummaryLoaded) {
       // 예치금 탭
       loadDepositInfo();
       if (user?.role !== UserRole.USER) {
         loadSellerInfo();
       }
-    } else if (tabValue === 2) {
+    } else if (tabValue === 2 && !depositHistoryLoaded) {
       // 충전 내역 탭
       loadDepositHistory();
-    } else if (tabValue === 3) {
+    } else if (tabValue === 3 && !ordersLoaded) {
       // 주문 내역 탭
       loadOrderHistory();
-    } else if (tabValue === 4 && user?.role !== UserRole.USER) {
+    } else if (
+      tabValue === 4 &&
+      user?.role !== UserRole.USER &&
+      !settlementLoaded
+    ) {
       // 정산 내역 탭
       loadSettlementHistory();
-    } else if (tabValue === 5 && user?.role !== UserRole.USER) {
+    } else if (
+      tabValue === 5 &&
+      user?.role !== UserRole.USER &&
+      !myProductsLoaded
+    ) {
       // 내 상품 탭
       loadMyProducts();
     }
-  }, [tabValue, user]);
+  }, [
+    tabValue,
+    user,
+    profileLoaded,
+    depositSummaryLoaded,
+    depositHistoryLoaded,
+    ordersLoaded,
+    settlementLoaded,
+    myProductsLoaded,
+  ]);
 
   const loadUserProfile = async () => {
-    setLoading(true);
-    setError(null);
+    setProfileLoading(true);
+    setProfileError(null);
     try {
       const data = await userApi.getMe();
 
       setUserInfo(data.data);
     } catch (err: any) {
-      setError("유저 정보를 불러오는데 실패했습니다.");
+      setProfileError("유저 정보를 불러오는데 실패했습니다.");
       console.error("유저 조회 실패:", err);
     } finally {
-      setLoading(false);
+      setProfileLoading(false);
+      setProfileLoaded(true);
     }
   };
 
   const loadSellerInfo = async () => {
-    setLoading(true);
-    setError(null);
+    setDepositSummaryLoading(true);
     try {
       const res = await userApi.getSellerInfo();
       setSellerInfo(res.data);
     } catch (err: any) {
-      // setError("계좌 정보를 불러오는데 실패했습니다.");
       console.error("계좌 조회 실패:", err);
     } finally {
-      setLoading(false);
+      setDepositSummaryLoading(false);
     }
   };
 
   const loadDepositInfo = async () => {
-    setLoading(true);
-    setError(null);
+    setDepositSummaryLoading(true);
+    setDepositSummaryError(null);
     try {
       const data = await depositApi.getAccount();
       setDepositInfo(data);
     } catch (err: any) {
-      // setError("예치금 정보를 불러오는데 실패했습니다.");
       console.error("예치금 조회 실패:", err);
     } finally {
-      setLoading(false);
+      setDepositSummaryLoading(false);
+      setDepositSummaryLoaded(true);
     }
   };
 
   const loadSettlementHistory = async () => {
-    setLoading(true);
-    setError(null);
+    setSettlementLoading(true);
+    setSettlementError(null);
     try {
       if (!user?.userId) {
         setSettlementHistory([]);
@@ -129,30 +179,32 @@ const MyPage: React.FC = () => {
       const res = await settlementApi.getSettlementHistory();
       setSettlementHistory(res.data);
     } catch (err: any) {
-      setError("정산 내역을 불러오는데 실패했습니다.");
+      setSettlementError("정산 내역을 불러오는데 실패했습니다.");
       console.error("정산 내역 조회 실패:", err);
     } finally {
-      setLoading(false);
+      setSettlementLoading(false);
+      setSettlementLoaded(true);
     }
   };
 
   const loadMyProducts = async () => {
-    setLoading(true);
-    setError(null);
+    setMyProductsLoading(true);
+    setMyProductsError(null);
     try {
       const response = await productApi.getMyProducts();
       setMyProducts(response.data);
     } catch (err: any) {
-      setError("내 상품 정보를 불러오는데 실패했습니다.");
+      setMyProductsError("내 상품 정보를 불러오는데 실패했습니다.");
       console.error("내 상품 조회 실패:", err);
     } finally {
-      setLoading(false);
+      setMyProductsLoading(false);
+      setMyProductsLoaded(true);
     }
   };
 
   const loadDepositHistory = async () => {
-    setLoading(true);
-    setError(null);
+    setDepositHistoryLoading(true);
+    setDepositHistoryError(null);
     try {
       const page = await depositApi.getDepositHistories({
         page: 0,
@@ -163,9 +215,10 @@ const MyPage: React.FC = () => {
       setDepositHistory(content);
     } catch (err: any) {
       console.error("충전 내역 조회 실패:", err);
-      setError("충전 내역을 불러오는데 실패했습니다.");
+      setDepositHistoryError("충전 내역을 불러오는데 실패했습니다.");
     } finally {
-      setLoading(false);
+      setDepositHistoryLoading(false);
+      setDepositHistoryLoaded(true);
     }
   };
 
@@ -190,7 +243,7 @@ const MyPage: React.FC = () => {
     }
   };
   const handleChargeSubmit = async () => {
-    if (loading) return;
+    if (chargeLoading) return;
     const amount = parseInt(chargeAmount, 10);
 
     if (isNaN(amount) || amount <= 0) {
@@ -198,14 +251,14 @@ const MyPage: React.FC = () => {
       return;
     }
 
-    setLoading(true);
+    setChargeLoading(true);
     setChargeError(null);
 
     try {
       const depositOrder = await depositApi.createDepositOrder(amount);
 
       if (depositOrder && depositOrder.orderId) {
-        requestTossPayment(depositOrder.orderId, depositOrder.amount);
+        requestTossPayment("DOR00000039", depositOrder.amount);
         handleCloseChargeDialog();
       } else {
         setChargeError("주문 생성에 실패했습니다.");
@@ -214,13 +267,13 @@ const MyPage: React.FC = () => {
       console.error("예치금 충전 주문 생성 실패:", err);
       setChargeError("예치금 충전 주문 생성 중 오류가 발생했습니다.");
     } finally {
-      setLoading(false);
+      setChargeLoading(false);
     }
   };
 
   const loadOrderHistory = async () => {
-    setLoading(true);
-    setError(null);
+    setOrdersLoading(true);
+    setOrdersError(null);
     try {
       const [soldRes, boughtRes] = await Promise.all([
         orderApi.getSoldOrders(),
@@ -230,9 +283,10 @@ const MyPage: React.FC = () => {
       setBoughtOrders(Array.isArray(boughtRes.data) ? boughtRes.data : []);
     } catch (err: any) {
       console.error("주문 내역 조회 실패:", err);
-      setError("주문 내역을 불러오는데 실패했습니다.");
+      setOrdersError("주문 내역을 불러오는데 실패했습니다.");
     } finally {
-      setLoading(false);
+      setOrdersLoading(false);
+      setOrdersLoaded(true);
     }
   };
 
@@ -255,8 +309,8 @@ const MyPage: React.FC = () => {
         {tabValue === 0 && <ProfileTab userInfo={userInfo} role={user?.role} />}
         {tabValue === 1 && (
           <DepositSummaryTab
-            loading={loading}
-            error={error}
+            loading={depositSummaryLoading}
+            error={depositSummaryError}
             depositInfo={depositInfo}
             sellerInfo={sellerInfo}
             role={user?.role}
@@ -266,30 +320,30 @@ const MyPage: React.FC = () => {
         )}
         {tabValue === 2 && (
           <DepositHistoryTab
-            loading={loading}
-            error={error}
+            loading={depositHistoryLoading}
+            error={depositHistoryError}
             history={depositHistory}
           />
         )}
         {tabValue === 3 && (
           <OrdersTab
-            loading={loading}
-            error={error}
+            loading={ordersLoading}
+            error={ordersError}
             sold={soldOrders}
             bought={boughtOrders}
           />
         )}
         {tabValue === 4 && user?.role !== "USER" && (
           <SettlementTab
-            loading={loading}
-            error={error}
+            loading={settlementLoading}
+            error={settlementError}
             settlementHistory={settlementHistory}
           />
         )}
         {tabValue === 5 && user?.role !== "USER" && (
           <MyProductsTab
-            loading={loading}
-            error={error}
+            loading={myProductsLoading}
+            error={myProductsError}
             products={myProducts}
           />
         )}
@@ -298,7 +352,7 @@ const MyPage: React.FC = () => {
       {/* 예치금 충전 다이얼로그 */}
       <DepositChargeDialog
         open={openChargeDialog}
-        loading={loading}
+        loading={chargeLoading}
         amount={chargeAmount}
         errorText={chargeError}
         onChangeAmount={setChargeAmount}

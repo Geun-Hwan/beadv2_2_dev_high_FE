@@ -35,8 +35,3 @@ export interface PagedApiResponse<T> {
   numberOfElements: number;
   empty: boolean;
 }
-
-export interface SortOrder {
-  property: string; // 정렬할 필드
-  direction?: "ASC" | "DESC";
-}

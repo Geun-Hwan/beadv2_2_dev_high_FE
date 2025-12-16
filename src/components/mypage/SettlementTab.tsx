@@ -1,6 +1,6 @@
 import {
   Alert,
-  CircularProgress,
+  Skeleton,
   Divider,
   List,
   ListItem,
@@ -22,38 +22,58 @@ export const SettlementTab: React.FC<SettlementTabProps> = ({
   error,
   settlementHistory,
 }) => {
+  const showSkeleton = loading && !error && settlementHistory.length === 0;
+
+  // 에러가 있는 경우에는 목록 대신 에러만 표시
+  if (error) {
+    return (
+      <Paper sx={{ p: 2 }}>
+        <Typography variant="h6" sx={{ mb: 2 }}>
+          정산 내역
+        </Typography>
+        <Alert severity="error">{error}</Alert>
+      </Paper>
+    );
+  }
+
   return (
     <Paper sx={{ p: 2 }}>
-          {loading ? (
-            <CircularProgress />
-          ) : error ? (
-            <Alert severity="error">{error}</Alert>
-          ) : (
-            <>
-              <Typography variant="h6" sx={{ mb: 2 }}>
-                정산 내역
-              </Typography>
-              {settlementHistory.length === 0 ? (
-                <Typography>정산 내역이 없습니다.</Typography>
-              ) : (
-                <List>
-                  {settlementHistory.map((item) => (
-                    <React.Fragment key={item.id}>
-                      <ListItem>
-                        <ListItemText
-                          primary={`${item.dueDate?.slice(
-                            0,
-                            10
-                          )} - 주문 ID: ${item.orderId}`}
-                          secondary={`낙찰가: ${item.winningAmount.toLocaleString()}원 | 수수료: ${item.charge.toLocaleString()}원 | 정산금: ${item.finalAmount.toLocaleString()}원`}
-                        />
-                      </ListItem>
-                      <Divider />
-                    </React.Fragment>
-                  ))}
-            </List>
-          )}
-        </>
+      <Typography variant="h6" sx={{ mb: 2 }}>
+        정산 내역
+      </Typography>
+      {showSkeleton ? (
+        <List>
+          {Array.from({ length: 3 }).map((_, idx) => (
+            <React.Fragment key={idx}>
+              <ListItem>
+                <ListItemText
+                  primary={<Skeleton width="50%" />}
+                  secondary={<Skeleton width="80%" />}
+                />
+              </ListItem>
+              <Divider />
+            </React.Fragment>
+          ))}
+        </List>
+      ) : settlementHistory.length === 0 ? (
+        <Alert severity="info">정산 내역이 없습니다.</Alert>
+      ) : (
+        <List>
+          {settlementHistory.map((item) => (
+            <React.Fragment key={item.id}>
+              <ListItem>
+                <ListItemText
+                  primary={`${item.dueDate?.slice(
+                    0,
+                    10
+                  )} - 주문 ID: ${item.orderId}`}
+                  secondary={`낙찰가: ${item.winningAmount.toLocaleString()}원 | 수수료: ${item.charge.toLocaleString()}원 | 정산금: ${item.finalAmount.toLocaleString()}원`}
+                />
+              </ListItem>
+              <Divider />
+            </React.Fragment>
+          ))}
+        </List>
       )}
     </Paper>
   );

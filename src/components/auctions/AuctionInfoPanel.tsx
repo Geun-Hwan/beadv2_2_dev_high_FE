@@ -1,5 +1,6 @@
 import { Box, Button, Chip, Stack } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
+import { getCommonStatusText } from "../../utils/statusText";
 
 interface AuctionInfoPanelProps {
   productName: string; // is not used
@@ -24,7 +25,7 @@ const AuctionInfoPanel: React.FC<AuctionInfoPanelProps> = ({
       <Stack direction="row" justifyContent="space-between" alignItems="center">
         <Stack direction="row" spacing={1}>
           <Chip
-            label={status}
+            label={getCommonStatusText(status)}
             color={isAuctionInProgress ? "success" : "default"}
             size="small"
           />

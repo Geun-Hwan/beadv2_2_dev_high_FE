@@ -3,13 +3,10 @@ import {
   Container,
   Typography,
   Paper,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemButton,
-  Divider,
   Chip,
   Box,
+  Skeleton,
+  Alert,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -66,81 +63,96 @@ const Notifications: React.FC = () => {
     return d.toLocaleString();
   };
 
+  const showSkeleton = loading && notifications.length === 0 && !error;
+
   return (
     <Container maxWidth="md">
-      <Typography variant="h4" sx={{ my: 4 }}>
-        알림
-      </Typography>
-      <Paper>
-        <List>
-          {loading && (
-            <ListItem>
-              <ListItemText primary="알림을 불러오는 중입니다..." />
-            </ListItem>
+      <Box sx={{ my: 4 }}>
+        <Typography variant="h4" sx={{ mb: 2 }}>
+          알림
+        </Typography>
+        <Paper sx={{ p: 2 }}>
+          {!showSkeleton && error && (
+            <Alert severity="error" sx={{ width: "100%" }}>
+              {error}
+            </Alert>
           )}
-          {!loading && error && (
-            <ListItem>
-              <ListItemText primary={error} />
-            </ListItem>
+          {!showSkeleton && !error && notifications.length === 0 && (
+            <Alert severity="info" sx={{ width: "100%" }}>
+              새로운 알림이 없습니다.
+            </Alert>
           )}
-          {!loading && !error && notifications.length === 0 && (
-            <ListItem>
-              <ListItemText primary="새로운 알림이 없습니다." />
-            </ListItem>
-          )}
-          {!loading &&
+          {showSkeleton &&
+            Array.from({ length: 4 }).map((_, idx) => (
+              <Box
+                key={idx}
+                sx={{
+                  p: 1.5,
+                  borderRadius: 2,
+                  mb: 2,
+                  bgcolor: "action.hover",
+                }}
+              >
+                <Skeleton width="70%" />
+                <Skeleton width="90%" />
+              </Box>
+            ))}
+
+          {!showSkeleton &&
             !error &&
             notifications.map((notification, index) => (
-              <React.Fragment key={notification.id ?? index}>
-                <ListItemButton
-                  onClick={() => handleClickNotification(notification)}
-                  alignItems="flex-start"
-                  sx={{
-                    backgroundColor: notification.readYn
-                      ? "transparent"
-                      : "action.hover",
-                  }}
+              <Box
+                key={notification.id ?? index}
+                onClick={() => handleClickNotification(notification)}
+                sx={{
+                  p: 1.5,
+                  borderRadius: 2,
+                  mb: 2,
+                  cursor: notification.relatedUrl ? "pointer" : "default",
+                  bgcolor: notification.readYn
+                    ? "background.paper"
+                    : "action.hover",
+                  transition: "background-color 0.15s ease",
+                  "&:hover": {
+                    bgcolor: notification.readYn
+                      ? "action.hover"
+                      : "action.selected",
+                  },
+                }}
+              >
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="space-between"
+                  sx={{ mb: 0.5 }}
                 >
-                  <ListItemText
-                    primary={
-                      <Box
-                        display="flex"
-                        alignItems="center"
-                        justifyContent="space-between"
-                      >
-                        <Box display="flex" alignItems="center" gap={1}>
-                          {!notification.readYn && (
-                            <Chip
-                              label="NEW"
-                              color="primary"
-                              size="small"
-                              sx={{ mr: 1 }}
-                            />
-                          )}
-                          <Typography
-                            variant="subtitle1"
-                            fontWeight={notification.readYn ? 400 : 600}
-                          >
-                            {notification.title}
-                          </Typography>
-                        </Box>
-                        <Typography variant="caption" color="text.secondary">
-                          {formatDateTime(notification.createdAt)}
-                        </Typography>
-                      </Box>
-                    }
-                    secondary={
-                      <Typography variant="body2" color="text.secondary">
-                        {notification.content}
-                      </Typography>
-                    }
-                  />
-                </ListItemButton>
-                {index < notifications.length - 1 && <Divider component="li" />}
-              </React.Fragment>
+                  <Box display="flex" alignItems="center" gap={1}>
+                    {!notification.readYn && (
+                      <Chip
+                        label="NEW"
+                        color="primary"
+                        size="small"
+                        sx={{ mr: 0.5 }}
+                      />
+                    )}
+                    <Typography
+                      variant="subtitle1"
+                      fontWeight={notification.readYn ? 400 : 600}
+                    >
+                      {notification.title}
+                    </Typography>
+                  </Box>
+                  <Typography variant="caption" color="text.secondary">
+                    {formatDateTime(notification.createdAt)}
+                  </Typography>
+                </Box>
+                <Typography variant="body2" color="text.secondary">
+                  {notification.content}
+                </Typography>
+              </Box>
             ))}
-        </List>
-      </Paper>
+        </Paper>
+      </Box>
     </Container>
   );
 };

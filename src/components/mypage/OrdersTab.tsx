@@ -1,7 +1,7 @@
 import {
   Alert,
   Chip,
-  CircularProgress,
+  Skeleton,
   Divider,
   List,
   ListItem,
@@ -38,80 +38,100 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
     return { label: "구매 내역", list: bought };
   }, [filter, bought, sold]);
 
+  const showSkeleton = loading && !error && list.length === 0;
+
+  // 에러가 있는 경우에는 목록 대신 에러만 표시
+  if (error) {
+    return (
+      <Paper sx={{ p: 2 }}>
+        <Typography variant="h6" sx={{ mb: 2 }}>
+          주문 내역
+        </Typography>
+        <Alert severity="error">{error}</Alert>
+      </Paper>
+    );
+  }
+
   return (
     <Paper sx={{ p: 2 }}>
-      {loading ? (
-        <CircularProgress />
-      ) : error ? (
-        <Alert severity="error">{error}</Alert>
+      <Typography variant="h6" sx={{ mb: 2 }}>
+        주문 내역
+      </Typography>
+
+      <ToggleButtonGroup
+        size="small"
+        color="primary"
+        value={filter}
+        exclusive
+        onChange={(_, v: OrderFilter | null) => {
+          if (!v) return;
+          setFilter(v);
+        }}
+        sx={{ mb: 2 }}
+      >
+        <ToggleButton value="BOUGHT">구매 내역</ToggleButton>
+        <ToggleButton value="SOLD">판매 내역</ToggleButton>
+      </ToggleButtonGroup>
+
+      {showSkeleton ? (
+        <List>
+          {Array.from({ length: 3 }).map((_, idx) => (
+            <React.Fragment key={idx}>
+              <ListItem>
+                <ListItemText
+                  primary={<Skeleton width="60%" />}
+                  secondary={<Skeleton width="80%" />}
+                />
+              </ListItem>
+              <Divider />
+            </React.Fragment>
+          ))}
+        </List>
+      ) : list.length === 0 ? (
+        <Typography>
+          {filter === "BOUGHT"
+            ? "구매한 주문이 없습니다."
+            : "판매한 주문이 없습니다."}
+        </Typography>
       ) : (
-        <>
-          <Typography variant="h6" sx={{ mb: 2 }}>
-            주문 내역
-          </Typography>
+        <List>
+          {list.map((order) => {
+            const confirmDateLabel = order.confirmDate
+              ? new Date(order.confirmDate).toLocaleString()
+              : null;
+            const payCompleteDateLabel = order.payCompleteDate
+              ? new Date(order.payCompleteDate).toLocaleString()
+              : null;
 
-          <ToggleButtonGroup
-            size="small"
-            color="primary"
-            value={filter}
-            exclusive
-            onChange={(_, v: OrderFilter | null) => {
-              if (!v) return;
-              setFilter(v);
-            }}
-            sx={{ mb: 2 }}
-          >
-            <ToggleButton value="BOUGHT">구매 내역</ToggleButton>
-            <ToggleButton value="SOLD">판매 내역</ToggleButton>
-          </ToggleButtonGroup>
-
-          {list.length === 0 ? (
-            <Typography>
-              {filter === "BOUGHT"
-                ? "구매한 주문이 없습니다."
-                : "판매한 주문이 없습니다."}
-            </Typography>
-          ) : (
-            <List>
-              {list.map((order) => {
-                const confirmDateLabel = order.confirmDate
-                  ? new Date(order.confirmDate).toLocaleString()
-                  : null;
-                const payCompleteDateLabel = order.payCompleteDate
-                  ? new Date(order.payCompleteDate).toLocaleString()
-                  : null;
-
-                return (
-                  <React.Fragment key={order.id}>
-                    <ListItem>
-                      <ListItemText
-                        primary={`낙찰가: ${order.winningAmount.toLocaleString()}원`}
-                        secondary={[
-                          `주문 ID: ${order.id} · 경매 ID: ${order.auctionId}`,
-                          confirmDateLabel
-                            ? `낙찰일: ${confirmDateLabel}`
-                            : undefined,
-                          payCompleteDateLabel
-                            ? `결제완료일: ${payCompleteDateLabel}`
-                            : undefined,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      />
-                      <Chip
-                        label={order.status}
-                        size="small"
-                        color="default"
-                        sx={{ ml: 2 }}
-                      />
-                    </ListItem>
-                    <Divider />
-                  </React.Fragment>
-                );
-              })}
-            </List>
-          )}
-        </>
+            return (
+              <React.Fragment key={order.id}>
+                <ListItem>
+                  <ListItemText
+                    primary={`낙찰가: ${order.winningAmount.toLocaleString()}원`}
+                    secondary={[
+                      `주문 ID: ${order.id} · 경매 ID: ${order.auctionId}`,
+                      confirmDateLabel
+                        ? `낙찰일: ${confirmDateLabel}`
+                        : undefined,
+                      payCompleteDateLabel
+                        ? `결제완료일: ${payCompleteDateLabel}`
+                        : undefined,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  />
+                  <Chip
+                    label={order.status}
+                    size="small"
+                    color="default"
+                    sx={{ ml: 2 }}
+                  />
+                </ListItem>
+                <Divider />
+              </React.Fragment>
+            );
+          })}
+        </List>
       )}
     </Paper>
   );

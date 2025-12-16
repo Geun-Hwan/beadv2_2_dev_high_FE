@@ -1,4 +1,3 @@
-import { Search as SearchIcon } from "@mui/icons-material";
 import {
   Box,
   Card,
@@ -6,10 +5,11 @@ import {
   CardContent,
   CardMedia,
   Container,
-  InputAdornment,
   Pagination,
-  TextField,
   Typography,
+  Chip,
+  Stack,
+  Skeleton,
 } from "@mui/material";
 import React, { useEffect, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
@@ -19,6 +19,7 @@ import {
   type PagedProductResponse,
   type Product,
 } from "../types/product";
+import { getCommonStatusText } from "../utils/statusText";
 
 // 경매 목록 API 응답 타입 정의 (페이징 포함)
 const Products: React.FC = () => {
@@ -27,38 +28,30 @@ const Products: React.FC = () => {
   );
 
   const [page, setPage] = useState(1);
-  const [searchQuery, setSearchQuery] = useState("");
-
-  // 상품 상태를 사용자 친화적인 텍스트로 변환
-  const getProductStatusText = (status: ProductStatus) => {
-    switch (status) {
-      case ProductStatus.IN_PROGESS:
-        return "판매중";
-      case ProductStatus.READY:
-        return "판매대기";
-      case ProductStatus.COMPLETE:
-        return "판매완료";
-
-      default:
-        return "판매대기";
-    }
-  };
+  const [statusFilter, setStatusFilter] = useState<ProductStatus | "">("");
+   const [loading, setLoading] = useState(false);
+   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchProducts();
-  }, [page, searchQuery]);
+  }, [page, statusFilter]);
 
   const fetchProducts = async () => {
     try {
+      setLoading(true);
+      setError(null);
       const response = await productApi.getProducts({
         page: page - 1,
         size: 20,
-        search: searchQuery || undefined, // 검색어가 있을 때만 추가
+        status: statusFilter || undefined,
       });
 
       setProductData(response.data);
     } catch (error) {
       console.error(error);
+      setError("상품 목록을 불러오는데 실패했습니다.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -69,8 +62,8 @@ const Products: React.FC = () => {
     setPage(value);
   };
 
-  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(event.target.value);
+  const handleStatusChange = (value: ProductStatus | "") => {
+    setStatusFilter((prev) => (prev === value ? "" : value));
     setPage(1);
   };
 
@@ -101,25 +94,56 @@ const Products: React.FC = () => {
 
   return (
     <Container>
-      {/* 검색 바 */}
-      <Box sx={{ mb: 3 }}>
-        <TextField
-          fullWidth
-          variant="outlined"
-          placeholder="검색..."
-          value={searchQuery}
-          onChange={handleSearchChange}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-          }}
-        />
+      <Box sx={{ mt: 4, mb: 2 }}>
+        <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
+          전체 상품
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          상품 기준으로 최근 경매 정보(현재가/시작가)와 상태를 함께 볼 수 있습니다.
+        </Typography>
+      </Box>
+
+      {/* 상태 필터 */}
+      <Box sx={{ my: 3 }}>
+        <Stack direction="row" spacing={1}>
+          <Chip
+            label="전체"
+            clickable
+            color={statusFilter === "" ? "primary" : "default"}
+            onClick={() => handleStatusChange("")}
+          />
+          <Chip
+            label="진행중"
+            clickable
+            color={
+              statusFilter === ProductStatus.IN_PROGESS ? "primary" : "default"
+            }
+            onClick={() => handleStatusChange(ProductStatus.IN_PROGESS)}
+          />
+          <Chip
+            label="대기중"
+            clickable
+            color={statusFilter === ProductStatus.READY ? "primary" : "default"}
+            onClick={() => handleStatusChange(ProductStatus.READY)}
+          />
+          <Chip
+            label="종료"
+            clickable
+            color={
+              statusFilter === ProductStatus.COMPLETE ? "primary" : "default"
+            }
+            onClick={() => handleStatusChange(ProductStatus.COMPLETE)}
+          />
+        </Stack>
       </Box>
 
       <Box sx={{ mt: 3 }}>
+        {error && (
+          <Typography color="error" sx={{ mb: 2 }}>
+            {error}
+          </Typography>
+        )}
+
         <Box
           sx={{
             display: "grid",
@@ -132,7 +156,34 @@ const Products: React.FC = () => {
             gap: 4,
           }}
         >
-          {productData?.content?.map((product: Product, i) => (
+          {loading && (!productData || productData.content.length === 0)
+            ? // 로딩 중 + 데이터 아직 없을 때 카드 스켈레톤
+              Array.from({ length: 8 }).map((_, i) => (
+                <Card
+                  key={i}
+                  sx={{
+                    height: 360,
+                    borderRadius: 2,
+                    boxShadow: 1,
+                    overflow: "hidden",
+                  }}
+                >
+                  <Skeleton variant="rectangular" height={200} />
+                  <CardContent
+                    sx={{
+                      flex: 1,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 1,
+                    }}
+                  >
+                    <Skeleton variant="text" width="80%" />
+                    <Skeleton variant="text" width="60%" />
+                    <Skeleton variant="text" width="40%" />
+                  </CardContent>
+                </Card>
+              ))
+            : productData?.content?.map((product: Product, i) => (
             <Card
               key={product.id || i}
               sx={{
@@ -245,13 +296,13 @@ const Products: React.FC = () => {
                         textAlign: "right",
                       }}
                     >
-                      {getProductStatusText(product.status)}
+                      {getCommonStatusText(product.status)}
                     </Typography>
                   </Box>
                 </CardContent>
               </CardActionArea>
             </Card>
-          ))}
+            ))}
         </Box>
       </Box>
 

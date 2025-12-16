@@ -23,6 +23,7 @@ export interface ProductQueryParams {
   size?: number;
   status?: ProductStatus;
   search?: string;
+  sort?: string[];
   // 기타 필터링 옵션
 }
 

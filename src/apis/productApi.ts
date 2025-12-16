@@ -1,10 +1,10 @@
+import qs from "qs";
 import type { ApiResponseDto } from "../types/common";
 import type {
   PagedProductResponse,
   Product,
   ProductCreationRequest,
   ProductQueryParams,
-  ProductStatus,
   ProductUpdateRequest,
 } from "../types/product";
 import { client } from "./client";
@@ -23,7 +23,19 @@ export const productApi = {
     params?: ProductQueryParams
   ): Promise<ApiResponseDto<PagedProductResponse>> => {
     console.log("상품 목록 조회 API 호출:", params);
-    const response = await client.get("/products", { params });
+    const finalParams: ProductQueryParams = {
+      ...params,
+    };
+    // 정렬 정보가 없는 경우 기본값: createdAt 내림차순
+    if (!finalParams.sort) {
+      finalParams.sort = ["createdAt,DESC"];
+    }
+
+    const response = await client.get("/products", {
+      params: finalParams,
+      paramsSerializer: (params) =>
+        qs.stringify(params, { arrayFormat: "repeat" }),
+    });
     return response.data;
   },
 

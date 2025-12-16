@@ -9,7 +9,7 @@
       "destination": "/api/ws-proxy/$1"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!api).*)",
       "destination": "/"
     }
   ]

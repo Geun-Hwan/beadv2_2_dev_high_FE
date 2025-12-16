@@ -5,10 +5,10 @@ import {
   Card,
   CardContent,
   CardHeader,
-  CircularProgress,
   Container,
   Divider,
   Grid,
+  Skeleton,
   Stack,
 } from "@mui/material";
 import type { IMessage } from "@stomp/stompjs";
@@ -284,8 +284,66 @@ const AuctionDetail: React.FC = () => {
 
   if (loading)
     return (
-      <Container sx={{ textAlign: "center", mt: 5 }}>
-        <CircularProgress />
+      <Container
+        maxWidth={false}
+        sx={{
+          px: { xs: 2, md: 4 },
+          mt: 4,
+          mb: 4,
+        }}
+      >
+        <Grid container spacing={3} justifyContent={"center"}>
+          <Grid flex={0.3}>
+            <Stack spacing={3}>
+              <Card
+                sx={{
+                  height: "400px",
+                  display: "flex",
+                  flexDirection: "column",
+                  pb: 2,
+                }}
+              >
+                <CardHeader
+                  title={<Skeleton width="40%" />}
+                  sx={{ pb: 0 }}
+                />
+                <CardContent
+                  sx={{
+                    flex: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 1,
+                  }}
+                >
+                  <Skeleton variant="text" width="80%" />
+                  <Skeleton variant="text" width="70%" />
+                  <Skeleton variant="text" width="60%" />
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader
+                  title={<Skeleton width="30%" />}
+                  sx={{ pb: 0 }}
+                />
+                <CardContent>
+                  <Skeleton variant="text" width="60%" />
+                  <Skeleton variant="text" width="50%" />
+                </CardContent>
+              </Card>
+            </Stack>
+          </Grid>
+
+          <Card sx={{ flex: 0.3, height: "100%" }}>
+            <CardHeader title={<Skeleton width="40%" />} />
+            <CardContent>
+              <Stack spacing={2}>
+                <Skeleton variant="text" width="70%" />
+                <Skeleton variant="text" width="60%" />
+                <Skeleton variant="rectangular" height={160} />
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
       </Container>
     );
   if (error)

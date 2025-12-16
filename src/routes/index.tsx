@@ -16,6 +16,7 @@ import Wishlist from "../pages/Wishlist"; // 새로운 임포트
 import ProtectedRoute from "./ProtectedRoute";
 import PaymentSuccess from "../pages/payment/PaymentSuccess";
 import PaymentFail from "../pages/payment/PayementFail";
+import SearchPage from "../pages/Search";
 
 /**
  * React Router v6.4+의 createBrowserRouter를 사용한 라우터 설정입니다.
@@ -32,6 +33,10 @@ export const router = createBrowserRouter([
       {
         index: true,
         element: <Home />,
+      },
+      {
+        path: "search",
+        element: <SearchPage />,
       },
       {
         path: "login",

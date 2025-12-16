@@ -14,6 +14,7 @@ import {
   ListItem,
   ListItemText,
   Paper,
+  Skeleton,
   TextField,
   Typography,
 } from "@mui/material";
@@ -305,8 +306,35 @@ const AuctionRegistration: React.FC = () => {
 
   if (loading && !selectedProduct) {
     return (
-      <Container sx={{ textAlign: "center", mt: 5 }}>
-        <CircularProgress />
+      <Container maxWidth="md">
+        <Typography variant="h4" sx={{ my: 4 }}>
+          {isEditMode ? "경매 정보 수정" : "경매에 등록할 상품 선택"}
+        </Typography>
+        <Paper>
+          <List>
+            {Array.from({ length: 4 }).map((_, idx) => (
+              <React.Fragment key={idx}>
+                <ListItem
+                  secondaryAction={
+                    <Button variant="contained" disabled>
+                      <Skeleton
+                        variant="rounded"
+                        width={60}
+                        height={32}
+                      />
+                    </Button>
+                  }
+                >
+                  <ListItemText
+                    primary={<Skeleton width="60%" />}
+                    secondary={<Skeleton width="80%" />}
+                  />
+                </ListItem>
+                <Divider />
+              </React.Fragment>
+            ))}
+          </List>
+        </Paper>
       </Container>
     );
   }

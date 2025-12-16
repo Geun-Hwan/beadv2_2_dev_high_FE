@@ -6,9 +6,9 @@ import {
   CardContent,
   CardMedia,
   Chip,
-  CircularProgress,
   Container,
   IconButton,
+  Skeleton,
   Stack,
   Typography,
 } from "@mui/material";
@@ -22,14 +22,7 @@ import type { Product } from "../types/product";
 import { AuctionStatus, type Auction } from "../types/auction";
 import { useAuth } from "../contexts/AuthContext";
 import RemainingTime from "../components/RemainingTime";
-
-const auctionStatusMap: Record<AuctionStatus, string> = {
-  READY: "대기 중",
-  IN_PROGRESS: "진행 중",
-  COMPLETED: "완료",
-  FAILED: "유찰",
-  CANCELLED: "취소됨",
-};
+import { getCommonStatusText } from "../utils/statusText";
 
 const ProductDetail: React.FC = () => {
   const { id: productId } = useParams<{ id: string }>();
@@ -82,8 +75,9 @@ const ProductDetail: React.FC = () => {
 
   const activeAuction = useMemo(
     () =>
-      auctions.find((a) => a.status === AuctionStatus.IN_PROGRESS) ??
-      auctions.find((a) => a.status === AuctionStatus.READY),
+      auctions.find((a) => a.status === AuctionStatus.IN_PROGRESS) ||
+      auctions.find((a) => a.status === AuctionStatus.READY) ||
+      auctions.find((a) => a.status === AuctionStatus.COMPLETED),
     [auctions]
   );
 
@@ -133,8 +127,47 @@ const ProductDetail: React.FC = () => {
 
   if (loading) {
     return (
-      <Container sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
-        <CircularProgress />
+      <Container maxWidth="lg">
+        <Box sx={{ my: 4 }}>
+          <Stack
+            direction={{ xs: "column", md: "row" }}
+            spacing={4}
+            alignItems="flex-start"
+          >
+            {/* 상품 카드 스켈레톤 */}
+            <Box flex={{ xs: "1 1 auto", md: "0 0 40%" }}>
+              <Card>
+                <Skeleton variant="rectangular" height={260} />
+                <CardContent>
+                  <Skeleton variant="text" width="70%" />
+                  <Skeleton variant="text" width="90%" />
+                  <Skeleton variant="text" width="80%" />
+                </CardContent>
+              </Card>
+            </Box>
+
+            {/* 경매 영역 스켈레톤 */}
+            <Box flex={1}>
+              <Stack spacing={3}>
+                <Card>
+                  <CardContent>
+                    <Skeleton variant="text" width="40%" />
+                    <Skeleton variant="text" width="60%" />
+                    <Skeleton variant="text" width="50%" />
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent>
+                    <Skeleton variant="text" width="30%" />
+                    <Skeleton variant="text" width="80%" />
+                    <Skeleton variant="text" width="75%" />
+                    <Skeleton variant="text" width="65%" />
+                  </CardContent>
+                </Card>
+              </Stack>
+            </Box>
+          </Stack>
+        </Box>
       </Container>
     );
   }
@@ -185,15 +218,15 @@ const ProductDetail: React.FC = () => {
           {/* 상품 기본 정보 */}
           <Box flex={{ xs: "1 1 auto", md: "0 0 40%" }}>
             <Card>
-              {product.imageUrl && (
+              {
                 <CardMedia
                   component="img"
                   height="260"
-                  image={product.imageUrl}
+                  image={product.imageUrl || "/images/no_image.png"}
                   alt={product.name}
                   sx={{ objectFit: "contain" }}
                 />
-              )}
+              }
               <CardContent>
                 <Box
                   sx={{
@@ -250,12 +283,6 @@ const ProductDetail: React.FC = () => {
                 >
                   {product.description || "설명 없음"}
                 </Typography>
-                <Chip
-                  label={product.status}
-                  size="small"
-                  color="default"
-                  sx={{ mr: 1 }}
-                />
               </CardContent>
             </Card>
           </Box>
@@ -272,11 +299,17 @@ const ProductDetail: React.FC = () => {
                     mb={2}
                   >
                     <Typography variant="h6">
-                      {activeAuction ? "진행 중인 경매" : "진행 중인 경매 없음"}
+                      {activeAuction
+                        ? activeAuction.status === AuctionStatus.IN_PROGRESS
+                          ? "진행 중인 경매"
+                          : activeAuction.status === AuctionStatus.READY
+                          ? "예정된 경매"
+                          : "최근 경매"
+                        : "진행 중인 경매 없음"}
                     </Typography>
                     {activeAuction && (
                       <Chip
-                        label={auctionStatusMap[activeAuction.status]}
+                        label={getCommonStatusText(activeAuction.status)}
                         color={
                           activeAuction.status === AuctionStatus.IN_PROGRESS
                             ? "success"
@@ -320,7 +353,11 @@ const ProductDetail: React.FC = () => {
                             activeAuction.auctionId ?? activeAuction.id
                           }`}
                         >
-                          경매 참여하기
+                          {activeAuction.status === AuctionStatus.IN_PROGRESS
+                            ? "경매 참여하기"
+                            : activeAuction.status === AuctionStatus.READY
+                            ? "경매 상세보기"
+                            : "경매 결과 보기"}
                         </Button>
                       </Box>
                     </>
@@ -373,7 +410,7 @@ const ProductDetail: React.FC = () => {
                             mb={1}
                           >
                             <Typography variant="subtitle2">
-                              {auctionStatusMap[auction.status]}
+                              {getCommonStatusText(auction.status)}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
                               {Math.max(
