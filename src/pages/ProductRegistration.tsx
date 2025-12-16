@@ -171,7 +171,7 @@ const ProductRegistration: React.FC = () => {
           name: productData?.name,
           description: productData?.description,
           startBid: auctionData?.startBid,
-          categoryIds: (productData?.categories ?? []).map((c) =>
+          categoryIds: (productData?.categories ?? [])?.map((c) =>
             typeof c === "string" ? c : String(c.id)
           ),
           auctionStartAt:
@@ -199,7 +199,7 @@ const ProductRegistration: React.FC = () => {
         // 카테고리 설정
         const selectedCategoryIds: string[] = (
           productData?.categories ?? []
-        ).map((c) => (typeof c === "string" ? c : String(c.id) ?? []));
+        )?.map((c) => (typeof c === "string" ? c : String(c.id) ?? []));
         setSelectedCategoryIds(selectedCategoryIds);
       } catch (err) {
         setError("데이터를 불러오는 데 실패했습니다.");
@@ -451,7 +451,7 @@ const ProductRegistration: React.FC = () => {
           <FormControl component="fieldset" margin="normal" fullWidth>
             <FormLabel component="legend">카테고리</FormLabel>
             <FormGroup row>
-              {allCategories.map((category) => (
+              {allCategories?.map((category) => (
                 <FormControlLabel
                   key={category.id}
                   control={

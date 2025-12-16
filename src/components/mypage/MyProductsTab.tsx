@@ -33,7 +33,7 @@ export const MyProductsTab: React.FC<MyProductsTabProps> = ({
           <Typography variant="h6" sx={{ mb: 2 }}>
             내 상품 목록
           </Typography>
-          {products.length === 0 ? (
+          {products?.length === 0 ? (
             <Typography>등록된 상품이 없습니다.</Typography>
           ) : (
             <List>
@@ -55,4 +55,3 @@ export const MyProductsTab: React.FC<MyProductsTabProps> = ({
     </Paper>
   );
 };
-

@@ -1,9 +1,10 @@
 /**
- * Vercel 서버리스 프록시
+ * Vercel 서버리스 프록시 (REST API용)
  *
  * - 클라이언트는 항상 /api/v1/... 으로 호출
- * - Vercel rewrites가 /api/v1/* -> /api/proxy/* 로 연결
  * - 이 함수는 GATEWAY_API_BASE_URL 환경변수를 읽어서 실제 게이트웨이로 포워딩
+ *
+ * 예: /api/v1/products?page=0 -> {GATEWAY_API_BASE_URL}/products?page=0
  */
 
 const GATEWAY_API_BASE_URL = process.env.GATEWAY_API_BASE_URL;
@@ -70,3 +71,4 @@ export default async function handler(req: any, res: any) {
     res.status(502).json({ message: "Bad gateway", error: String(error) });
   }
 }
+
