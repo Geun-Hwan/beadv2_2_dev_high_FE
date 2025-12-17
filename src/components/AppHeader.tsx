@@ -26,12 +26,15 @@ import { useThemeContext } from "../contexts/ThemeProvider";
 import { useEffect, useState } from "react";
 import { notificationApi } from "../apis/notificationApi";
 import { depositApi } from "../apis/depositApi";
+import { orderApi } from "../apis/orderApi";
+import { OrderStatus } from "../types/order";
 
 export const AppHeader: React.FC = () => {
   const { isAuthenticated, user, logout } = useAuth();
   const { mode, toggleColorMode } = useThemeContext();
   const [unreadCount, setUnreadCount] = useState(0);
   const [depositBalance, setDepositBalance] = useState<number | null>(null);
+  const [pendingOrderCount, setPendingOrderCount] = useState(0);
 
   // 로그인된 경우에만 미확인 알림 개수 조회
   useEffect(() => {
@@ -104,6 +107,49 @@ export const AppHeader: React.FC = () => {
   }, [isAuthenticated, user?.userId]);
 
   useEffect(() => {
+    let cancelled = false;
+
+    const fetchPendingOrderCount = async () => {
+      if (!isAuthenticated || !user?.userId) {
+        setPendingOrderCount(0);
+        return;
+      }
+      try {
+        const res = await orderApi.getStatusCount(OrderStatus.UNPAID);
+        if (cancelled) return;
+        setPendingOrderCount(typeof res.data === "number" ? res.data : 0);
+      } catch (err) {
+        if (!cancelled) {
+          console.error("구매 대기 주문 카운트 조회 실패:", err);
+          setPendingOrderCount(0);
+        }
+      }
+    };
+
+    fetchPendingOrderCount();
+
+    const handleRefresh = () => fetchPendingOrderCount();
+    window.addEventListener("orders:refresh", handleRefresh);
+    const handlePendingDecrement = (event: Event) => {
+      const delta = (event as CustomEvent<number>).detail ?? 1;
+      if (typeof delta !== "number" || Number.isNaN(delta)) return;
+      setPendingOrderCount((prev) => Math.max(prev - delta, 0));
+    };
+    window.addEventListener(
+      "orders:pending-decrement",
+      handlePendingDecrement as EventListener
+    );
+    return () => {
+      cancelled = true;
+      window.removeEventListener("orders:refresh", handleRefresh);
+      window.removeEventListener(
+        "orders:pending-decrement",
+        handlePendingDecrement as EventListener
+      );
+    };
+  }, [isAuthenticated, user?.userId]);
+
+  useEffect(() => {
     const applyDelta = (delta: number) => {
       setDepositBalance((prev) => {
         const base = typeof prev === "number" ? prev : 0;
@@ -123,6 +169,12 @@ export const AppHeader: React.FC = () => {
       applyDelta(-delta);
     };
 
+    const handleSet = (event: Event) => {
+      const nextBalance = (event as CustomEvent<number>).detail;
+      if (typeof nextBalance !== "number" || Number.isNaN(nextBalance)) return;
+      setDepositBalance(Math.max(nextBalance, 0));
+    };
+
     window.addEventListener(
       "deposit:increment",
       handleIncrement as EventListener
@@ -131,6 +183,7 @@ export const AppHeader: React.FC = () => {
       "deposit:decrement",
       handleDecrement as EventListener
     );
+    window.addEventListener("deposit:set", handleSet as EventListener);
     return () => {
       window.removeEventListener(
         "deposit:increment",
@@ -140,6 +193,7 @@ export const AppHeader: React.FC = () => {
         "deposit:decrement",
         handleDecrement as EventListener
       );
+      window.removeEventListener("deposit:set", handleSet as EventListener);
     };
   }, []);
 
@@ -243,7 +297,13 @@ export const AppHeader: React.FC = () => {
                     to="/orders"
                     color="inherit"
                   >
-                    <ReceiptIcon />
+                    <Badge
+                      badgeContent={pendingOrderCount}
+                      color="error"
+                      invisible={pendingOrderCount === 0}
+                    >
+                      <ReceiptIcon />
+                    </Badge>
                   </IconButton>
                 </Tooltip>
 

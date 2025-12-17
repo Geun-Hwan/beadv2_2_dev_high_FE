@@ -8,6 +8,7 @@ import {
   Container,
   Divider,
   Grid,
+  Drawer,
   Skeleton,
   Stack,
 } from "@mui/material";
@@ -37,6 +38,7 @@ const AuctionDetail: React.FC = () => {
   const { id: auctionId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
+  const [productDrawerOpen, setProductDrawerOpen] = useState(false);
 
   const [auctionDetail, setAuctionDetail] =
     useState<AuctionDetailResponse | null>(null);
@@ -44,6 +46,7 @@ const AuctionDetail: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const [currentBidPrice, setCurrentBidPrice] = useState<number>(0);
+  const [hasAnyBid, setHasAnyBid] = useState(false);
   const [highestBidderInfo, setHighestBidderInfo] = useState<{
     id?: string;
     username?: string;
@@ -70,13 +73,69 @@ const AuctionDetail: React.FC = () => {
   const [withdrawLoading, setWithdrawLoading] = useState(false);
   const [depositLoading, setDepositLoading] = useState(false);
 
+  const getProductImageUrls = useCallback(() => {
+    const raw: unknown = (auctionDetail as any)?.files;
+    if (raw == null) return [];
+
+    const pickFromObject = (value: unknown) => {
+      if (!value || typeof value !== "object") return undefined;
+      const record = value as any;
+      const maybePath = record.filePath ?? record.url ?? record.imageUrl;
+      if (typeof maybePath === "string" && maybePath.trim().length > 0) {
+        return maybePath.trim();
+      }
+      return undefined;
+    };
+
+    if (Array.isArray(raw)) {
+      return raw
+        .map((item) => pickFromObject(item))
+        .filter((v): v is string => typeof v === "string" && v.length > 0);
+    }
+
+    if (typeof raw === "object") {
+      const one = pickFromObject(raw);
+      return one ? [one] : [];
+    }
+
+    if (typeof raw !== "string") return [];
+
+    const trimmed = raw.trim();
+    if (!trimmed) return [];
+
+    try {
+      if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          return parsed
+            .map((item) => pickFromObject(item))
+            .filter((v): v is string => typeof v === "string" && v.length > 0);
+        }
+        const one = pickFromObject(parsed);
+        return one ? [one] : [];
+      }
+    } catch {
+      // ignore parsing errors and fall back to string heuristics
+    }
+
+    if (trimmed.includes(",")) {
+      return trimmed
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+
+    return [trimmed];
+  }, [auctionDetail?.files]);
+
   const fetchAuctionDetail = async () => {
     try {
       const data: AuctionDetailResponse = await auctionApi
         .getAuctionDetail(auctionId as string)
         .then((res) => res.data);
       setAuctionDetail(data);
-      setCurrentBidPrice(data.currentBid || data.startBid);
+      setHasAnyBid(data.currentBid > 0);
+      setCurrentBidPrice(data.currentBid > 0 ? data.currentBid : data.startBid);
       if (data.highestUserId) {
         setHighestBidderInfo({ id: data.highestUserId, username: "" });
       }
@@ -154,6 +213,7 @@ const AuctionDetail: React.FC = () => {
             break;
           case "BID_SUCCESS":
             console.log("입찰 성공 메시지 처리:", payload);
+            setHasAnyBid(true);
             setCurrentBidPrice(payload.bidPrice);
             setHighestBidderInfo({
               id: payload.highestUserId,
@@ -192,6 +252,13 @@ const AuctionDetail: React.FC = () => {
     onMessage: handleNewMessage,
   });
 
+  const minBidPrice =
+    auctionDetail == null
+      ? 0
+      : hasAnyBid
+      ? currentBidPrice + 100
+      : auctionDetail.startBid;
+
   const handleBidSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (bidLoading) return;
@@ -217,11 +284,23 @@ const AuctionDetail: React.FC = () => {
       alert("입찰 금액은 100원 단위의 올바른 숫자여야 합니다.");
       return;
     }
-    if (bid <= currentBidPrice) {
-      alert(
-        `입찰 금액은 현재가(${currentBidPrice.toLocaleString()}원)보다 높아야 합니다.`
-      );
-      return;
+    if (auctionDetail) {
+      if (!hasAnyBid && bid < auctionDetail.startBid) {
+        alert(
+          `첫 입찰 금액은 시작가(${auctionDetail.startBid.toLocaleString()}원) 이상이어야 합니다.`
+        );
+        return;
+      }
+      if (hasAnyBid && bid <= currentBidPrice) {
+        alert(
+          `입찰 금액은 최고입찰가(${currentBidPrice.toLocaleString()}원)보다 높아야 합니다.`
+        );
+        return;
+      }
+      if (bid < minBidPrice) {
+        alert(`최소 입찰 금액은 ${minBidPrice.toLocaleString()}원입니다.`);
+        return;
+      }
     }
 
     try {
@@ -378,6 +457,7 @@ const AuctionDetail: React.FC = () => {
 
   const isAuctionInProgress =
     auctionDetail.status === AuctionStatus.IN_PROGRESS;
+  const isAuctionInReday = auctionDetail.status === AuctionStatus.READY;
   const canEdit =
     auctionDetail.status === AuctionStatus.READY &&
     user &&
@@ -430,6 +510,7 @@ const AuctionDetail: React.FC = () => {
                   <AuctionParticipationStatus
                     participationStatus={participationStatus}
                     depositAmount={auctionDetail.depositAmount}
+                    auctionStatus={auctionDetail.status}
                     setOpenPopup={() => setOpenWithdrawnPopup(true)}
                     refundRequest={refundRequest}
                   />
@@ -440,7 +521,18 @@ const AuctionDetail: React.FC = () => {
 
           {/* --- 실시간 입찰 --- */}
           <Card sx={{ flex: 0.3, height: "100%" }}>
-            <CardHeader title="실시간 현황" />
+            <CardHeader
+              title="실시간 현황"
+              action={
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={() => setProductDrawerOpen(true)}
+                >
+                  상품 정보
+                </Button>
+              }
+            />
             <CardContent>
               <Stack spacing={2}>
                 <AuctionInfoPanel
@@ -456,6 +548,7 @@ const AuctionDetail: React.FC = () => {
                 <AuctionBiddingPanel
                   status={auctionDetail.status}
                   currentBidPrice={currentBidPrice}
+                  hasAnyBid={hasAnyBid}
                   highestBidderInfo={highestBidderInfo}
                   currentUserCount={currentUserCount}
                   auctionEndAt={auctionDetail.auctionEndAt}
@@ -464,8 +557,11 @@ const AuctionDetail: React.FC = () => {
                 />
                 <Divider />
                 <AuctionBidForm
+                  isAuctionInReady={isAuctionInReday}
                   isAuctionInProgress={isAuctionInProgress}
                   currentBidPrice={currentBidPrice}
+                  minBidPrice={minBidPrice}
+                  hasAnyBid={hasAnyBid}
                   newBidAmount={newBidAmount}
                   setNewBidAmount={setNewBidAmount}
                   handleBidSubmit={handleBidSubmit}
@@ -493,6 +589,37 @@ const AuctionDetail: React.FC = () => {
         handleWithdraw={handleWithdraw}
         isCurrentUserHighestBidder={highestBidderInfo?.id === user?.userId}
       />
+
+      <Drawer
+        anchor="right"
+        open={productDrawerOpen}
+        onClose={() => setProductDrawerOpen(false)}
+        PaperProps={{
+          sx: { width: { xs: "100%", sm: 420 }, p: 2 },
+        }}
+      >
+        <Stack spacing={2}>
+          <Stack direction="row" justifyContent="space-between">
+            <Button
+              variant="outlined"
+              onClick={() => setProductDrawerOpen(false)}
+            >
+              닫기
+            </Button>
+            <Button
+              variant="contained"
+              onClick={() => navigate(`/products/${auctionDetail.productId}`)}
+            >
+              상품 상세보기
+            </Button>
+          </Stack>
+          <ProductInfo
+            imageUrls={getProductImageUrls()}
+            productName={auctionDetail.productName}
+            description={auctionDetail.description}
+          />
+        </Stack>
+      </Drawer>
     </>
   );
 };

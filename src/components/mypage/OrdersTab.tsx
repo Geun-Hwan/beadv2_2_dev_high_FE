@@ -7,6 +7,7 @@ import {
   ListItem,
   ListItemText,
   Paper,
+  Stack,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
@@ -16,13 +17,15 @@ import { getOrderStatusLabel, type OrderResponse } from "../../types/order";
 import { Link as RouterLink } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 
-type OrderFilter = "BOUGHT" | "SOLD";
+export type OrderFilter = "BOUGHT" | "SOLD";
 
 interface OrdersTabProps {
   loading: boolean;
   error: string | null;
   sold: OrderResponse[];
   bought: OrderResponse[];
+  initialFilter?: OrderFilter;
+  onFilterChange?: (filter: OrderFilter) => void;
 }
 
 export const OrdersTab: React.FC<OrdersTabProps> = ({
@@ -30,9 +33,11 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
   error,
   sold,
   bought,
+  initialFilter,
+  onFilterChange,
 }) => {
   const { user } = useAuth();
-  const [filter, setFilter] = useState<OrderFilter>("BOUGHT");
+  const [filter, setFilter] = useState<OrderFilter>(initialFilter ?? "BOUGHT");
 
   const { label, list } = useMemo(() => {
     if (filter === "SOLD") {
@@ -69,6 +74,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
         onChange={(_, v: OrderFilter | null) => {
           if (!v) return;
           setFilter(v);
+          onFilterChange?.(v);
         }}
         sx={{ mb: 2 }}
       >
@@ -103,9 +109,9 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
           {list.map((order) => {
             const depositAmount =
               typeof order.depositAmount === "number" ? order.depositAmount : 0;
-            const finalPurchaseAmount =
+            const additionalPaymentAmount =
               typeof order.depositAmount === "number"
-                ? order.winningAmount - order.depositAmount
+                ? Math.max(order.winningAmount - order.depositAmount, 0)
                 : null;
             const confirmDateLabel = order.confirmDate
               ? new Date(order.confirmDate).toLocaleString()
@@ -123,25 +129,35 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                 >
                   <ListItemText
                     primary={order.productName ?? "주문"}
-                    secondary={[
-                      filter === "BOUGHT"
-                        ? finalPurchaseAmount != null
-                          ? `최종 구매금액: ${finalPurchaseAmount.toLocaleString()}원`
-                          : `낙찰가: ${order.winningAmount.toLocaleString()}원`
-                        : `낙찰가: ${order.winningAmount.toLocaleString()}원`,
-                      typeof order.depositAmount === "number"
-                        ? `보증금: ${depositAmount.toLocaleString()}원`
-                        : undefined,
-                      `주문 ID: ${order.id}`,
-                      confirmDateLabel
-                        ? `주문일(낙찰확정): ${confirmDateLabel}`
-                        : undefined,
-                      payCompleteDateLabel
-                        ? `구매완료일: ${payCompleteDateLabel}`
-                        : undefined,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
+                    secondary={
+                      <Stack spacing={0.25} sx={{ mt: 0.5 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          총 낙찰가: {order.winningAmount.toLocaleString()}원
+                          {typeof order.depositAmount === "number"
+                            ? ` · 보증금(기납부): ${depositAmount.toLocaleString()}원`
+                            : ""}
+                          {filter === "BOUGHT" && additionalPaymentAmount != null
+                            ? ` · 추가 결제금액: ${additionalPaymentAmount.toLocaleString()}원`
+                            : ""}
+                        </Typography>
+
+                        <Typography variant="caption" color="text.secondary">
+                          주문 ID: {order.id}
+                        </Typography>
+
+                        {confirmDateLabel && (
+                          <Typography variant="caption" color="text.secondary">
+                            주문일(낙찰확정): {confirmDateLabel}
+                          </Typography>
+                        )}
+                        {payCompleteDateLabel && (
+                          <Typography variant="caption" color="text.secondary">
+                            구매완료일: {payCompleteDateLabel}
+                          </Typography>
+                        )}
+                      </Stack>
+                    }
+                    secondaryTypographyProps={{ component: "div" }}
                   />
                   <Chip
                     label={getOrderStatusLabel(order.status)}

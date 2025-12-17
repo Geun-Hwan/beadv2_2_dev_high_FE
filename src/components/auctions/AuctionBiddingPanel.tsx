@@ -3,10 +3,18 @@ import { Box, Paper, Stack, Typography } from "@mui/material";
 import RemainingTime from "../RemainingTime";
 import { AuctionStatus } from "../../types/auction";
 
+const formatDateTime = (value?: string) => {
+  if (!value) return "-";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleString();
+};
+
 interface AuctionBiddingPanelProps {
   status: AuctionStatus;
   startBid: number;
   currentBidPrice: number;
+  hasAnyBid: boolean;
   highestBidderInfo: { id?: string; username?: string } | null;
   currentUserCount: number;
   auctionEndAt: string;
@@ -17,6 +25,7 @@ const AuctionBiddingPanel: React.FC<AuctionBiddingPanelProps> = ({
   status,
   startBid,
   currentBidPrice,
+  hasAnyBid,
   highestBidderInfo,
   currentUserCount,
   auctionEndAt,
@@ -29,27 +38,32 @@ const AuctionBiddingPanel: React.FC<AuctionBiddingPanelProps> = ({
           시작 가격
         </Typography>
         <Typography variant="h5" fontWeight="bold" color="primary.main">
-          {status === AuctionStatus.READY
-            ? "경매 시작 전"
-            : `${startBid.toLocaleString()}원`}
+          {`${startBid.toLocaleString()}원`}
         </Typography>
-        <Typography variant="overline" color="text.secondary">
-          현재 최고 입찰가
-        </Typography>
-        <Typography variant="h3" fontWeight="bold" color="primary.main">
-          {status === AuctionStatus.READY
-            ? "경매 시작 전"
-            : `${currentBidPrice.toLocaleString()}원`}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          최고 입찰자:{" "}
-          {highestBidderInfo?.id
-            ? `${highestBidderInfo.username} (${highestBidderInfo.id.slice(
-                0,
-                4
-              )}****)`
-            : "없음"}
-        </Typography>
+        {status !== AuctionStatus.READY && (
+          <>
+            <Typography variant="overline" color="text.secondary">
+              최고 입찰가
+            </Typography>
+            <Typography variant="h3" fontWeight="bold" color="primary.main">
+              {hasAnyBid ? `${currentBidPrice.toLocaleString()}원` : "-"}
+            </Typography>
+            {!hasAnyBid && (
+              <Typography variant="caption" color="text.secondary">
+                아직 입찰이 없습니다. 첫 입찰은 시작가 이상 부터 가능합니다.
+              </Typography>
+            )}
+            <Typography variant="body2" color="text.secondary">
+              최고 입찰자:{" "}
+              {highestBidderInfo?.id
+                ? `${highestBidderInfo.username} (${highestBidderInfo.id.slice(
+                    0,
+                    4
+                  )}****)`
+                : "없음"}
+            </Typography>
+          </>
+        )}
       </Box>
 
       <Box
@@ -64,14 +78,40 @@ const AuctionBiddingPanel: React.FC<AuctionBiddingPanelProps> = ({
       >
         <Stack direction="row" alignItems="center" spacing={1}>
           <Timer color="action" />
-          <Box minWidth="180px">
-            <Typography variant="h6" fontWeight="medium">
-              <RemainingTime
-                auctionEndAt={auctionEndAt}
-                auctionStartAt={auctionStartAt}
-                status={status}
-              />
-            </Typography>
+          <Box minWidth="220px">
+            {status === AuctionStatus.READY ? (
+              <Stack spacing={0.25}>
+                <Typography
+                  variant="caption"
+                  sx={{ color: "primary.main", fontWeight: 700 }}
+                >
+                  시작시간: {formatDateTime(auctionStartAt)}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  종료예정: {formatDateTime(auctionEndAt)}
+                </Typography>
+                <Typography variant="body2" fontWeight="medium">
+                  <RemainingTime
+                    auctionEndAt={auctionEndAt}
+                    auctionStartAt={auctionStartAt}
+                    status={status}
+                  />
+                </Typography>
+              </Stack>
+            ) : (
+              <Stack spacing={0.25}>
+                <Typography variant="caption" color="text.secondary">
+                  종료예정: {formatDateTime(auctionEndAt)}
+                </Typography>
+                <Typography variant="h6" fontWeight="medium">
+                  <RemainingTime
+                    auctionEndAt={auctionEndAt}
+                    auctionStartAt={auctionStartAt}
+                    status={status}
+                  />
+                </Typography>
+              </Stack>
+            )}
           </Box>
         </Stack>
         <Box display="flex" alignItems="center" gap={1}>

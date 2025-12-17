@@ -47,7 +47,7 @@ export const DepositChargeDialog: React.FC<DepositChargeDialogProps> = ({
           slotProps={{
             input: {
               inputProps: {
-                min: 0,
+                min: 1000,
                 step: 1000,
               },
             },
@@ -63,4 +63,3 @@ export const DepositChargeDialog: React.FC<DepositChargeDialogProps> = ({
     </Dialog>
   );
 };
-

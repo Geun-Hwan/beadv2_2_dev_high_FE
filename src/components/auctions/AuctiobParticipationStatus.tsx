@@ -3,20 +3,30 @@ import {
   Box,
   Button,
   Chip,
-  Grid,
   Paper,
   Stack,
   Typography,
+  Divider,
 } from "@mui/material";
-import type { AuctionParticipationResponse } from "../../types/auction";
+import {
+  AuctionStatus,
+  type AuctionParticipationResponse,
+} from "../../types/auction";
 
 // 보증금 및 참여 상태를 표시하는 컴포넌트
 const AuctionParticipationStatus: React.FC<{
   participationStatus: AuctionParticipationResponse;
   depositAmount: number;
+  auctionStatus: AuctionStatus;
   setOpenPopup: () => void;
   refundRequest: () => void;
-}> = ({ participationStatus, depositAmount, setOpenPopup, refundRequest }) => {
+}> = ({
+  participationStatus,
+  depositAmount,
+  auctionStatus,
+  setOpenPopup,
+  refundRequest,
+}) => {
   const { isParticipated, isWithdrawn, isRefund, lastBidPrice } =
     participationStatus;
 
@@ -37,56 +47,120 @@ const AuctionParticipationStatus: React.FC<{
     statusChip = <Chip label="미참여" color="default" />;
   }
 
+  const isAuctionEnded =
+    auctionStatus === AuctionStatus.COMPLETED ||
+    auctionStatus === AuctionStatus.FAILED ||
+    auctionStatus === AuctionStatus.CANCELLED;
+
+  const statusMessage = (() => {
+    if (isWithdrawn) {
+      return {
+        severity: "warning" as const,
+        text: "경매 참여를 포기하여 더 이상 입찰할 수 없습니다.",
+      };
+    }
+    if (isRefund) {
+      return {
+        severity: "success" as const,
+        text: "보증금 환급이 완료되었습니다.",
+      };
+    }
+    if (!isParticipated && isAuctionEnded) {
+      return {
+        severity: "info" as const,
+        text: "참여하지 않은 상태로 경매가 종료되었습니다.",
+      };
+    }
+    if (!isParticipated) {
+      return {
+        severity: "info" as const,
+        text: "보증금을 납부하면 입찰할 수 있어요.",
+      };
+    }
+    return null;
+  })();
+
   return (
     <Paper sx={{ p: 2, backgroundColor: "background.paper" }}>
-      {isWithdrawn ? (
-        <Alert severity="warning" sx={{ mb: 2 }}>
-          경매 참여를 포기하여 더 이상 입찰할 수 없습니다.
-        </Alert>
-      ) : (
-        <Box sx={{ minHeight: "58px", mb: "auto" }}></Box>
-      )}
-
-      <Box
-        display="flex"
-        justifyContent="space-between"
+      <Stack
+        direction="row"
         alignItems="center"
-        mb={3}
+        justifyContent="space-between"
+        sx={{ mb: 1.25 }}
       >
-        {isParticipated && !isWithdrawn && !isRefund && (
-          <Button
-            variant="contained"
-            color="error"
-            onClick={setOpenPopup}
-            size="medium"
-          >
-            경매 포기하기
-          </Button>
-        )}
-        {isWithdrawn && !isRefund && (
-          <Box display="flex" gap={1}>
+        {statusChip}
+        <Stack direction="row" spacing={1} alignItems="center">
+          {isParticipated && !isWithdrawn && !isRefund && !isAuctionEnded && (
+            <Button
+              variant="contained"
+              color="error"
+              onClick={setOpenPopup}
+              size="medium"
+            >
+              경매 포기하기
+            </Button>
+          )}
+          {isWithdrawn && !isRefund && (
             <Button variant="contained" loading={false} onClick={refundRequest}>
               환불요청
             </Button>
-          </Box>
-        )}
-      </Box>
-
-      <Stack direction="row" alignItems="center" spacing={2} mt={1}>
-        <Grid gap={1} flex={1} display={"flex"}>
-          {statusChip}
-          {lastBidPrice && lastBidPrice > 0 && (
-            <Typography variant="h6">
-              마지막 입찰가: {lastBidPrice.toLocaleString()}원
-            </Typography>
           )}
-        </Grid>
-        <Typography variant="body1" textAlign="right">
-          {isParticipated || isRefund
-            ? `보증금: ${depositAmount.toLocaleString()}원`
-            : `필요 보증금: ${depositAmount.toLocaleString()}원`}
-        </Typography>
+        </Stack>
       </Stack>
+
+      {statusMessage ? (
+        <>
+          <Divider sx={{ mb: 1.5 }} />
+          <Alert
+            severity={statusMessage.severity}
+            variant="outlined"
+            sx={{ mb: 2 }}
+          >
+            {statusMessage.text}
+          </Alert>
+        </>
+      ) : (
+        <Divider sx={{ mb: 2 }} />
+      )}
+
+      <Box
+        sx={{
+          px: 1.5,
+          py: 1.25,
+          borderRadius: 2,
+          backgroundColor: "action.hover",
+        }}
+      >
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
+        >
+          <Box>
+            <Typography variant="caption" color="text.secondary">
+              마지막 입찰가
+            </Typography>
+            <Typography variant="subtitle1" fontWeight={700}>
+              {lastBidPrice && lastBidPrice > 0
+                ? `${lastBidPrice.toLocaleString()}원`
+                : "-"}
+            </Typography>
+            {isParticipated && (!lastBidPrice || lastBidPrice <= 0) && (
+              <Typography variant="caption" color="text.secondary">
+                아직 입찰 전
+              </Typography>
+            )}
+          </Box>
+          <Box textAlign="right">
+            <Typography variant="caption" color="text.secondary">
+              {isParticipated || isRefund ? "보증금" : "필요 보증금"}
+            </Typography>
+            <Typography variant="subtitle1" fontWeight={700}>
+              {depositAmount.toLocaleString()}원
+            </Typography>
+          </Box>
+        </Stack>
+      </Box>
     </Paper>
   );
 };

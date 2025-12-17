@@ -40,11 +40,12 @@ export const MyProductsTab: React.FC<MyProductsTabProps> = ({
   }
 
   const formatPriceInfo = (product: Product) => {
-    if (product.currentBid != null) {
-      return `현재가 ${product.currentBid.toLocaleString()}원`;
-    }
     if (product.startBid != null) {
-      return `시작가 ${product.startBid.toLocaleString()}원`;
+      const highest =
+        product.currentBid != null && product.currentBid > 0
+          ? `${product.currentBid.toLocaleString()}원`
+          : "-";
+      return `최고입찰가 ${highest} · 시작가 ${product.startBid.toLocaleString()}원`;
     }
     return null;
   };

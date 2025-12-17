@@ -29,3 +29,21 @@ export const getCommonStatusText = (
   }
 };
 
+export const getAuctionStatusText = (
+  status: string | null | undefined
+): string => {
+  switch (status) {
+    case AuctionStatus.READY:
+      return "경매 대기중";
+    case AuctionStatus.IN_PROGRESS:
+      return "경매 진행중";
+    case AuctionStatus.COMPLETED:
+      return "경매 종료";
+    case AuctionStatus.FAILED:
+      return "경매 유찰";
+    case AuctionStatus.CANCELLED:
+      return "경매 취소";
+    default:
+      return "경매 상태 알 수 없음";
+  }
+};

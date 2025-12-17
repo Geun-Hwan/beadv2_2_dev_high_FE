@@ -1,5 +1,5 @@
 // pages/payment/PaymentSuccess.tsx
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CheckCircleOutline, ErrorOutline } from "@mui/icons-material";
 import {
@@ -11,19 +11,26 @@ import {
   Typography,
 } from "@mui/material";
 import { depositApi } from "../../apis/depositApi";
+import { useAuth } from "../../contexts/AuthContext";
 
 export default function PaymentSuccess() {
   const navigate = useNavigate();
   const [status, setStatus] = useState<"loading" | "success" | "error">(
     "loading"
   );
+  const { user } = useAuth();
   const [title, setTitle] = useState("결제를 처리하고 있어요");
   const [description, setDescription] = useState(
     "결제 승인 중입니다. 잠시만 기다려 주세요."
   );
+  const [action, setAction] = useState<{ label: string; path: string }>({
+    label: "마이페이지로 바로가기",
+    path: "/mypage?tab=1",
+  });
 
   useEffect(() => {
     const approvePayment = async () => {
+      let redirectPath = "/mypage?tab=1";
       const params = new URLSearchParams(window.location.search);
       const paymentKey = params.get("paymentKey");
       const orderId = params.get("orderId");
@@ -44,29 +51,97 @@ export default function PaymentSuccess() {
         window.dispatchEvent(
           new CustomEvent("deposit:increment", { detail: amount })
         );
+
+        const autoPurchaseRaw = sessionStorage.getItem(
+          "autoPurchaseAfterCharge"
+        );
+        if (autoPurchaseRaw) {
+          try {
+            const parsed = JSON.parse(autoPurchaseRaw) as {
+              orderId?: string;
+              amount?: number;
+              createdAt?: number;
+            };
+            const purchaseOrderId = parsed?.orderId;
+            const purchaseAmount = parsed?.amount;
+            if (purchaseOrderId && typeof purchaseAmount === "number") {
+              try {
+                const info = await depositApi.createDeposit({
+                  depositOrderId: purchaseOrderId,
+                  amount: purchaseAmount,
+                  type: "USAGE",
+                  userId: user?.userId,
+                });
+                if (typeof info?.balance === "number") {
+                  window.dispatchEvent(
+                    new CustomEvent("deposit:set", { detail: info.balance })
+                  );
+                } else {
+                  window.dispatchEvent(
+                    new CustomEvent("deposit:decrement", {
+                      detail: purchaseAmount,
+                    })
+                  );
+                }
+                window.dispatchEvent(
+                  new CustomEvent("orders:pending-decrement", { detail: 1 })
+                );
+                window.dispatchEvent(new Event("orders:refresh"));
+                redirectPath = "/orders";
+                setStatus("success");
+                setTitle("충전과 구매가 완료되었어요");
+                setDescription(
+                  "예치금 충전 승인 후 주문서 구매까지 처리했습니다. 주문 내역에서 확인할 수 있어요."
+                );
+                setAction({ label: "주문서로 바로가기", path: "/orders" });
+              } catch (purchaseErr) {
+                console.error("자동 구매 처리 실패:", purchaseErr);
+                redirectPath = "/orders";
+                setStatus("success");
+                setTitle("충전은 완료됐지만 구매는 실패했어요");
+                setDescription(
+                  "예치금 충전은 완료됐지만 주문서 구매 처리에 실패했습니다. 주문서에서 다시 구매해 주세요."
+                );
+                setAction({ label: "주문서로 바로가기", path: "/orders" });
+              } finally {
+                sessionStorage.removeItem("autoPurchaseAfterCharge");
+              }
+
+              setTimeout(() => {
+                navigate(redirectPath, { replace: true });
+              }, 5000);
+              return;
+            }
+          } catch (e) {
+            console.error("autoPurchaseAfterCharge 파싱/처리 실패:", e);
+          }
+        }
+
         setStatus("success");
-        setTitle("결제가 완료되었어요");
+        setTitle("충전이 완료되었어요");
         setDescription(
           "예치금이 충전되었습니다. 마이페이지에서 잔액과 내역을 확인할 수 있어요."
         );
+        setAction({ label: "마이페이지로 바로가기", path: "/mypage?tab=1" });
       } catch (err) {
         setStatus("error");
         setTitle("결제 승인에 실패했어요");
         setDescription(
           "결제가 정상적으로 승인되지 않았습니다. 결제 내역을 확인하거나 잠시 후 다시 시도해 주세요."
         );
+        setAction({ label: "마이페이지로 바로가기", path: "/mypage?tab=1" });
       }
 
       setTimeout(() => {
-        navigate("/mypage?tab=1", { replace: true });
+        navigate(redirectPath, { replace: true });
       }, 5000);
     };
 
     approvePayment();
-  }, []);
+  }, [navigate]);
 
-  const handleGoMyPage = () => {
-    navigate("/mypage?tab=1", { replace: true });
+  const handleGo = () => {
+    navigate(action.path, { replace: true });
   };
 
   return (
@@ -97,10 +172,10 @@ export default function PaymentSuccess() {
           {description}
         </Typography>
         <Typography variant="caption" color="text.secondary" sx={{ mb: 2 }}>
-          잠시 후 마이페이지(예치금 탭)로 이동합니다.
+          잠시 후 자동으로 이동합니다.
         </Typography>
-        <Button variant="contained" color="primary" onClick={handleGoMyPage}>
-          마이페이지로 바로가기
+        <Button variant="contained" color="primary" onClick={handleGo}>
+          {action.label}
         </Button>
       </Paper>
     </Container>

@@ -78,7 +78,7 @@ const AuctionRegistration: React.FC = () => {
           setProducts(response.data);
         } else {
           const response = await productApi.getProducts();
-          const mapped = setProducts(response.data.content);
+          setProducts(response.data.content);
         }
       } catch (err) {
         setError("상품 목록을 불러오는 데 실패했습니다.");

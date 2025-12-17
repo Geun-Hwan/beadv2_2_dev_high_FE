@@ -22,15 +22,6 @@ export function getOrderStatusLabel(status: string) {
   return ORDER_STATUS_LABELS[status] ?? status;
 }
 
-export interface PendingOrder {
-  id: string;
-  productName: string;
-  auctionId: string;
-  orderPrice: number;
-  status: OrderStatus;
-  createdAt: string;
-}
-
 // 주문/낙찰 내역 응답
 export interface OrderResponse {
   id: string;

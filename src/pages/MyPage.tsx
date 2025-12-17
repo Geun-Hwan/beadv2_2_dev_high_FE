@@ -195,7 +195,7 @@ const MyPage: React.FC = () => {
     setMyProductsLoading(true);
     setMyProductsError(null);
     try {
-      const response = await productApi.getMyProducts();
+      const response = await productApi.getMyProducts(user?.userId);
       setMyProducts(response.data);
     } catch (err: any) {
       setMyProductsError("내 상품 정보를 불러오는데 실패했습니다.");
@@ -251,8 +251,8 @@ const MyPage: React.FC = () => {
     if (chargeLoading) return;
     const amount = parseInt(chargeAmount, 10);
 
-    if (isNaN(amount) || amount <= 0) {
-      setChargeError("유효한 금액을 입력해주세요.");
+    if (isNaN(amount) || amount < 1000 || amount % 100 !== 0) {
+      setChargeError("충전은 100원 단위로 최소 1,000원부터 가능합니다.");
       return;
     }
 
@@ -281,8 +281,8 @@ const MyPage: React.FC = () => {
     setOrdersError(null);
     try {
       const [soldRes, boughtRes] = await Promise.all([
-        orderApi.getSoldOrders(),
-        orderApi.getBoughtOrders(),
+        orderApi.getOrderByStatus("sold"),
+        orderApi.getOrderByStatus("bought"),
       ]);
       setSoldOrders(Array.isArray(soldRes.data) ? soldRes.data : []);
       setBoughtOrders(Array.isArray(boughtRes.data) ? boughtRes.data : []);

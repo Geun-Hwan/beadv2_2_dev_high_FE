@@ -72,20 +72,22 @@ const Products: React.FC = () => {
   const formatAuctionPrice = (product: Product) => {
     switch (product.status) {
       case ProductStatus.IN_PROGESS: {
-        const amount = Math.max(product.currentBid ?? 0, product.startBid ?? 0);
-        if (!amount) return null;
+        const hasBid = (product.currentBid ?? 0) > 0;
+        const highestAmount = hasBid ? (product.currentBid as number) : null;
+        const startBid = product.startBid ?? null;
+        if (startBid == null && highestAmount == null) return null;
         return {
-          label: "현재가",
-          amount,
+          highestAmount,
+          startBid,
           color: "error.main" as const,
         };
       }
       case ProductStatus.READY: {
-        const amount = product.startBid ?? 0;
-        if (amount == null) return null;
+        const startBid = product.startBid ?? null;
+        if (startBid == null) return null;
         return {
-          label: "시작가",
-          amount,
+          highestAmount: null,
+          startBid,
           color: "primary.main" as const,
         };
       }
@@ -125,12 +127,12 @@ const Products: React.FC = () => {
           전체 상품
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          상품 기준으로 최근 경매 정보(현재가/시작가)와 상태를 함께 볼 수
+          상품 기준으로 최근 경매 정보(최고입찰가/시작가)와 상태를 함께 볼 수
           있습니다.
         </Typography>
       </Box>
 
-      {/* 상태 필터 */}
+      {/* TODO: 상태 필터 서버측에서  */}
       <Box sx={{ my: 3 }}>
         <Stack direction="row" spacing={1}>
           <Chip
@@ -301,17 +303,28 @@ const Products: React.FC = () => {
                         const price = formatAuctionPrice(product);
                         if (!price) return null;
                         return (
-                          <Typography
-                            variant="subtitle2"
-                            sx={{
-                              mt: 1,
-                              fontWeight: 600,
-                              color: price.color,
-                              textAlign: "right",
-                            }}
-                          >
-                            {price.label} {price.amount.toLocaleString()}원
-                          </Typography>
+                          <Box sx={{ mt: 1, textAlign: "right" }}>
+                            <Typography
+                              variant="subtitle2"
+                              sx={{
+                                fontWeight: 600,
+                                color: price.color,
+                              }}
+                            >
+                              최고입찰가{" "}
+                              {price.highestAmount != null
+                                ? `${price.highestAmount.toLocaleString()}원`
+                                : "-"}
+                            </Typography>
+                            {price.startBid != null && (
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
+                                시작가 {price.startBid.toLocaleString()}원
+                              </Typography>
+                            )}
+                          </Box>
                         );
                       })()}
 

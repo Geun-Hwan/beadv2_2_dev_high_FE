@@ -1,26 +1,13 @@
 import type { ApiResponseDto } from "../types/common";
-import type { OrderResponse, PendingOrder } from "../types/order";
+import type { OrderResponse, OrderStatus } from "../types/order";
 import { client } from "./client";
 
 export const orderApi = {
-  getPendingOrders: async (): Promise<ApiResponseDto<PendingOrder[]>> => {
-    const res = await client.get("/orders/pending");
-    return res.data;
-  },
-  completeOrderByDeposit: async (
-    orderId: string
-  ): Promise<ApiResponseDto<PendingOrder>> => {
-    const res = await client.post(`/orders/${orderId}/complete/deposit`);
-    return res.data;
-  },
-
-  getSoldOrders: async (): Promise<ApiResponseDto<OrderResponse[]>> => {
-    const res = await client.get("/order/sold");
-    return res.data;
-  },
-
-  getBoughtOrders: async (): Promise<ApiResponseDto<OrderResponse[]>> => {
-    const res = await client.get("/order/bought");
+  getOrderByStatus: async (
+    type: "sold" | "bought",
+    status?: OrderStatus
+  ): Promise<ApiResponseDto<OrderResponse[]>> => {
+    const res = await client.get("/order", { params: { status, type } });
     return res.data;
   },
 
@@ -28,6 +15,14 @@ export const orderApi = {
     orderId: string
   ): Promise<ApiResponseDto<OrderResponse>> => {
     const res = await client.get(`/order/${orderId}`);
+    return res.data;
+  },
+
+  getStatusCount: async (
+    status: OrderStatus
+  ): Promise<ApiResponseDto<number>> => {
+    const res = await client.get("/order/count", { params: { status } });
+
     return res.data;
   },
 };

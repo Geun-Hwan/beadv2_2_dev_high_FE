@@ -14,12 +14,12 @@ import React, { useEffect, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import { auctionApi } from "../apis/auctionApi";
 import { AuctionStatus, type PagedAuctionResponse } from "../types/auction";
-import { getCommonStatusText } from "../utils/statusText";
+import { getAuctionStatusText } from "../utils/statusText";
 import RemainingTime from "./RemainingTime";
 
 /**
  * 홈 히어로에 들어갈 "오늘의 인기 경매" 카드
- * - 진행 중(IN_PROGRESS) 경매 중 현재가가 가장 높은 1개를 보여줍니다.
+ * - 진행 중(IN_PROGRESS) 경매 중 최고입찰가가 가장 높은 1개를 보여줍니다.
  */
 const FeaturedAuctionCard: React.FC = () => {
   const [data, setData] = useState<PagedAuctionResponse | null>(null);
@@ -50,10 +50,8 @@ const FeaturedAuctionCard: React.FC = () => {
   }, []);
 
   const auction = data?.content?.[0];
-  const effectivePrice =
-    (auction?.currentBid ?? 0) > 0
-      ? (auction?.currentBid as number)
-      : auction?.startBid ?? 0;
+  const hasBid = (auction?.currentBid ?? 0) > 0;
+  const highestBidPrice = hasBid ? (auction?.currentBid as number) : null;
 
   return (
     <Card
@@ -84,7 +82,7 @@ const FeaturedAuctionCard: React.FC = () => {
               <Chip label="오늘의 인기" color="secondary" size="small" />
               {auction && (
                 <Chip
-                  label={getCommonStatusText(auction.status)}
+                  label={getAuctionStatusText(auction.status)}
                   color="primary"
                   size="small"
                   variant="outlined"
@@ -102,7 +100,10 @@ const FeaturedAuctionCard: React.FC = () => {
                   variant="subtitle1"
                   sx={{ fontWeight: 700, color: "primary.main" }}
                 >
-                  현재가 {effectivePrice.toLocaleString()}원
+                  최고입찰가{" "}
+                  {highestBidPrice != null
+                    ? `${highestBidPrice.toLocaleString()}원`
+                    : "-"}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   시작가 {auction.startBid?.toLocaleString() ?? 0}원 · 남은 시간{" "}

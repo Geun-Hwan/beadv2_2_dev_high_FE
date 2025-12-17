@@ -75,21 +75,21 @@ const OrderDetail: React.FC = () => {
             {renderInfo("주문 ID", order.id)}
             <Divider />
             {renderInfo(
-              "낙찰 금액",
+              "총 낙찰가",
               `${order.winningAmount.toLocaleString()}원`
             )}
             <Divider />
             {renderInfo(
-              "보증금",
+              "보증금(기납부)",
               typeof order.depositAmount === "number"
                 ? `${order.depositAmount.toLocaleString()}원`
                 : "-"
             )}
             <Divider />
             {renderInfo(
-              "최종 구매금액",
+              "추가 결제금액(예치금 차감)",
               typeof order.depositAmount === "number"
-                ? `${(order.winningAmount - order.depositAmount).toLocaleString()}원`
+                ? `${Math.max(order.winningAmount - order.depositAmount, 0).toLocaleString()}원`
                 : "-"
             )}
             <Divider />

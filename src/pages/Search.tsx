@@ -21,7 +21,7 @@ import { auctionApi } from "../apis/auctionApi";
 import type { AuctionDocument } from "../types/search";
 import { ProductStatus, type ProductCategory } from "../types/product";
 import { categoryApi } from "../apis/categoryApi";
-import { getCommonStatusText } from "../utils/statusText";
+import { getAuctionStatusText } from "../utils/statusText";
 
 const SearchPage: React.FC = () => {
   const location = useLocation();
@@ -341,14 +341,18 @@ const SearchPage: React.FC = () => {
                       color="text.secondary"
                       sx={{ mb: 0.5, textAlign: "right" }}
                     >
-                      {doc.currentBid != null
-                        ? `현재가 ${doc.currentBid.toLocaleString()}원`
-                        : `시작가 ${doc.startBid?.toLocaleString() ?? 0}원`}
+                      최고입찰가{" "}
+                      {doc.currentBid != null && doc.currentBid > 0
+                        ? `${doc.currentBid.toLocaleString()}원`
+                        : "-"}
+                      {doc.startBid != null
+                        ? ` · 시작가 ${doc.startBid.toLocaleString()}원`
+                        : ""}
                     </Typography>
                   ) : null}
                   <Box sx={{ mt: "auto", textAlign: "right" }}>
                     <Typography variant="caption" color="text.secondary">
-                      상태: {getCommonStatusText(doc.status)}
+                      상태: {getAuctionStatusText(doc.status)}
                     </Typography>
                   </Box>
                 </CardContent>

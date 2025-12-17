@@ -197,13 +197,6 @@ const Notifications: React.FC = () => {
                 <Typography variant="body2" color="text.secondary">
                   {notification.content}
                 </Typography>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{ display: "block", mt: 0.5 }}
-                >
-                  받은 시각: {formatDateTime(notification.createdAt)}
-                </Typography>
               </Box>
             ))}
         </Paper>

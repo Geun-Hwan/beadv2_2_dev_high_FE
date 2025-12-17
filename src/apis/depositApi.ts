@@ -34,8 +34,8 @@ export const depositApi = {
    * @param userId
    * @returns
    */
-  createDepositHst: async (params: DepositHstRequest): Promise<DepositInfo> => {
-    const response = await client.post(`/deposit/histories`, params);
+  createDeposit: async (params: DepositHstRequest): Promise<DepositInfo> => {
+    const response = await client.post(`/deposit/usages`, params);
     return response.data;
   },
 
@@ -60,9 +60,10 @@ export const depositApi = {
    * /deposit/histories/me - 예치금 이력(충전/사용) 조회
    * 페이징 응답을 그대로 반환합니다. (ApiResponseDto로 감싸져 있지 않음)
    */
-  getDepositHistories: async (
-    params?: { page?: number; size?: number }
-  ): Promise<PagedDepositHistoryResponse> => {
+  getDepositHistories: async (params?: {
+    page?: number;
+    size?: number;
+  }): Promise<PagedDepositHistoryResponse> => {
     const res = await client.get("/deposit/histories/me", { params });
     return res.data;
   },

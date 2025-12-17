@@ -16,7 +16,7 @@ import {
   type PagedAuctionResponse,
   AuctionStatus,
 } from "../types/auction";
-import { getCommonStatusText } from "../utils/statusText";
+import { getAuctionStatusText } from "../utils/statusText";
 import RemainingTime from "./RemainingTime";
 
 type AuctionSortOption =
@@ -128,10 +128,9 @@ const AuctionList: React.FC<AuctionListProps> = ({
             </Card>
           ))
         : auctionData?.content?.map((auction, i) => {
-            const effectiveCurrentPrice =
-              (auction.currentBid ?? 0) > 0
-                ? (auction.currentBid as number)
-                : auction.startBid ?? 0;
+            const hasBid =
+              auction.status === AuctionStatus.IN_PROGRESS &&
+              (auction.currentBid ?? 0) > 0;
 
             return (
               <Card
@@ -176,7 +175,10 @@ const AuctionList: React.FC<AuctionListProps> = ({
                         mb: 0.5,
                       }}
                     >
-                      현재가: {effectiveCurrentPrice.toLocaleString()}원
+                      최고입찰가:{" "}
+                      {hasBid
+                        ? `${Number(auction.currentBid).toLocaleString()}원`
+                        : "-"}
                     </Typography>
                     <Typography
                       variant="caption"
@@ -195,31 +197,25 @@ const AuctionList: React.FC<AuctionListProps> = ({
                         color:
                           auction.status === "IN_PROGRESS"
                             ? "warning.main"
+                            : auction.status === AuctionStatus.READY
+                              ? "primary.main"
                             : "text.secondary",
-                        fontWeight: 500,
+                        fontWeight:
+                          auction.status === AuctionStatus.READY ? 700 : 500,
                         textAlign: "right",
                         display: "block",
                       }}
                     >
-                      <RemainingTime
-                        auctionStartAt={auction.auctionStartAt}
-                        auctionEndAt={auction.auctionEndAt}
-                        status={auction.status}
-                      />
+                      {auction.status === AuctionStatus.READY ? (
+                        `시작시간: ${formatDateTime(auction.auctionStartAt)}`
+                      ) : (
+                        <RemainingTime
+                          auctionStartAt={auction.auctionStartAt}
+                          auctionEndAt={auction.auctionEndAt}
+                          status={auction.status}
+                        />
+                      )}
                     </Typography>
-                    {auction.status === AuctionStatus.READY && (
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          color: "primary.main",
-                          fontWeight: 500,
-                          textAlign: "right",
-                          display: "block",
-                        }}
-                      >
-                        시작 예정: {formatDateTime(auction.auctionStartAt)}
-                      </Typography>
-                    )}
                     <Typography
                       variant="caption"
                       sx={{
@@ -229,7 +225,7 @@ const AuctionList: React.FC<AuctionListProps> = ({
                         mt: 0.5,
                       }}
                     >
-                      상태: {getCommonStatusText(auction.status)}
+                      상태: {getAuctionStatusText(auction.status)}
                     </Typography>
                   </Box>
                 </CardContent>

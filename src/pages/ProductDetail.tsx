@@ -23,7 +23,7 @@ import { ProductStatus, type Product } from "../types/product";
 import { AuctionStatus, type Auction } from "../types/auction";
 import { useAuth } from "../contexts/AuthContext";
 import RemainingTime from "../components/RemainingTime";
-import { getCommonStatusText } from "../utils/statusText";
+import { getAuctionStatusText } from "../utils/statusText";
 import { getProductImageUrls } from "../utils/images";
 
 const ProductDetail: React.FC = () => {
@@ -533,7 +533,7 @@ const ProductDetail: React.FC = () => {
                     {activeAuction && (
                       <Stack direction="row" spacing={1} alignItems="center">
                         <Chip
-                          label={getCommonStatusText(activeAuction.status)}
+                          label={getAuctionStatusText(activeAuction.status)}
                           color={
                             activeAuction.status === AuctionStatus.IN_PROGRESS
                               ? "success"
@@ -568,14 +568,31 @@ const ProductDetail: React.FC = () => {
                       >
                         시작가: {activeAuction.startBid.toLocaleString()}원
                       </Typography>
-                      <Typography variant="h4" fontWeight="bold" sx={{ mb: 1 }}>
-                        현재가:{" "}
-                        {Math.max(
-                          activeAuction.currentBid || 0,
-                          activeAuction.startBid
-                        ).toLocaleString()}
-                        원
-                      </Typography>
+                      {activeAuction.status === AuctionStatus.READY ? null : (
+                        <>
+                          <Typography
+                            variant="h4"
+                            fontWeight="bold"
+                            sx={{ mb: 1 }}
+                          >
+                            최고입찰가:{" "}
+                            {(activeAuction.currentBid ?? 0) > 0
+                              ? `${Number(
+                                  activeAuction.currentBid
+                                ).toLocaleString()}원`
+                              : "-"}
+                          </Typography>
+                          {(activeAuction.currentBid ?? 0) <= 0 && (
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              아직 입찰이 없습니다. 첫 입찰은 시작가 이상 부터
+                              가능합니다.
+                            </Typography>
+                          )}
+                        </>
+                      )}
                       <Typography variant="body2" color="text.secondary">
                         남은 시간:{" "}
                         <RemainingTime
@@ -652,7 +669,7 @@ const ProductDetail: React.FC = () => {
                             mb={1}
                           >
                             <Typography variant="subtitle2">
-                              {getCommonStatusText(auction.status)}
+                              {getAuctionStatusText(auction.status)}
                             </Typography>
                             <Stack
                               direction="row"

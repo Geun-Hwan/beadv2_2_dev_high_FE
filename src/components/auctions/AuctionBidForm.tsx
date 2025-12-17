@@ -4,8 +4,11 @@ import Button from "@mui/material/Button";
 import { useNavigate } from "react-router-dom";
 
 interface AuctionBidFormProps {
+  isAuctionInReady: boolean;
   isAuctionInProgress: boolean;
   currentBidPrice: number;
+  minBidPrice: number;
+  hasAnyBid: boolean;
   newBidAmount: string;
   setNewBidAmount: (value: string) => void;
   handleBidSubmit: (event: React.FormEvent) => Promise<void>;
@@ -16,8 +19,11 @@ interface AuctionBidFormProps {
 }
 
 const AuctionBidForm: React.FC<AuctionBidFormProps> = ({
+  isAuctionInReady,
   isAuctionInProgress,
   currentBidPrice,
+  minBidPrice,
+  hasAnyBid,
   newBidAmount,
   setNewBidAmount,
   handleBidSubmit,
@@ -58,35 +64,35 @@ const AuctionBidForm: React.FC<AuctionBidFormProps> = ({
           )}
           {isAuthenticated && !isConnected && (
             <Alert severity="warning">
-              실시간 서버와 연결이 끊어졌습니다. 입찰은 접수되지만 현재가/내역
-              갱신이 늦을 수 있습니다.
+              실시간 서버와 연결이 끊어졌습니다. 입찰은 접수되지만
+              최고입찰가/내역 갱신이 늦을 수 있습니다.
             </Alert>
           )}
         </Box>
 
         <TextField
           type="number"
-          label={`입찰 금액 (현재가 ${currentBidPrice.toLocaleString()}원 이상)`}
+          label={`입찰 금액 (최고입찰가 ${
+            hasAnyBid ? `${currentBidPrice.toLocaleString()}원` : "-"
+          } · 최소 ${minBidPrice.toLocaleString()}원)`}
           value={newBidAmount}
           onChange={(e) => setNewBidAmount(e.target.value)}
           fullWidth
-          onFocus={() =>
-            !newBidAmount && setNewBidAmount(String(currentBidPrice + 100))
-          }
+          onFocus={() => !newBidAmount && setNewBidAmount(String(minBidPrice))}
           disabled={isWithdrawn || !isAuctionInProgress}
-          inputProps={{ min: currentBidPrice + 100, step: 100 }}
+          inputProps={{ min: minBidPrice, step: 100 }}
         />
 
         <Button
           type="submit"
           variant="contained"
           size="large"
-          disabled={
-            isWithdrawn || bidLoading || !isAuctionInProgress
-          }
+          disabled={isWithdrawn || bidLoading || !isAuctionInProgress}
           fullWidth
         >
-          {!isAuctionInProgress
+          {isAuctionInReady
+            ? "대기중 입니다."
+            : !isAuctionInProgress
             ? "종료 되었습니다."
             : bidLoading
             ? "입찰 중..."
