@@ -56,7 +56,7 @@ export const MyProductsTab: React.FC<MyProductsTabProps> = ({
         내 상품 목록
       </Typography>
       {showSkeleton ? (
-        <List>
+        <List sx={{ maxHeight: "60vh", overflowY: "auto" }}>
           {Array.from({ length: 3 }).map((_, idx) => (
             <React.Fragment key={idx}>
               <ListItem>
@@ -72,7 +72,7 @@ export const MyProductsTab: React.FC<MyProductsTabProps> = ({
       ) : products?.length === 0 ? (
         <Alert severity="info">등록된 상품이 없습니다.</Alert>
       ) : (
-        <List>
+        <List sx={{ maxHeight: "60vh", overflowY: "auto" }}>
           {products.map(({ product, auctions }) => {
             const priceInfo = formatPriceInfo(product);
             const statusText = getCommonStatusText(product.status);

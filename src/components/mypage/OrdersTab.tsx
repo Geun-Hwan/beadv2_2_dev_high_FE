@@ -85,7 +85,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
       </ToggleButtonGroup>
 
       {showSkeleton ? (
-        <List>
+        <List sx={{ maxHeight: "60vh", overflowY: "auto" }}>
           {Array.from({ length: 3 }).map((_, idx) => (
             <React.Fragment key={idx}>
               <ListItem>
@@ -105,7 +105,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
             : "판매한 주문이 없습니다."}
         </Alert>
       ) : (
-        <List>
+        <List sx={{ maxHeight: "60vh", overflowY: "auto" }}>
           {list.map((order) => {
             const depositAmount =
               typeof order.depositAmount === "number" ? order.depositAmount : 0;
