@@ -6,6 +6,7 @@ import {
   DialogTitle,
   Typography,
 } from "@mui/material";
+import { formatWon } from "../../utils/money";
 
 interface AuctionDialogsProps {
   openLoginPrompt: boolean;
@@ -62,7 +63,7 @@ const AuctionDialogs: React.FC<AuctionDialogsProps> = ({
           <Typography>
             경매에 처음 입찰하시려면 보증금{" "}
             <Typography component="span" fontWeight="bold">
-              {depositAmount.toLocaleString()}원
+              {formatWon(depositAmount)}
             </Typography>
             이 필요합니다.
           </Typography>

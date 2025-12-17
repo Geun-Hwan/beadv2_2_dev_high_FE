@@ -5,9 +5,9 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  TextField,
 } from "@mui/material";
 import React from "react";
+import { MoneyInput } from "../inputs/MoneyInput";
 
 interface DepositChargeDialogProps {
   open: boolean;
@@ -32,25 +32,19 @@ export const DepositChargeDialog: React.FC<DepositChargeDialogProps> = ({
     <Dialog open={open} onClose={onClose}>
       <DialogTitle>예치금 충전</DialogTitle>
       <DialogContent>
-        <TextField
+        <MoneyInput
           autoFocus
           margin="dense"
           id="amount"
           label="충전 금액 (원)"
-          type="number"
           fullWidth
           variant="standard"
-          value={amount}
-          onChange={(e) => onChangeAmount(e.target.value)}
+          value={amount.replace(/\D/g, "")}
+          onChangeValue={onChangeAmount}
           error={!!errorText}
           helperText={errorText}
-          slotProps={{
-            input: {
-              inputProps: {
-                min: 1000,
-                step: 1000,
-              },
-            },
+          InputProps={{
+            endAdornment: "원",
           }}
         />
       </DialogContent>

@@ -12,6 +12,7 @@ import {
   AuctionStatus,
   type AuctionParticipationResponse,
 } from "../../types/auction";
+import { formatWon } from "../../utils/money";
 
 // 보증금 및 참여 상태를 표시하는 컴포넌트
 const AuctionParticipationStatus: React.FC<{
@@ -142,7 +143,7 @@ const AuctionParticipationStatus: React.FC<{
             </Typography>
             <Typography variant="subtitle1" fontWeight={700}>
               {lastBidPrice && lastBidPrice > 0
-                ? `${lastBidPrice.toLocaleString()}원`
+                ? formatWon(lastBidPrice)
                 : "-"}
             </Typography>
             {isParticipated && (!lastBidPrice || lastBidPrice <= 0) && (
@@ -156,7 +157,7 @@ const AuctionParticipationStatus: React.FC<{
               {isParticipated || isRefund ? "보증금" : "필요 보증금"}
             </Typography>
             <Typography variant="subtitle1" fontWeight={700}>
-              {depositAmount.toLocaleString()}원
+              {formatWon(depositAmount)}
             </Typography>
           </Box>
         </Stack>

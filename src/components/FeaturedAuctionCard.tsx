@@ -16,6 +16,7 @@ import { auctionApi } from "../apis/auctionApi";
 import { AuctionStatus, type PagedAuctionResponse } from "../types/auction";
 import { getAuctionStatusText } from "../utils/statusText";
 import RemainingTime from "./RemainingTime";
+import { formatWon } from "../utils/money";
 
 /**
  * 홈 히어로에 들어갈 "오늘의 인기 경매" 카드
@@ -102,11 +103,11 @@ const FeaturedAuctionCard: React.FC = () => {
                 >
                   최고입찰가{" "}
                   {highestBidPrice != null
-                    ? `${highestBidPrice.toLocaleString()}원`
+                    ? formatWon(highestBidPrice)
                     : "-"}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  시작가 {auction.startBid?.toLocaleString() ?? 0}원 · 남은 시간{" "}
+                  시작가 {formatWon(auction.startBid ?? 0)} · 남은 시간{" "}
                   <RemainingTime
                     auctionStartAt={auction.auctionStartAt}
                     auctionEndAt={auction.auctionEndAt}

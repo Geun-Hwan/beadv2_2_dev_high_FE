@@ -15,7 +15,7 @@ export const getCommonStatusText = (
     case ProductStatus.IN_PROGESS:
     case AuctionStatus.IN_PROGRESS:
       return "진행중";
-    case ProductStatus.COMPLETE:
+    case ProductStatus.COMPLETED:
     case AuctionStatus.COMPLETED:
       return "종료";
     case ProductStatus.FAILED:

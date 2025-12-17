@@ -13,6 +13,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { orderApi } from "../apis/orderApi";
 import { getOrderStatusLabel, type OrderResponse } from "../types/order";
+import { formatWon } from "../utils/money";
 
 const OrderDetail: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
@@ -76,20 +77,20 @@ const OrderDetail: React.FC = () => {
             <Divider />
             {renderInfo(
               "총 낙찰가",
-              `${order.winningAmount.toLocaleString()}원`
+              formatWon(order.winningAmount)
             )}
             <Divider />
             {renderInfo(
               "보증금(기납부)",
               typeof order.depositAmount === "number"
-                ? `${order.depositAmount.toLocaleString()}원`
+                ? formatWon(order.depositAmount)
                 : "-"
             )}
             <Divider />
             {renderInfo(
               "추가 결제금액(예치금 차감)",
               typeof order.depositAmount === "number"
-                ? `${Math.max(order.winningAmount - order.depositAmount, 0).toLocaleString()}원`
+                ? formatWon(Math.max(order.winningAmount - order.depositAmount, 0))
                 : "-"
             )}
             <Divider />

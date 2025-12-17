@@ -18,6 +18,7 @@ import {
   type DepositHistory,
   type DepositInfo,
 } from "../../types/deposit";
+import { formatNumber } from "../../utils/money";
 
 type HistoryFilter = "ALL" | "CHARGE" | "USAGE";
 
@@ -38,6 +39,23 @@ const typeMap = {
   ALL: "예치금",
 };
 
+const isUsageType = (type: DepositType) => type === "USAGE" || type === "DEPOSIT";
+
+const getHistoryTypeText = (type: DepositType) => {
+  switch (type) {
+    case "CHARGE":
+      return "충전";
+    case "USAGE":
+      return "사용";
+    case "DEPOSIT":
+      return "보증금 납부";
+    case "REFUND":
+      return "보증금 환불";
+    default:
+      return String(type);
+  }
+};
+
 export const DepositHistoryTab: React.FC<DepositHistoryTabProps> = ({
   loading,
   error,
@@ -52,8 +70,8 @@ export const DepositHistoryTab: React.FC<DepositHistoryTabProps> = ({
 
   const filtered = useMemo(() => {
     if (filter === "ALL") return history;
-    const type: DepositType = filter === "CHARGE" ? "CHARGE" : "USAGE";
-    return history.filter((h) => h.type === type);
+    if (filter === "CHARGE") return history.filter((h) => h.type === "CHARGE");
+    return history.filter((h) => isUsageType(h.type));
   }, [history, filter]);
 
   const showSkeleton = loading && !error && history.length === 0;
@@ -94,7 +112,7 @@ export const DepositHistoryTab: React.FC<DepositHistoryTabProps> = ({
             <Skeleton width={120} />
           ) : (
             <Typography variant="h5" fontWeight={700}>
-              {balanceInfo?.balance?.toLocaleString() ?? "0"}원
+              {formatNumber(balanceInfo?.balance ?? 0)}원
             </Typography>
           )}
           {balanceError && (
@@ -170,8 +188,8 @@ export const DepositHistoryTab: React.FC<DepositHistoryTabProps> = ({
                 <ListItemText
                   primary={`${new Date(hst.createdAt).toLocaleString()}`}
                   secondary={`${
-                    hst.type === "CHARGE" ? "충전" : "사용"
-                  } 금액: ${hst.amount.toLocaleString()}원 (잔액: ${hst.balance.toLocaleString()}원)`}
+                    getHistoryTypeText(hst.type)
+                  } 금액: ${formatNumber(hst.amount)}원 (잔액: ${formatNumber(hst.balance)}원)`}
                 />
               </ListItem>
               <Divider />

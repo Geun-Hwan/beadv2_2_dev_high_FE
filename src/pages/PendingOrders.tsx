@@ -25,6 +25,7 @@ import { OrdersTab, type OrderFilter } from "../components/mypage/OrdersTab";
 import { requestTossPayment } from "../components/tossPay/requestTossPayment";
 import { useAuth } from "../contexts/AuthContext";
 import { OrderStatus, type OrderResponse } from "../types/order";
+import { formatWon } from "../utils/money";
 
 type OrdersViewMode = "PENDING" | "HISTORY";
 
@@ -283,7 +284,7 @@ const PendingOrders: React.FC = () => {
                     <ListItemText
                       primary={`${
                         order.productName ?? "주문"
-                      } · 추가 결제금액: ${payableAmount.toLocaleString()}원`}
+                      } · 추가 결제금액: ${formatWon(payableAmount)}`}
                       secondary={format(
                         new Date(order.createdAt),
                         "yyyy-MM-dd HH:mm"
@@ -305,13 +306,13 @@ const PendingOrders: React.FC = () => {
         <DialogTitle>예치금 잔액이 부족합니다</DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ mt: 1 }}>
-            현재 잔액: {(insufficientInfo?.balance ?? 0).toLocaleString()}원
+            현재 잔액: {formatWon(insufficientInfo?.balance ?? 0)}
           </Typography>
           <Typography variant="body2">
-            필요 금액: {(insufficientInfo?.needed ?? 0).toLocaleString()}원
+            필요 금액: {formatWon(insufficientInfo?.needed ?? 0)}
           </Typography>
           <Typography variant="body2">
-            부족 금액: {(insufficientInfo?.shortage ?? 0).toLocaleString()}원
+            부족 금액: {formatWon(insufficientInfo?.shortage ?? 0)}
           </Typography>
           <Typography variant="body2" sx={{ mt: 1 }}>
             예치금을 충전한 뒤 구매할 수 있어요.

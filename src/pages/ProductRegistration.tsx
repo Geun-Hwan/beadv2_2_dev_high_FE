@@ -2,8 +2,8 @@ import {
   Alert,
   Box,
   Button,
-  ButtonBase,
   Checkbox,
+  Chip,
   CircularProgress,
   Container,
   Dialog,
@@ -16,12 +16,30 @@ import {
   FormControlLabel,
   FormGroup,
   FormLabel,
+  IconButton,
   Paper,
   Skeleton,
   Stack,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Typography,
 } from "@mui/material";
+import { AddPhotoAlternate, Close, Star } from "@mui/icons-material";
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  rectSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   addHours,
   format,
@@ -30,7 +48,7 @@ import {
   setSeconds,
 } from "date-fns";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import { auctionApi } from "../apis/auctionApi";
 import { categoryApi } from "../apis/categoryApi";
@@ -50,6 +68,7 @@ import { ProductStatus } from "../types/product";
 import { ko } from "date-fns/locale";
 import { UserRole } from "../types/user";
 import { getProductImageUrls } from "../utils/images";
+import { MoneyInput } from "../components/inputs/MoneyInput";
 
 interface ProductAuctionFormData {
   name: string;
@@ -59,6 +78,7 @@ interface ProductAuctionFormData {
   auctionEndAt: string;
   startBid: number;
   fileGroupId?: string;
+  auctionId?: string;
 }
 
 interface LocalImage {
@@ -66,6 +86,88 @@ interface LocalImage {
   file: File;
   preview: string;
 }
+
+const SortableImageItem: React.FC<{
+  image: LocalImage;
+  isRepresentative: boolean;
+  onRemove: () => void;
+}> = ({ image, isRepresentative, onRemove }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: image.id });
+
+  return (
+    <Paper
+      ref={setNodeRef}
+      variant="outlined"
+      sx={{
+        position: "relative",
+        overflow: "hidden",
+        borderRadius: 2,
+        cursor: "grab",
+        borderColor: isRepresentative ? "primary.main" : "divider",
+        boxShadow: isRepresentative ? 2 : 0,
+        opacity: isDragging ? 0.6 : 1,
+        userSelect: "none",
+        touchAction: "none",
+        transform: CSS.Transform.toString(transform),
+        transition,
+        "&:hover .image-actions": { opacity: 1 },
+      }}
+      {...attributes}
+      {...listeners}
+    >
+      <Box
+        component="img"
+        src={image.preview}
+        alt="선택한 상품 이미지"
+        sx={{
+          width: "100%",
+          height: 140,
+          objectFit: "cover",
+          display: "block",
+          pointerEvents: "none",
+        }}
+      />
+      {isRepresentative && (
+        <Chip
+          size="small"
+          icon={<Star sx={{ fontSize: 16 }} />}
+          label="대표"
+          color="primary"
+          sx={{
+            position: "absolute",
+            top: 8,
+            left: 8,
+            fontWeight: 700,
+          }}
+        />
+      )}
+      <IconButton
+        size="small"
+        onClick={(e) => {
+          e.stopPropagation();
+          onRemove();
+        }}
+        sx={{
+          position: "absolute",
+          top: 6,
+          right: 6,
+          bgcolor: "rgba(0,0,0,0.45)",
+          color: "common.white",
+          "&:hover": { bgcolor: "rgba(0,0,0,0.6)" },
+        }}
+      >
+        <Close fontSize="small" />
+      </IconButton>
+    </Paper>
+  );
+};
 
 const ProductRegistration: React.FC = () => {
   const { productId, auctionId } = useParams<{
@@ -79,6 +181,7 @@ const ProductRegistration: React.FC = () => {
     register,
     handleSubmit,
     watch,
+    control,
     formState: { errors },
     reset,
   } = useForm<ProductAuctionFormData>();
@@ -87,7 +190,6 @@ const ProductRegistration: React.FC = () => {
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [localImages, setLocalImages] = useState<LocalImage[]>([]);
   const [useExistingImages, setUseExistingImages] = useState(false);
-  const [existingPreviewIndex, setExistingPreviewIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -150,7 +252,6 @@ const ProductRegistration: React.FC = () => {
 
   const handleExistingImageModeChange = (next: boolean) => {
     setUseExistingImages(next);
-    setExistingPreviewIndex(0);
     if (next) {
       clearLocalImages();
     }
@@ -188,7 +289,6 @@ const ProductRegistration: React.FC = () => {
         });
         setHasActiveAuction(false);
         setUseExistingImages(false);
-        setExistingPreviewIndex(0);
         clearLocalImages();
         return;
       }
@@ -276,7 +376,6 @@ const ProductRegistration: React.FC = () => {
           (productData?.images?.length ?? 0) > 0 ||
           !!productData?.imageUrl;
         setUseExistingImages(hasExistingImages);
-        setExistingPreviewIndex(0);
       } catch (err) {
         setError("데이터를 불러오는 데 실패했습니다.");
         console.error(err);
@@ -300,6 +399,23 @@ const ProductRegistration: React.FC = () => {
     setUseExistingImages(false);
     event.target.value = "";
   };
+
+  const handleDropFiles = (files: File[]) => {
+    if (!files.length) return;
+    setLocalImages((prev) => [
+      ...prev,
+      ...files.map((file) => buildLocalImage(file)),
+    ]);
+    setUseExistingImages(false);
+  };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  );
+  const imageIds = useMemo(
+    () => localImages.map((img) => img.id),
+    [localImages]
+  );
 
   const handleCategoryChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const categoryId = event.target.name;
@@ -378,6 +494,7 @@ const ProductRegistration: React.FC = () => {
           startBid: Number(data.startBid),
           auctionStartAt: auctionStart,
           auctionEndAt: auctionEnd,
+          auctionId: readyAuction?.auctionId,
         };
         const productResponse = await productApi.updateProduct(
           productId,
@@ -524,12 +641,6 @@ const ProductRegistration: React.FC = () => {
     [currentProduct]
   );
   const showExistingImages = isEditMode && existingImageUrls.length > 0;
-  const existingPreviewUrl =
-    existingImageUrls[existingPreviewIndex] ?? existingImageUrls[0] ?? null;
-
-  useEffect(() => {
-    setExistingPreviewIndex(0);
-  }, [currentProduct?.id, existingImageUrls.length]);
 
   return (
     <Container maxWidth="md">
@@ -686,228 +797,264 @@ const ProductRegistration: React.FC = () => {
                       : "grey.50",
                 }}
               >
-                <Stack spacing={1}>
-                  <Typography variant="body2" color="text.secondary">
-                    현재 등록된 이미지
-                  </Typography>
-                  {existingPreviewUrl && (
-                    <Box sx={{ position: "relative" }}>
-                      <Box
-                        component="img"
-                        src={existingPreviewUrl}
-                        alt="대표 이미지"
-                        sx={{
-                          width: "100%",
-                          maxHeight: 240,
-                          objectFit: "cover",
-                          borderRadius: 1,
-                          border: "1px solid",
-                          borderColor: "divider",
-                        }}
-                      />
+                <Stack spacing={1.5}>
+                  <Stack
+                    direction={{ xs: "column", sm: "row" }}
+                    spacing={1}
+                    alignItems={{ xs: "flex-start", sm: "center" }}
+                    justifyContent="space-between"
+                  >
+                    <Box>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Typography variant="body2" color="text.secondary">
+                          현재 등록된 이미지
+                        </Typography>
+                        <Chip
+                          size="small"
+                          label={`${existingImageUrls.length}장`}
+                          variant="outlined"
+                        />
+                      </Stack>
+                      <Typography variant="caption" color="text.secondary">
+                        기존 이미지는 유지하거나, 새 이미지로 한 번에 교체할 수
+                        있어요.
+                      </Typography>
                     </Box>
-                  )}
-                  {existingImageUrls.length > 1 && (
-                    <Stack
-                      direction="row"
-                      spacing={1}
-                      flexWrap="wrap"
-                      useFlexGap
-                      sx={{ pt: 1 }}
+
+                    <ToggleButtonGroup
+                      size="small"
+                      color="primary"
+                      value={useExistingImages ? "KEEP" : "REPLACE"}
+                      exclusive
+                      onChange={(_, v: "KEEP" | "REPLACE" | null) => {
+                        if (!v) return;
+                        handleExistingImageModeChange(v === "KEEP");
+                      }}
                     >
-                      {existingImageUrls.map((url, idx) => (
-                        <ButtonBase
-                          key={`${url}-${idx}`}
-                          onClick={() => setExistingPreviewIndex(idx)}
+                      <ToggleButton value="KEEP">유지</ToggleButton>
+                      <ToggleButton value="REPLACE">교체</ToggleButton>
+                    </ToggleButtonGroup>
+                  </Stack>
+
+                  <Box
+                    sx={{
+                      display: "grid",
+                      gap: 1,
+                      gridTemplateColumns:
+                        "repeat(auto-fill, minmax(120px, 1fr))",
+                      opacity: useExistingImages ? 1 : 0.55,
+                      transition: "opacity 0.15s ease",
+                    }}
+                  >
+                    {existingImageUrls.map((url, idx) => (
+                      <Paper
+                        key={`${url}-${idx}`}
+                        variant="outlined"
+                        sx={{
+                          position: "relative",
+                          overflow: "hidden",
+                          borderRadius: 2,
+                          borderColor: idx === 0 ? "primary.main" : "divider",
+                        }}
+                      >
+                        <Box
+                          component="img"
+                          src={url}
+                          alt={`등록된 이미지 ${idx + 1}`}
                           sx={{
-                            width: 72,
-                            height: 72,
-                            borderRadius: 1,
-                            overflow: "hidden",
-                            border: "2px solid",
-                            borderColor:
-                              idx === existingPreviewIndex
-                                ? "primary.main"
-                                : "transparent",
-                            boxShadow: idx === existingPreviewIndex ? 2 : 0,
+                            width: "100%",
+                            height: 120,
+                            objectFit: "cover",
+                            display: "block",
                           }}
-                        >
-                          <Box
-                            component="img"
-                            src={url}
-                            alt={`추가 이미지 ${idx + 1}`}
+                        />
+                        {idx === 0 && (
+                          <Chip
+                            size="small"
+                            icon={<Star sx={{ fontSize: 16 }} />}
+                            label="대표"
+                            color="primary"
                             sx={{
-                              width: "100%",
-                              height: "100%",
-                              objectFit: "cover",
+                              position: "absolute",
+                              top: 8,
+                              left: 8,
+                              fontWeight: 700,
                             }}
                           />
-                        </ButtonBase>
-                      ))}
-                    </Stack>
-                  )}
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    onClick={() =>
-                      handleExistingImageModeChange(!useExistingImages)
-                    }
-                  >
-                    {useExistingImages
-                      ? "이미지 교체하기"
-                      : "기존 이미지 유지하기"}
-                  </Button>
+                        )}
+                      </Paper>
+                    ))}
+                  </Box>
+
                   {!useExistingImages && (
-                    <Typography variant="caption" color="text.secondary">
-                      새로운 이미지를 업로드하면 기존 이미지가 대체됩니다.
-                    </Typography>
+                    <Alert severity="warning">
+                      새 이미지를 업로드하면 기존 이미지가 모두 대체됩니다.
+                    </Alert>
                   )}
                 </Stack>
               </Paper>
             )}
 
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              <Button
+              <Paper
                 variant="outlined"
-                component="label"
                 sx={{
-                  py: 3,
-                  border: "2px dashed #ccc",
+                  borderStyle: "dashed",
+                  borderWidth: 2,
+                  borderColor: useExistingImages ? "divider" : "grey.400",
                   borderRadius: 2,
-                  "&:hover": {
-                    borderColor: "primary.main",
-                    backgroundColor: "rgba(25, 118, 210, 0.04)",
-                  },
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 1,
+                  p: 2,
+                  bgcolor: useExistingImages
+                    ? "action.disabledBackground"
+                    : "background.paper",
+                  transition:
+                    "border-color 0.15s ease, background-color 0.15s ease",
+                  "&:hover": useExistingImages
+                    ? undefined
+                    : {
+                        borderColor: "primary.main",
+                        bgcolor: "action.hover",
+                      },
+                }}
+                onDragOver={(e) => {
+                  if (useExistingImages) return;
+                  e.preventDefault();
+                }}
+                onDrop={(e) => {
+                  if (useExistingImages) return;
+                  e.preventDefault();
+                  const dropped = Array.from(e.dataTransfer.files || []).filter(
+                    (f) => f.type.startsWith("image/")
+                  );
+                  handleDropFiles(dropped);
                 }}
               >
-                <Typography variant="h6" sx={{ color: "primary.main" }}>
-                  📷
-                </Typography>
-                <Typography variant="body1">
-                  {localImages.length > 0
-                    ? "이미지를 추가로 선택"
-                    : "이미지 업로드"}
-                </Typography>
-                <Typography variant="caption" sx={{ color: "text.secondary" }}>
-                  클릭하여 상품 이미지를 여러 장 선택하세요
-                </Typography>
-                <input
-                  type="file"
-                  hidden
-                  accept="image/*"
-                  multiple
-                  onChange={handleFileChange}
-                />
-              </Button>
+                <Stack
+                  direction={{ xs: "column", sm: "row" }}
+                  spacing={2}
+                  alignItems={{ xs: "stretch", sm: "center" }}
+                  justifyContent="space-between"
+                >
+                  <Box>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <AddPhotoAlternate
+                        color={useExistingImages ? "disabled" : "primary"}
+                      />
+                      <Typography variant="subtitle1" fontWeight={700}>
+                        {useExistingImages
+                          ? "기존 이미지 유지 중"
+                          : localImages.length > 0
+                          ? "이미지를 추가로 선택"
+                          : "상품 이미지 업로드"}
+                      </Typography>
+                    </Stack>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mt: 0.5 }}
+                    >
+                      {useExistingImages
+                        ? "기존 이미지를 유지하려면 그대로 저장하세요. 교체하려면 ‘이미지 교체하기’를 눌러주세요."
+                        : "드래그 앤 드롭 또는 파일 선택으로 여러 장 업로드할 수 있어요."}
+                    </Typography>
+                  </Box>
+
+                  <Button
+                    variant="contained"
+                    component="label"
+                    disabled={useExistingImages}
+                    sx={{ whiteSpace: "nowrap" }}
+                  >
+                    파일 선택
+                    <input
+                      type="file"
+                      hidden
+                      accept="image/*"
+                      multiple
+                      onChange={handleFileChange}
+                    />
+                  </Button>
+                </Stack>
+              </Paper>
 
               {localImages.length > 0 && (
-                <Box
+                <Paper
+                  variant="outlined"
                   sx={{
-                    border: "1px solid #e0e0e0",
-                    borderRadius: 2,
                     p: 2,
-                    backgroundColor: "#fafafa",
+                    borderRadius: 2,
+                    bgcolor: (theme) =>
+                      theme.palette.mode === "dark"
+                        ? "rgba(255,255,255,0.04)"
+                        : "grey.50",
                   }}
                 >
-                  <Typography
-                    variant="subtitle2"
-                    sx={{
-                      mb: 1,
-                      color: "text.secondary",
-                      fontWeight: "bold",
-                    }}
+                  <Stack
+                    direction={{ xs: "column", sm: "row" }}
+                    spacing={1}
+                    alignItems={{ xs: "flex-start", sm: "center" }}
+                    justifyContent="space-between"
+                    sx={{ mb: 1 }}
                   >
-                    선택한 이미지 ({localImages.length}) — 첫 번째 이미지는
-                    대표로 사용됩니다.
-                  </Typography>
-                  <Stack spacing={1}>
-                    <Box sx={{ position: "relative" }}>
-                      <Box
-                        component="img"
-                        src={localImages[0].preview}
-                        alt="선택한 대표 이미지"
-                        sx={{
-                          width: "100%",
-                          maxHeight: 240,
-                          objectFit: "cover",
-                          borderRadius: 1,
-                          border: "1px solid",
-                          borderColor: "divider",
-                        }}
-                      />
-                      <Button
-                        size="small"
-                        color="error"
-                        variant="contained"
-                        onClick={() =>
-                          handleRemoveLocalImage(localImages[0].id)
-                        }
-                        sx={{
-                          position: "absolute",
-                          top: 8,
-                          right: 8,
-                          minWidth: 0,
-                          px: 1,
-                        }}
-                      >
-                        제거
-                      </Button>
+                    <Box>
+                      <Typography variant="subtitle2" fontWeight={700}>
+                        선택한 이미지 {localImages.length}장
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        드래그해서 순서를 바꿀 수 있어요. 첫 번째 이미지가
+                        대표로 사용됩니다.
+                      </Typography>
                     </Box>
-                    {localImages.length > 1 && (
-                      <Stack
-                        direction="row"
-                        spacing={1}
-                        flexWrap="wrap"
-                        useFlexGap
-                      >
-                        {localImages.slice(1).map((image) => (
-                          <Box
-                            key={image.id}
-                            sx={{
-                              width: 96,
-                              borderRadius: 1,
-                              border: "1px solid #e0e0e0",
-                              overflow: "hidden",
-                              backgroundColor: "background.paper",
-                            }}
-                          >
-                            <Box
-                              component="img"
-                              src={image.preview}
-                              alt="선택한 상품 이미지 미리보기"
-                              sx={{
-                                width: "100%",
-                                height: 96,
-                                objectFit: "cover",
-                              }}
-                            />
-                            <Button
-                              size="small"
-                              color="error"
-                              fullWidth
-                              onClick={() => handleRemoveLocalImage(image.id)}
-                            >
-                              제거
-                            </Button>
-                          </Box>
-                        ))}
-                      </Stack>
-                    )}
-                  </Stack>
-                  {localImages.length > 1 && (
                     <Button
                       size="small"
                       color="inherit"
-                      sx={{ mt: 1 }}
                       onClick={clearLocalImages}
                     >
-                      선택한 이미지 모두 제거
+                      전체 제거
                     </Button>
-                  )}
-                </Box>
+                  </Stack>
+
+                  <Box
+                    sx={{
+                      display: "grid",
+                      gap: 1,
+                      gridTemplateColumns:
+                        "repeat(auto-fill, minmax(140px, 1fr))",
+                    }}
+                  >
+                    <DndContext
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={({ active, over }) => {
+                        if (!over || active.id === over.id) return;
+                        setLocalImages((prev) => {
+                          const oldIndex = prev.findIndex(
+                            (img) => img.id === active.id
+                          );
+                          const newIndex = prev.findIndex(
+                            (img) => img.id === over.id
+                          );
+                          if (oldIndex < 0 || newIndex < 0) return prev;
+                          return arrayMove(prev, oldIndex, newIndex);
+                        });
+                      }}
+                    >
+                      <SortableContext
+                        items={imageIds}
+                        strategy={rectSortingStrategy}
+                      >
+                        {localImages.map((image, idx) => (
+                          <SortableImageItem
+                            key={image.id}
+                            image={image}
+                            isRepresentative={idx === 0}
+                            onRemove={() => handleRemoveLocalImage(image.id)}
+                          />
+                        ))}
+                      </SortableContext>
+                    </DndContext>
+                  </Box>
+                </Paper>
               )}
             </Box>
           </Box>
@@ -923,36 +1070,44 @@ const ProductRegistration: React.FC = () => {
           </Typography>
 
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="startBid"
-              label="시작 입찰가 (100원 단위)"
-              type="number"
-              {...register("startBid", {
+            <Controller
+              name="startBid"
+              control={control}
+              rules={{
                 required: "시작 입찰가는 필수입니다.",
                 validate: (v) => {
                   if (v <= 0) return "시작 입찰가는 0보다 커야 합니다";
                   if (v % 100 !== 0) return "100원 단위로 입력해주세요";
                   return true;
                 },
-                valueAsNumber: true,
-                setValueAs: (v) => Math.round(Number(v) / 100) * 100,
-              })}
-              error={!!errors.startBid}
-              helperText={errors.startBid?.message}
-              slotProps={{
-                input: {
-                  inputProps: {
-                    min: 0,
-                    step: 100,
-                  },
-                },
-                inputLabel: {
-                  shrink: true,
-                },
               }}
+              render={({ field }) => (
+                <MoneyInput
+                  margin="normal"
+                  required
+                  fullWidth
+                  id="startBid"
+                  label="시작 입찰가 (100원 단위)"
+                  value={field.value != null ? String(field.value) : ""}
+                  onChangeValue={(digits) => {
+                    const num = digits ? Number(digits) : 0;
+                    field.onChange(Number.isFinite(num) ? num : 0);
+                  }}
+                  onBlur={() => {
+                    field.onBlur();
+                    const next = Math.round(Number(field.value ?? 0) / 100) * 100;
+                    field.onChange(Number.isFinite(next) ? next : 0);
+                  }}
+                  error={!!errors.startBid}
+                  helperText={errors.startBid?.message}
+                  InputProps={{ endAdornment: "원" }}
+                  slotProps={{
+                    inputLabel: {
+                      shrink: true,
+                    },
+                  }}
+                />
+              )}
             />
             <TextField
               margin="normal"

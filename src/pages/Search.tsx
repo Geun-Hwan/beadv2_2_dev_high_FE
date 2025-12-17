@@ -23,6 +23,7 @@ import { type ProductCategory } from "../types/product";
 import { categoryApi } from "../apis/categoryApi";
 import { getAuctionStatusText } from "../utils/statusText";
 import { AuctionStatus } from "../types/auction";
+import { formatWon } from "../utils/money";
 
 const SearchPage: React.FC = () => {
   const formatDateTime = (value?: string) => {
@@ -565,13 +566,13 @@ const SearchPage: React.FC = () => {
                     <Typography variant="caption" color="text.secondary">
                       시작가{" "}
                       {doc.startPrice != null
-                        ? `${doc.startPrice.toLocaleString()}원`
+                        ? formatWon(doc.startPrice)
                         : "-"}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
                       보증금{" "}
                       {doc.depositAmount != null
-                        ? `${doc.depositAmount.toLocaleString()}원`
+                        ? formatWon(doc.depositAmount)
                         : "-"}
                     </Typography>
                   </Stack>

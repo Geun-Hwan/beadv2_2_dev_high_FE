@@ -16,6 +16,7 @@ import React, { useMemo, useState } from "react";
 import { getOrderStatusLabel, type OrderResponse } from "../../types/order";
 import { Link as RouterLink } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import { formatWon } from "../../utils/money";
 
 export type OrderFilter = "BOUGHT" | "SOLD";
 
@@ -132,12 +133,12 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                     secondary={
                       <Stack spacing={0.25} sx={{ mt: 0.5 }}>
                         <Typography variant="body2" color="text.secondary">
-                          총 낙찰가: {order.winningAmount.toLocaleString()}원
+                          총 낙찰가: {formatWon(order.winningAmount)}
                           {typeof order.depositAmount === "number"
-                            ? ` · 보증금(기납부): ${depositAmount.toLocaleString()}원`
+                            ? ` · 보증금(기납부): ${formatWon(depositAmount)}`
                             : ""}
                           {filter === "BOUGHT" && additionalPaymentAmount != null
-                            ? ` · 추가 결제금액: ${additionalPaymentAmount.toLocaleString()}원`
+                            ? ` · 추가 결제금액: ${formatWon(additionalPaymentAmount)}`
                             : ""}
                         </Typography>
 

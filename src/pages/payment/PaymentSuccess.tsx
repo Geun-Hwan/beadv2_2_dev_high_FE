@@ -10,6 +10,7 @@ import {
   Paper,
   Typography,
 } from "@mui/material";
+import { auctionApi } from "../../apis/auctionApi";
 import { depositApi } from "../../apis/depositApi";
 import { useAuth } from "../../contexts/AuthContext";
 
@@ -114,6 +115,101 @@ export default function PaymentSuccess() {
             }
           } catch (e) {
             console.error("autoPurchaseAfterCharge 파싱/처리 실패:", e);
+          }
+        }
+
+        const autoAuctionRaw = sessionStorage.getItem(
+          "autoAuctionDepositAfterCharge"
+        );
+        if (autoAuctionRaw) {
+          try {
+            const parsed = JSON.parse(autoAuctionRaw) as {
+              auctionId?: string;
+              depositAmount?: number;
+              bidPrice?: number;
+              createdAt?: number;
+            };
+            const targetAuctionId = parsed?.auctionId;
+            const targetDepositAmount = parsed?.depositAmount;
+            const targetBidPrice = parsed?.bidPrice;
+
+            if (targetAuctionId && typeof targetDepositAmount === "number") {
+              try {
+                await auctionApi.createParticipation(targetAuctionId, {
+                  depositAmount: targetDepositAmount,
+                });
+
+                if (typeof targetBidPrice === "number" && targetBidPrice > 0) {
+                  try {
+                    await auctionApi.placeBid(targetAuctionId, targetBidPrice);
+                    setTitle("충전과 보증금 결제, 입찰까지 완료되었어요");
+                    setDescription(
+                      "예치금 충전 승인 후 보증금 결제와 입찰 접수까지 처리했습니다."
+                    );
+                  } catch (bidErr) {
+                    console.error("자동 입찰 처리 실패:", bidErr);
+                    setTitle("충전과 보증금 결제는 완료됐지만 입찰은 실패했어요");
+                    setDescription(
+                      "예치금 충전과 보증금 결제는 완료됐지만 입찰 접수에 실패했습니다. 경매 상세에서 다시 입찰해 주세요."
+                    );
+                  }
+                } else {
+                  setTitle("충전과 보증금 결제가 완료되었어요");
+                  setDescription(
+                    "예치금 충전 승인 후 보증금 결제까지 처리했습니다. 이제 입찰할 수 있어요."
+                  );
+                }
+
+                try {
+                  const account = await depositApi.getAccount();
+                  if (typeof account?.balance === "number") {
+                    window.dispatchEvent(
+                      new CustomEvent("deposit:set", { detail: account.balance })
+                    );
+                  } else {
+                    window.dispatchEvent(
+                      new CustomEvent("deposit:decrement", {
+                        detail: targetDepositAmount,
+                      })
+                    );
+                  }
+                } catch {
+                  window.dispatchEvent(
+                    new CustomEvent("deposit:decrement", {
+                      detail: targetDepositAmount,
+                    })
+                  );
+                }
+
+                redirectPath = `/auctions/${targetAuctionId}`;
+                setStatus("success");
+                setAction({
+                  label: "경매로 바로가기",
+                  path: `/auctions/${targetAuctionId}`,
+                });
+              } catch (depositErr) {
+                console.error("자동 보증금 결제 처리 실패:", depositErr);
+                redirectPath = `/auctions/${targetAuctionId}`;
+                setStatus("success");
+                setTitle("충전은 완료됐지만 보증금 결제는 실패했어요");
+                setDescription(
+                  "예치금 충전은 완료됐지만 보증금 결제 처리에 실패했습니다. 경매 상세에서 다시 시도해 주세요."
+                );
+                setAction({
+                  label: "경매로 바로가기",
+                  path: `/auctions/${targetAuctionId}`,
+                });
+              } finally {
+                sessionStorage.removeItem("autoAuctionDepositAfterCharge");
+              }
+
+              setTimeout(() => {
+                navigate(redirectPath, { replace: true });
+              }, 5000);
+              return;
+            }
+          } catch (e) {
+            console.error("autoAuctionDepositAfterCharge 파싱/처리 실패:", e);
           }
         }
 

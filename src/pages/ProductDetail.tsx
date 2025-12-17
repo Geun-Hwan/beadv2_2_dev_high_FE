@@ -25,6 +25,7 @@ import { useAuth } from "../contexts/AuthContext";
 import RemainingTime from "../components/RemainingTime";
 import { getAuctionStatusText } from "../utils/statusText";
 import { getProductImageUrls } from "../utils/images";
+import { formatWon } from "../utils/money";
 
 const ProductDetail: React.FC = () => {
   const { id: productId } = useParams<{ id: string }>();
@@ -566,7 +567,7 @@ const ProductDetail: React.FC = () => {
                         color="text.secondary"
                         sx={{ mb: 1 }}
                       >
-                        시작가: {activeAuction.startBid.toLocaleString()}원
+                        시작가: {formatWon(activeAuction.startBid)}
                       </Typography>
                       {activeAuction.status === AuctionStatus.READY ? null : (
                         <>
@@ -577,9 +578,7 @@ const ProductDetail: React.FC = () => {
                           >
                             최고입찰가:{" "}
                             {(activeAuction.currentBid ?? 0) > 0
-                              ? `${Number(
-                                  activeAuction.currentBid
-                                ).toLocaleString()}원`
+                              ? formatWon(activeAuction.currentBid)
                               : "-"}
                           </Typography>
                           {(activeAuction.currentBid ?? 0) <= 0 && (
@@ -680,11 +679,9 @@ const ProductDetail: React.FC = () => {
                                 variant="body2"
                                 color="text.secondary"
                               >
-                                {Math.max(
-                                  auction.currentBid ?? 0,
-                                  auction.startBid
-                                ).toLocaleString()}
-                                원
+                                {formatWon(
+                                  Math.max(auction.currentBid ?? 0, auction.startBid)
+                                )}
                               </Typography>
                               {isAuctionDeletable(auction) && (
                                 <Button

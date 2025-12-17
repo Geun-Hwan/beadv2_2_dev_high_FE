@@ -7,10 +7,15 @@ import {
   CardHeader,
   Container,
   Divider,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Grid,
   Drawer,
   Skeleton,
   Stack,
+  Typography,
 } from "@mui/material";
 import type { IMessage } from "@stomp/stompjs";
 import React, { useCallback, useEffect, useState } from "react";
@@ -24,8 +29,11 @@ import AuctionDialogs from "../components/auctions/AuctionDialogs";
 import AuctionInfoPanel from "../components/auctions/AuctionInfoPanel";
 import BidHistory from "../components/auctions/BidHistory";
 import ProductInfo from "../components/auctions/ProductInfo";
+import { DepositChargeDialog } from "../components/mypage/DepositChargeDialog";
+import { requestTossPayment } from "../components/tossPay/requestTossPayment";
 import { useAuth } from "../contexts/AuthContext";
 import { useStomp } from "../hooks/useStomp";
+import { formatWon } from "../utils/money";
 import {
   type AuctionBidMessage,
   type AuctionDetailResponse,
@@ -72,6 +80,17 @@ const AuctionDetail: React.FC = () => {
   const [bidLoading, setBidLoading] = useState(false);
   const [withdrawLoading, setWithdrawLoading] = useState(false);
   const [depositLoading, setDepositLoading] = useState(false);
+  const [insufficientDepositOpen, setInsufficientDepositOpen] = useState(false);
+  const [insufficientDepositInfo, setInsufficientDepositInfo] = useState<{
+    balance: number;
+    needed: number;
+    shortage: number;
+    recommendedCharge: number;
+  } | null>(null);
+  const [chargeOpen, setChargeOpen] = useState(false);
+  const [chargeLoading, setChargeLoading] = useState(false);
+  const [chargeAmount, setChargeAmount] = useState("");
+  const [chargeError, setChargeError] = useState<string | null>(null);
 
   const getProductImageUrls = useCallback(() => {
     const raw: unknown = (auctionDetail as any)?.files;
@@ -287,18 +306,18 @@ const AuctionDetail: React.FC = () => {
     if (auctionDetail) {
       if (!hasAnyBid && bid < auctionDetail.startBid) {
         alert(
-          `첫 입찰 금액은 시작가(${auctionDetail.startBid.toLocaleString()}원) 이상이어야 합니다.`
+          `첫 입찰 금액은 시작가(${formatWon(auctionDetail.startBid)}) 이상이어야 합니다.`
         );
         return;
       }
       if (hasAnyBid && bid <= currentBidPrice) {
         alert(
-          `입찰 금액은 최고입찰가(${currentBidPrice.toLocaleString()}원)보다 높아야 합니다.`
+          `입찰 금액은 최고입찰가(${formatWon(currentBidPrice)})보다 높아야 합니다.`
         );
         return;
       }
       if (bid < minBidPrice) {
-        alert(`최소 입찰 금액은 ${minBidPrice.toLocaleString()}원입니다.`);
+        alert(`최소 입찰 금액은 ${formatWon(minBidPrice)}입니다.`);
         return;
       }
     }
@@ -362,7 +381,22 @@ const AuctionDetail: React.FC = () => {
       const account = await depositApi.getAccount();
 
       if ((account?.balance ?? 0) < depositAmount) {
-        alert("보증금이 부족합니다. 예치금을 충전해 주세요.");
+        const balance = Number(account?.balance ?? 0);
+        const needed = depositAmount;
+        const shortage = Math.max(0, needed - balance);
+        const recommendedCharge = Math.max(
+          1000,
+          Math.ceil(shortage / 100) * 100
+        );
+
+        setInsufficientDepositInfo({
+          balance,
+          needed,
+          shortage,
+          recommendedCharge,
+        });
+        setOpenDepositPrompt(false);
+        setInsufficientDepositOpen(true);
         return;
       }
 
@@ -588,6 +622,95 @@ const AuctionDetail: React.FC = () => {
         setOpenWithdrawnPopup={setOpenWithdrawnPopup}
         handleWithdraw={handleWithdraw}
         isCurrentUserHighestBidder={highestBidderInfo?.id === user?.userId}
+      />
+
+      <Dialog
+        open={insufficientDepositOpen}
+        onClose={() => setInsufficientDepositOpen(false)}
+      >
+        <DialogTitle>예치금 잔액이 부족합니다</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mt: 1 }}>
+            현재 잔액: {formatWon(insufficientDepositInfo?.balance ?? 0)}
+          </Typography>
+          <Typography variant="body2">
+            필요 금액: {formatWon(insufficientDepositInfo?.needed ?? 0)}
+          </Typography>
+          <Typography variant="body2">
+            부족 금액:{" "}
+            {formatWon(insufficientDepositInfo?.shortage ?? 0)}
+          </Typography>
+          <Typography variant="body2" sx={{ mt: 1 }}>
+            예치금을 충전한 뒤 보증금 결제를 진행할 수 있어요.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setInsufficientDepositOpen(false)}>
+            닫기
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              const amount = insufficientDepositInfo?.recommendedCharge ?? 0;
+              setChargeAmount(amount > 0 ? String(amount) : "");
+              setChargeError(null);
+              setInsufficientDepositOpen(false);
+              setChargeOpen(true);
+            }}
+          >
+            충전하기
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <DepositChargeDialog
+        open={chargeOpen}
+        loading={chargeLoading}
+        amount={chargeAmount}
+        errorText={chargeError}
+        onChangeAmount={setChargeAmount}
+        onClose={() => {
+          if (chargeLoading) return;
+          setChargeOpen(false);
+          setChargeAmount("");
+          setChargeError(null);
+        }}
+        onSubmit={async () => {
+          if (chargeLoading) return;
+          const amount = parseInt(chargeAmount, 10);
+          if (isNaN(amount) || amount < 1000 || amount % 100 !== 0) {
+            setChargeError("충전은 100원 단위로 최소 1,000원부터 가능합니다.");
+            return;
+          }
+
+          setChargeLoading(true);
+          setChargeError(null);
+          try {
+            const depositOrder = await depositApi.createDepositOrder(amount);
+            if (depositOrder && depositOrder.orderId && auctionId) {
+              const depositAmount = Number(auctionDetail?.depositAmount ?? 0);
+              const bidPrice = Number(newBidAmount);
+              sessionStorage.setItem(
+                "autoAuctionDepositAfterCharge",
+                JSON.stringify({
+                  auctionId,
+                  depositAmount,
+                  bidPrice: Number.isFinite(bidPrice) ? bidPrice : undefined,
+                  createdAt: Date.now(),
+                })
+              );
+              requestTossPayment(depositOrder.orderId, depositOrder.amount);
+              setChargeOpen(false);
+            } else {
+              setChargeError("주문 생성에 실패했습니다.");
+            }
+          } catch (chargeErr) {
+            console.error("예치금 충전 주문 생성 실패:", chargeErr);
+            setChargeError("예치금 충전 주문 생성 중 오류가 발생했습니다.");
+          } finally {
+            setChargeLoading(false);
+          }
+        }}
       />
 
       <Drawer

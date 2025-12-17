@@ -32,6 +32,7 @@ export default function PaymentFail() {
         console.error("결제 실패 처리 중 오류:", err);
       } finally {
         sessionStorage.removeItem("autoPurchaseAfterCharge");
+        sessionStorage.removeItem("autoAuctionDepositAfterCharge");
         setTitle("결제가 실패했어요");
         setDescription(
           msg ||

@@ -19,7 +19,7 @@ import {
   Typography,
 } from "@mui/material";
 import React, { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
 import { auctionApi } from "../apis/auctionApi";
 import { productApi } from "../apis/productApi";
@@ -37,6 +37,7 @@ import {
 } from "date-fns";
 import { ko } from "date-fns/locale";
 import { UserRole } from "../types/user";
+import { MoneyInput } from "../components/inputs/MoneyInput";
 
 interface AuctionFormData {
   startBid: number;
@@ -57,6 +58,7 @@ const AuctionRegistration: React.FC = () => {
     register,
     handleSubmit,
     watch,
+    control,
     formState: { errors },
     reset,
   } = useForm<AuctionFormData>();
@@ -270,6 +272,7 @@ const AuctionRegistration: React.FC = () => {
           startBid: Number(data.startBid),
           auctionStartAt: auctionStart,
           auctionEndAt: auctionEnd,
+          sellerId: user?.userId,
         };
         const response = await auctionApi.createAuction(auctionData);
         alert("경매가 성공적으로 등록되었습니다.");
@@ -394,33 +397,47 @@ const AuctionRegistration: React.FC = () => {
               noValidate
               sx={{ mt: 1 }}
             >
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                id="startBid"
-                label="시작 입찰가 (100원 단위)"
-                type="number"
-                {...register("startBid", {
+              <Controller
+                name="startBid"
+                control={control}
+                rules={{
                   required: "시작 입찰가는 필수입니다.",
                   validate: (v) => {
                     if (v <= 0) return "시작 입찰가는 0보다 커야 합니다";
                     if (v % 100 !== 0) return "100원 단위로 입력해주세요";
                     return true;
                   },
-                  valueAsNumber: true,
-                  setValueAs: (v) => Math.round(Number(v) / 100) * 100,
-                })}
-                error={!!errors.startBid}
-                helperText={errors.startBid?.message}
-                slotProps={{
-                  input: {
-                    inputProps: {
-                      min: 0,
-                      step: 100,
-                    },
-                  },
                 }}
+                render={({ field }) => (
+                  <MoneyInput
+                    margin="normal"
+                    required
+                    fullWidth
+                    id="startBid"
+                    label="시작 입찰가 (100원 단위)"
+                    value={field.value != null ? String(field.value) : ""}
+                    onChangeValue={(digits) => {
+                      const num = digits ? Number(digits) : 0;
+                      field.onChange(Number.isFinite(num) ? num : 0);
+                    }}
+                    onBlur={() => {
+                      field.onBlur();
+                      const next = Math.round(Number(field.value ?? 0) / 100) * 100;
+                      field.onChange(Number.isFinite(next) ? next : 0);
+                    }}
+                    error={!!errors.startBid}
+                    helperText={errors.startBid?.message}
+                    InputProps={{ endAdornment: "원" }}
+                    slotProps={{
+                      input: {
+                        inputProps: {
+                          "aria-label": "시작 입찰가",
+                        },
+                      },
+                      inputLabel: { shrink: true },
+                    }}
+                  />
+                )}
               />
               <TextField
                 margin="normal"

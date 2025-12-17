@@ -16,6 +16,7 @@ import {
   type PagedAuctionResponse,
   AuctionStatus,
 } from "../types/auction";
+import { formatWon } from "../utils/money";
 import { getAuctionStatusText } from "../utils/statusText";
 import RemainingTime from "./RemainingTime";
 
@@ -177,7 +178,7 @@ const AuctionList: React.FC<AuctionListProps> = ({
                     >
                       최고입찰가:{" "}
                       {hasBid
-                        ? `${Number(auction.currentBid).toLocaleString()}원`
+                        ? formatWon(auction.currentBid)
                         : "-"}
                     </Typography>
                     <Typography
@@ -189,7 +190,7 @@ const AuctionList: React.FC<AuctionListProps> = ({
                         mb: 0.5,
                       }}
                     >
-                      시작가: {auction.startBid?.toLocaleString()}원
+                      시작가: {formatWon(auction.startBid)}
                     </Typography>
                     <Typography
                       variant="caption"

@@ -4,7 +4,7 @@ import type { FileGroup, PagedApiResponse } from "./common";
 export const ProductStatus = {
   READY: "READY",
   IN_PROGESS: "IN_PROGRESS",
-  COMPLETE: "COMPLETE",
+  COMPLETED: "COMPLETED",
   FAILED: "FAILED",
   CANCELLED: "CANCELLED",
 } as const;
@@ -108,6 +108,7 @@ export interface ProductUpdateRequest {
   fileGrpId?: number | string;
   categoryIds: string[];
   sellerId?: string;
+  auctionId?: string;
 }
 
 export type PagedProductResponse = PagedApiResponse<Product>;

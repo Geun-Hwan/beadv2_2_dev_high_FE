@@ -2,6 +2,7 @@ import { People, Timer } from "@mui/icons-material";
 import { Box, Paper, Stack, Typography } from "@mui/material";
 import RemainingTime from "../RemainingTime";
 import { AuctionStatus } from "../../types/auction";
+import { formatWon } from "../../utils/money";
 
 const formatDateTime = (value?: string) => {
   if (!value) return "-";
@@ -38,7 +39,7 @@ const AuctionBiddingPanel: React.FC<AuctionBiddingPanelProps> = ({
           시작 가격
         </Typography>
         <Typography variant="h5" fontWeight="bold" color="primary.main">
-          {`${startBid.toLocaleString()}원`}
+          {formatWon(startBid)}
         </Typography>
         {status !== AuctionStatus.READY && (
           <>
@@ -46,7 +47,7 @@ const AuctionBiddingPanel: React.FC<AuctionBiddingPanelProps> = ({
               최고 입찰가
             </Typography>
             <Typography variant="h3" fontWeight="bold" color="primary.main">
-              {hasAnyBid ? `${currentBidPrice.toLocaleString()}원` : "-"}
+              {hasAnyBid ? formatWon(currentBidPrice) : "-"}
             </Typography>
             {!hasAnyBid && (
               <Typography variant="caption" color="text.secondary">

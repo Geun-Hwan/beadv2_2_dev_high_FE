@@ -55,7 +55,6 @@ const SignUp: React.FC = () => {
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
   const [timeLeft, setTimeLeft] = useState(0);
-  const [emailChecking, setEmailChecking] = useState(false);
   const [emailAvailable, setEmailAvailable] = useState<boolean | null>(null);
   const [nicknameChecking, setNicknameChecking] = useState(false);
   const [nicknameAvailable, setNicknameAvailable] = useState<boolean | null>(
@@ -104,25 +103,6 @@ const SignUp: React.FC = () => {
     return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
   };
 
-  // 이메일 중복 검증 함수
-  const checkEmailAvailability = async (email: string) => {
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setEmailAvailable(null);
-      return;
-    }
-
-    setEmailChecking(true);
-    try {
-      // 이메일 중복 체크 API 호출 (userApi에 추가 필요)
-      // 일단은 임시로 true로 설정 (실제로는 API 호출)
-      await new Promise((resolve) => setTimeout(resolve, 500)); // API 호출 시뮬레이션
-      setEmailAvailable(true); // 실제로는 API 응답에 따라 설정
-    } catch (error) {
-      setEmailAvailable(false);
-    } finally {
-      setEmailChecking(false);
-    }
-  };
   // 닉네임 중복 검증 함수
   const checkNicknameAvailability = async (nickname: string) => {
     if (!nickname || nickname.length < 2) {
@@ -161,7 +141,10 @@ const SignUp: React.FC = () => {
       setIsEmailSent(true);
       setTimeLeft(300); // 5분 = 300초
       setVerificationCode("");
+      setEmailAvailable(true);
     } catch (error: any) {
+      const status = error?.response?.status;
+      if (status === 409) setEmailAvailable(false);
       setServerError(
         error.response?.data?.message || "인증번호 발송에 실패했습니다."
       );
@@ -243,6 +226,11 @@ const SignUp: React.FC = () => {
             ✓ 이메일 인증이 완료되었습니다.
           </Alert>
         )}
+        {isEmailSent && !isEmailVerified && (
+          <Alert severity="success" sx={{ mb: 2 }}>
+            사용 가능한 이메일입니다. 인증번호를 확인해주세요.
+          </Alert>
+        )}
 
         {/* 이메일 & 인증 섹션 */}
         <Box sx={{ mb: 3 }}>
@@ -280,17 +268,18 @@ const SignUp: React.FC = () => {
                     errors.email?.message ||
                     (emailAvailable === false
                       ? "이미 사용중인 이메일입니다."
-                      : emailAvailable === true
-                      ? "사용 가능한 이메일입니다."
                       : "")
                   }
                   disabled={isEmailVerified}
                   inputProps={{ maxLength: 100 }}
-                  onBlur={(e) => checkEmailAvailability(e.target.value)}
-                  InputProps={{
-                    endAdornment: emailChecking ? (
-                      <CircularProgress size={20} />
-                    ) : null,
+                  onChange={(e) => {
+                    field.onChange(e);
+                    setServerError(null);
+                    setEmailAvailable(null);
+                    setIsEmailSent(false);
+                    setIsEmailVerified(false);
+                    setVerificationCode("");
+                    setTimeLeft(0);
                   }}
                 />
               )}

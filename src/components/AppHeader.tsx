@@ -28,6 +28,7 @@ import { notificationApi } from "../apis/notificationApi";
 import { depositApi } from "../apis/depositApi";
 import { orderApi } from "../apis/orderApi";
 import { OrderStatus } from "../types/order";
+import { formatWon } from "../utils/money";
 
 export const AppHeader: React.FC = () => {
   const { isAuthenticated, user, logout } = useAuth();
@@ -260,9 +261,7 @@ export const AppHeader: React.FC = () => {
                 }}
               >
                 예치금{" "}
-                {depositBalance != null
-                  ? `${depositBalance.toLocaleString()}원`
-                  : "0원"}
+                {depositBalance != null ? formatWon(depositBalance) : "0원"}
               </Typography>
             )}
 

@@ -16,6 +16,7 @@ import React from "react";
 import InfiniteScroll from "react-infinite-scroll-component";
 import { useNavigate } from "react-router-dom";
 import type { AuctionBidMessage } from "../../types/auction";
+import { formatWon } from "../../utils/money";
 
 interface BidHistoryProps {
   isAuthenticated: boolean;
@@ -86,7 +87,7 @@ const BidHistory: React.FC<BidHistoryProps> = ({
               <ListItemText
                 primary={
                   <Typography component="span" fontWeight="bold">
-                    {bid.bidPrice.toLocaleString()}원
+                    {formatWon(bid.bidPrice)}
                   </Typography>
                 }
                 secondary={

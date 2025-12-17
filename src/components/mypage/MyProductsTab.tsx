@@ -14,6 +14,7 @@ import React from "react";
 import { Link as RouterLink } from "react-router-dom";
 import type { Product, ProductAndAuction } from "../../types/product";
 import { getCommonStatusText } from "../../utils/statusText";
+import { formatWon } from "../../utils/money";
 
 interface MyProductsTabProps {
   loading: boolean;
@@ -43,9 +44,9 @@ export const MyProductsTab: React.FC<MyProductsTabProps> = ({
     if (product.startBid != null) {
       const highest =
         product.currentBid != null && product.currentBid > 0
-          ? `${product.currentBid.toLocaleString()}원`
+          ? formatWon(product.currentBid)
           : "-";
-      return `최고입찰가 ${highest} · 시작가 ${product.startBid.toLocaleString()}원`;
+      return `최고입찰가 ${highest} · 시작가 ${formatWon(product.startBid)}`;
     }
     return null;
   };

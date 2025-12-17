@@ -18,6 +18,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import React, { useMemo, useState } from "react";
 import { settlementApi } from "../../apis/settlementApi";
 import type { SettlementResponse, SettlementSummary } from "../../types/settlement";
+import { formatNumber, formatWon } from "../../utils/money";
 
 type SettlementView = "SUMMARY" | "HISTORY";
 
@@ -111,8 +112,8 @@ export const SettlementTab: React.FC = () => {
               <React.Fragment key={`${item.sellerId}-${item.date ?? "all"}`}>
                 <ListItem>
                   <ListItemText
-                    primary={`${item.date ? formatDate(item.date) : "전체"} · ${item.count.toLocaleString()}건`}
-                    secondary={`낙찰합계: ${item.totalWinningAmount.toLocaleString()}원 · 수수료합계: ${item.totalCharge.toLocaleString()}원 · 정산합계: ${item.totalFinalAmount.toLocaleString()}원`}
+                    primary={`${item.date ? formatDate(item.date) : "전체"} · ${formatNumber(item.count)}건`}
+                    secondary={`낙찰합계: ${formatWon(item.totalWinningAmount)} · 수수료합계: ${formatWon(item.totalCharge)} · 정산합계: ${formatWon(item.totalFinalAmount)}`}
                   />
                 </ListItem>
                 <Divider />
@@ -159,9 +160,9 @@ export const SettlementTab: React.FC = () => {
                   <ListItemText
                     primary={`${formatDate(item.dueDate)} · 주문 ID: ${item.orderId}`}
                     secondary={[
-                      `낙찰가: ${item.winningAmount.toLocaleString()}원`,
-                      `수수료: ${item.charge.toLocaleString()}원`,
-                      `정산금: ${item.finalAmount.toLocaleString()}원`,
+                      `낙찰가: ${formatWon(item.winningAmount)}`,
+                      `수수료: ${formatWon(item.charge)}`,
+                      `정산금: ${formatWon(item.finalAmount)}`,
                       item.completeDate
                         ? `완료일: ${formatDateTime(item.completeDate)}`
                         : undefined,

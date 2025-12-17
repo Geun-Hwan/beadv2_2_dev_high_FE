@@ -2,6 +2,7 @@ import { Gavel } from "@mui/icons-material";
 import { Alert, Box, TextField, Typography } from "@mui/material";
 import Button from "@mui/material/Button";
 import { useNavigate } from "react-router-dom";
+import { formatNumber } from "../../utils/money";
 
 interface AuctionBidFormProps {
   isAuctionInReady: boolean;
@@ -73,8 +74,8 @@ const AuctionBidForm: React.FC<AuctionBidFormProps> = ({
         <TextField
           type="number"
           label={`입찰 금액 (최고입찰가 ${
-            hasAnyBid ? `${currentBidPrice.toLocaleString()}원` : "-"
-          } · 최소 ${minBidPrice.toLocaleString()}원)`}
+            hasAnyBid ? `${formatNumber(currentBidPrice)}원` : "-"
+          } · 최소 ${formatNumber(minBidPrice)}원)`}
           value={newBidAmount}
           onChange={(e) => setNewBidAmount(e.target.value)}
           fullWidth
