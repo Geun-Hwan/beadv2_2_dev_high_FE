@@ -24,6 +24,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { OrderStatus, type OrderResponse } from "@moreauction/types";
 import { formatWon } from "@moreauction/utils";
+import { queryKeys } from "../queries/queryKeys";
 
 const PendingOrders: React.FC = () => {
   const location = useLocation();
@@ -56,7 +57,7 @@ const PendingOrders: React.FC = () => {
   }, [location.search, navigate]);
 
   const pendingQuery = useQuery({
-    queryKey: ["orders", "pending", user?.userId],
+    queryKey: queryKeys.orders.pending(user?.userId),
     queryFn: async () => {
       const res = await orderApi.getOrderByStatus("bought", OrderStatus.UNPAID);
       return Array.isArray(res.data) ? res.data : [];
@@ -82,7 +83,7 @@ const PendingOrders: React.FC = () => {
 
   const setDepositBalanceCache = useCallback(
     (next: number) => {
-      queryClient.setQueryData(["deposit", "balance"], next);
+      queryClient.setQueryData(queryKeys.deposit.balance(), next);
       localStorage.setItem("depositBalance", String(next));
     },
     [queryClient]
@@ -91,7 +92,7 @@ const PendingOrders: React.FC = () => {
   const decrementDepositBalance = useCallback(
     (amount: number) => {
       queryClient.setQueryData(
-        ["deposit", "balance"],
+        queryKeys.deposit.balance(),
         (prev: number | undefined) => {
           const base = typeof prev === "number" ? prev : 0;
           const next = Math.max(base - amount, 0);
@@ -128,20 +129,32 @@ const PendingOrders: React.FC = () => {
         decrementDepositBalance(payableAmount);
       }
       queryClient.setQueryData(
-        ["orders", "pendingCount"],
+        queryKeys.orders.pendingCount(),
         (prev: number | undefined) =>
           Math.max((typeof prev === "number" ? prev : 0) - 1, 0)
       );
       queryClient.setQueryData(
-        ["orders", "pending", user?.userId],
+        queryKeys.orders.pending(user?.userId),
         (prev: OrderResponse[] | undefined) =>
           (prev ?? []).filter((item) => item.id !== orderId)
       );
-      await queryClient.invalidateQueries({ queryKey: ["orders", "pending"] });
-      await queryClient.invalidateQueries({ queryKey: ["orders", "history"] });
-      await queryClient.invalidateQueries({
-        queryKey: ["orders", "pendingCount"],
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.orders.pendings(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.orders.histories(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.orders.pendingCount(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.deposit.account(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.deposit.history(),
+        }),
+      ]);
     } catch (err: any) {
       console.error("구매 실패:", err);
       if (err.status === 400) {

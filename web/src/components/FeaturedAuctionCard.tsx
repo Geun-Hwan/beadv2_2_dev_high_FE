@@ -18,6 +18,7 @@ import { AuctionStatus, type PagedAuctionResponse } from "@moreauction/types";
 import { getAuctionStatusText } from "@moreauction/utils";
 import RemainingTime from "./RemainingTime";
 import { formatWon } from "@moreauction/utils";
+import { queryKeys } from "../queries/queryKeys";
 
 /**
  * 홈 히어로에 들어갈 "오늘의 인기 경매" 카드
@@ -25,7 +26,7 @@ import { formatWon } from "@moreauction/utils";
  */
 const FeaturedAuctionCard: React.FC = () => {
   const topAuctionQuery = useQuery({
-    queryKey: ["auctions", "featured", AuctionStatus.IN_PROGRESS],
+    queryKey: queryKeys.auctions.featured(AuctionStatus.IN_PROGRESS),
     queryFn: async () => {
       const res = await auctionApi.getAuctions({
         page: 0,
@@ -41,7 +42,9 @@ const FeaturedAuctionCard: React.FC = () => {
   const errorMessage = useMemo(() => {
     if (!topAuctionQuery.isError) return null;
     const err: any = topAuctionQuery.error;
-    return err?.data?.message ?? err?.message ?? "인기 경매를 불러오지 못했습니다.";
+    return (
+      err?.data?.message ?? err?.message ?? "인기 경매를 불러오지 못했습니다."
+    );
   }, [topAuctionQuery.error, topAuctionQuery.isError]);
 
   const auction = topAuctionQuery.data?.content?.[0];
@@ -64,7 +67,7 @@ const FeaturedAuctionCard: React.FC = () => {
         <CardMedia
           component="img"
           height="220"
-          image={auction?.imageUrl ?? "/images/no_image.png"}
+          image={"/images/no_image.png"}
           alt={auction?.productName ?? "오늘의 인기 경매"}
           sx={{ objectFit: "cover" }}
         />
@@ -96,9 +99,7 @@ const FeaturedAuctionCard: React.FC = () => {
                   sx={{ fontWeight: 700, color: "primary.main" }}
                 >
                   최고입찰가{" "}
-                  {highestBidPrice != null
-                    ? formatWon(highestBidPrice)
-                    : "-"}
+                  {highestBidPrice != null ? formatWon(highestBidPrice) : "-"}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   시작가 {formatWon(auction.startBid ?? 0)} · 남은 시간{" "}

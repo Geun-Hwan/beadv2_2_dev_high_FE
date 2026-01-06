@@ -19,6 +19,7 @@ import React, { useMemo, useState } from "react";
 import { settlementApi } from "../../apis/settlementApi";
 import type { SettlementResponse, SettlementSummary } from "@moreauction/types";
 import { formatNumber, formatWon } from "@moreauction/utils";
+import { queryKeys } from "../../queries/queryKeys";
 
 type SettlementView = "SUMMARY" | "HISTORY";
 
@@ -42,7 +43,7 @@ export const SettlementTab: React.FC = () => {
   const pageSize = 20;
 
   const summaryQuery = useInfiniteQuery({
-    queryKey: ["settlement", "summary", pageSize],
+    queryKey: queryKeys.settlement.summary(pageSize),
     initialPageParam: 0,
     queryFn: async ({ pageParam }) => {
       const res = await settlementApi.getSettlementSummary({
@@ -58,7 +59,7 @@ export const SettlementTab: React.FC = () => {
   });
 
   const historyQuery = useInfiniteQuery({
-    queryKey: ["settlement", "history", pageSize],
+    queryKey: queryKeys.settlement.history(pageSize),
     initialPageParam: 0,
     queryFn: async ({ pageParam }) => {
       const res = await settlementApi.getSettlementHistory({

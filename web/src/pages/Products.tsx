@@ -19,6 +19,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import React, { useMemo, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import { productApi } from "../apis/productApi";
+import { queryKeys } from "../queries/queryKeys";
 
 // 경매 목록 API 응답 타입 정의 (페이징 포함)
 const Products: React.FC = () => {
@@ -29,7 +30,7 @@ const Products: React.FC = () => {
   const [page, setPage] = useState(1); // UI page (8개씩)
   const apiPage = Math.floor((page - 1) / PAGES_PER_FETCH); // 서버는 32개씩
   const productsQuery = useQuery({
-    queryKey: ["products", apiPage],
+    queryKey: queryKeys.products.list(apiPage),
     queryFn: async () => {
       const response = await productApi.getProducts({
         page: apiPage,

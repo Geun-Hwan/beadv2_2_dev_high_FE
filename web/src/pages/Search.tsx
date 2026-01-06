@@ -26,6 +26,7 @@ import { categoryApi } from "../apis/categoryApi";
 import { getAuctionStatusText } from "@moreauction/utils";
 import { AuctionStatus } from "@moreauction/types";
 import { formatWon } from "@moreauction/utils";
+import { queryKeys } from "../queries/queryKeys";
 
 const SearchPage: React.FC = () => {
   const formatDateTime = (value?: string) => {
@@ -97,7 +98,7 @@ const SearchPage: React.FC = () => {
   );
 
   const categoriesQuery = useQuery({
-    queryKey: ["categories"],
+    queryKey: queryKeys.categories.all,
     queryFn: async () => {
       const res = await categoryApi.getCategories();
       return res.data as ProductCategory[];
@@ -138,8 +139,7 @@ const SearchPage: React.FC = () => {
   ]);
 
   const searchQuery = useQuery({
-    queryKey: [
-      "search",
+    queryKey: queryKeys.search.auctions(
       keyword,
       status,
       selectedCategoryIds.join(","),
@@ -147,8 +147,8 @@ const SearchPage: React.FC = () => {
       maxStartPrice,
       startFrom,
       startTo,
-      page,
-    ],
+      page
+    ),
     queryFn: async () => {
       const normalizeDateTimeLocal = (value: string) => {
         const trimmed = value.trim();
@@ -211,7 +211,7 @@ const SearchPage: React.FC = () => {
   );
 
   const fileGroupsQuery = useQuery({
-    queryKey: ["files", "groups", "search", fileGroupIds],
+    queryKey: queryKeys.files.searchGroups(fileGroupIds),
     queryFn: async () => {
       const response = await fileApi.getFileGroupsByIds(fileGroupIds);
       return response.data ?? [];

@@ -46,6 +46,7 @@ import { userApi } from "../apis/userApi";
 import { OrderStatus, type NotificationInfo } from "@moreauction/types";
 import { formatWon } from "@moreauction/utils";
 import { useNavigate } from "react-router-dom";
+import { queryKeys } from "../queries/queryKeys";
 
 export const AppHeader: React.FC = () => {
   const { isAuthenticated, user, logout } = useAuth();
@@ -67,7 +68,7 @@ export const AppHeader: React.FC = () => {
 
   // 로그인된 경우에만 미확인 알림 개수 조회
   const unreadQuery = useQuery({
-    queryKey: ["notifications", "unreadCount"],
+    queryKey: queryKeys.notifications.unreadCount(),
     queryFn: notificationApi.getUnreadCount,
     enabled: isAuthenticated,
     staleTime: 30_000,
@@ -75,7 +76,7 @@ export const AppHeader: React.FC = () => {
   });
 
   const notificationsQuery = useQuery({
-    queryKey: ["notifications", "list", "header", user?.userId],
+    queryKey: queryKeys.notifications.headerList(user?.userId),
     queryFn: () =>
       notificationApi.getNotifications({
         userId: user?.userId,
@@ -99,7 +100,7 @@ export const AppHeader: React.FC = () => {
   }, [notificationsQuery.data?.content]);
 
   const depositQuery = useQuery({
-    queryKey: ["deposit", "balance"],
+    queryKey: queryKeys.deposit.balance(),
     queryFn: async () => {
       const info = await depositApi.getAccount();
       return info?.data?.balance ?? 0;
@@ -111,7 +112,7 @@ export const AppHeader: React.FC = () => {
   });
 
   const pendingQuery = useQuery({
-    queryKey: ["orders", "pendingCount"],
+    queryKey: queryKeys.orders.pendingCount(),
     queryFn: async () => {
       const res = await orderApi.getStatusCount(OrderStatus.UNPAID);
       return typeof res.data === "number" ? res.data : 0;
@@ -126,7 +127,7 @@ export const AppHeader: React.FC = () => {
       notificationApi.getNotifi(notificationId),
     onSuccess: (_, notificationId) => {
       queryClient.setQueryData(
-        ["notifications", "list", "header", user?.userId],
+        queryKeys.notifications.headerList(user?.userId),
         (oldData: any) => {
           if (!oldData?.content) return oldData;
           return {
@@ -138,7 +139,7 @@ export const AppHeader: React.FC = () => {
         }
       );
       queryClient.setQueryData(
-        ["notifications", "list", user?.userId],
+        queryKeys.notifications.list(user?.userId),
         (oldData: any) => {
           if (!oldData?.pages) return oldData;
           return {
@@ -153,7 +154,7 @@ export const AppHeader: React.FC = () => {
         }
       );
       queryClient.setQueryData(
-        ["notifications", "unreadCount"],
+        queryKeys.notifications.unreadCount(),
         (prev: number | undefined) =>
           Math.max((typeof prev === "number" ? prev : 0) - 1, 0)
       );
@@ -201,7 +202,7 @@ export const AppHeader: React.FC = () => {
 
   const handleMarkAllRead = () => {
     queryClient.setQueryData(
-      ["notifications", "list", "header", user?.userId],
+      queryKeys.notifications.headerList(user?.userId),
       (oldData: any) => {
         if (!oldData?.content) return oldData;
         return {
@@ -214,7 +215,7 @@ export const AppHeader: React.FC = () => {
       }
     );
     queryClient.setQueryData(
-      ["notifications", "list", user?.userId],
+      queryKeys.notifications.list(user?.userId),
       (oldData: any) => {
         if (!oldData?.pages) return oldData;
         return {
@@ -229,7 +230,7 @@ export const AppHeader: React.FC = () => {
         };
       }
     );
-    queryClient.setQueryData(["notifications", "unreadCount"], 0);
+    queryClient.setQueryData(queryKeys.notifications.unreadCount(), 0);
   };
 
   const handleViewAllNotifications = () => {

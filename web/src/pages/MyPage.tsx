@@ -25,6 +25,7 @@ import { OrdersTab } from "../components/mypage/OrdersTab";
 import { SettlementTab } from "../components/mypage/SettlementTab";
 import { requestTossPayment } from "../components/tossPay/requestTossPayment";
 import { useAuth } from "../contexts/AuthContext";
+import { queryKeys } from "../queries/queryKeys";
 
 const MyPage: React.FC = () => {
   const { user } = useAuth();
@@ -69,7 +70,7 @@ const MyPage: React.FC = () => {
   };
 
   const depositInfoQuery = useQuery<ApiResponseDto<DepositInfo>>({
-    queryKey: ["deposit", "account"],
+    queryKey: queryKeys.deposit.account(),
     queryFn: () => depositApi.getAccount(),
     enabled: tabValue === 0,
     staleTime: 30_000,
@@ -79,7 +80,7 @@ const MyPage: React.FC = () => {
     PagedDepositHistoryResponse,
     Error
   >({
-    queryKey: ["deposit", "history"],
+    queryKey: queryKeys.deposit.history(),
     queryFn: async ({ pageParam = 0 }) => {
       const response = await depositApi.getDepositHistories({
         page: pageParam as number,
@@ -95,7 +96,7 @@ const MyPage: React.FC = () => {
   });
 
   const boughtOrdersQuery = useQuery({
-    queryKey: ["orders", "history", "bought", user?.userId],
+    queryKey: queryKeys.orders.history("bought", user?.userId),
     queryFn: async () => {
       const boughtRes = await orderApi.getOrderByStatus("bought");
       return Array.isArray(boughtRes.data) ? boughtRes.data : [];
@@ -105,7 +106,7 @@ const MyPage: React.FC = () => {
   });
 
   const soldOrdersQuery = useQuery({
-    queryKey: ["orders", "history", "sold", user?.userId],
+    queryKey: queryKeys.orders.history("sold", user?.userId),
     queryFn: async () => {
       const soldRes = await orderApi.getOrderByStatus("sold");
       return Array.isArray(soldRes.data) ? soldRes.data : [];
@@ -115,14 +116,14 @@ const MyPage: React.FC = () => {
   });
 
   const sellerInfoQuery = useQuery({
-    queryKey: ["seller", "info"],
+    queryKey: queryKeys.seller.info(),
     queryFn: () => userApi.getSellerInfo(),
     enabled: tabValue === 3 && hasRole(user?.roles, UserRole.SELLER),
     staleTime: 60_000,
   });
 
   const myProductsQuery = useQuery({
-    queryKey: ["products", "mine", user?.userId],
+    queryKey: queryKeys.products.mine(user?.userId),
     queryFn: async () => {
       const response = await productApi.getMyProducts(user?.userId);
       return response.data as Product[];
@@ -212,13 +213,16 @@ const MyPage: React.FC = () => {
       const res = await depositApi.createAccount(user?.userId);
       if (res?.data) {
         alert("예치금 계좌가 생성되었습니다.");
-        queryClient.setQueryData(["deposit", "account"], res);
+        queryClient.setQueryData(queryKeys.deposit.account(), res);
         if (typeof res.data.balance === "number") {
-          queryClient.setQueryData(["deposit", "balance"], res.data.balance);
+          queryClient.setQueryData(
+            queryKeys.deposit.balance(),
+            res.data.balance
+          );
           localStorage.setItem("depositBalance", String(res.data.balance));
         }
         await queryClient.invalidateQueries({
-          queryKey: ["deposit", "history"],
+          queryKey: queryKeys.deposit.history(),
         });
       }
     } catch (err: any) {

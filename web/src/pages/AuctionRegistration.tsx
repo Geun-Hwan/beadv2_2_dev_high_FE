@@ -22,6 +22,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { auctionApi } from "../apis/auctionApi";
 import { productApi } from "../apis/productApi";
 import { useAuth } from "../contexts/AuthContext";
+import { queryKeys } from "../queries/queryKeys";
 
 import { hasRole, UserRole } from "@moreauction/types";
 import {
@@ -65,14 +66,14 @@ const AuctionRegistration: React.FC = () => {
     useState<string | null>(null);
 
   const auctionDetailQuery = useQuery({
-    queryKey: ["auctions", "detail", auctionId],
+    queryKey: queryKeys.auctions.detail(auctionId),
     queryFn: () => auctionApi.getAuctionDetail(auctionId as string),
     enabled: isEditMode && !!auctionId,
     staleTime: 30_000,
   });
 
   const productForRegisterQuery = useQuery({
-    queryKey: ["products", "detail", productId],
+    queryKey: queryKeys.products.detail(productId),
     queryFn: async () => {
       const response = await productApi.getProductById(productId as string);
       return response.data;
@@ -83,7 +84,7 @@ const AuctionRegistration: React.FC = () => {
 
   const auctionProductId = auctionDetailQuery.data?.data?.productId;
   const productForEditQuery = useQuery({
-    queryKey: ["products", "detail", auctionProductId],
+    queryKey: queryKeys.products.detail(auctionProductId),
     queryFn: async () => {
       const response = await productApi.getProductById(
         auctionProductId as string
@@ -263,14 +264,17 @@ const AuctionRegistration: React.FC = () => {
         const targetProductId =
           selectedProduct?.id ?? response.data.productId ?? "";
         await queryClient.invalidateQueries({
-          queryKey: ["auctions", "detail", targetAuctionId],
+          queryKey: queryKeys.auctions.detail(targetAuctionId),
+        });
+        await queryClient.invalidateQueries({
+          queryKey: queryKeys.auctions.lists(),
         });
         if (targetProductId) {
           await queryClient.invalidateQueries({
-            queryKey: ["auctions", "byProduct", targetProductId],
+            queryKey: queryKeys.auctions.byProduct(targetProductId),
           });
           await queryClient.invalidateQueries({
-            queryKey: ["products", "detail", targetProductId],
+            queryKey: queryKeys.products.detail(targetProductId),
           });
         }
         alert("경매가 성공적으로 수정되었습니다.");
@@ -297,13 +301,16 @@ const AuctionRegistration: React.FC = () => {
           );
         }
         await queryClient.invalidateQueries({
-          queryKey: ["auctions", "detail", createdAuctionId],
+          queryKey: queryKeys.auctions.detail(createdAuctionId),
         });
         await queryClient.invalidateQueries({
-          queryKey: ["auctions", "byProduct", selectedProduct.id],
+          queryKey: queryKeys.auctions.lists(),
         });
         await queryClient.invalidateQueries({
-          queryKey: ["products", "detail", selectedProduct.id],
+          queryKey: queryKeys.auctions.byProduct(selectedProduct.id),
+        });
+        await queryClient.invalidateQueries({
+          queryKey: queryKeys.products.detail(selectedProduct.id),
         });
         const targetAuctionId =
           createdAuctionId || response.data.auctionId || response.data.id;

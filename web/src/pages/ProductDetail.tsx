@@ -33,6 +33,7 @@ import { productApi } from "../apis/productApi";
 import { wishlistApi } from "../apis/wishlistApi";
 import RemainingTime from "../components/RemainingTime";
 import { useAuth } from "../contexts/AuthContext";
+import { queryKeys } from "../queries/queryKeys";
 
 const ProductDetail: React.FC = () => {
   const formatDateTime = (value?: string | null) => {
@@ -66,7 +67,7 @@ const ProductDetail: React.FC = () => {
     AuctionStatus.CANCELLED,
   ];
   const productQuery = useQuery({
-    queryKey: ["products", "detail", productId],
+    queryKey: queryKeys.products.detail(productId),
     queryFn: async () => {
       if (!productId) {
         throw new Error("Product ID is missing.");
@@ -81,14 +82,14 @@ const ProductDetail: React.FC = () => {
   const product = productQuery.data ?? null;
   const productFileGroupId = productQuery.data?.fileGroupId;
   const fileGroupQuery = useQuery({
-    queryKey: ["files", "group", productFileGroupId],
+    queryKey: queryKeys.files.group(productFileGroupId),
     queryFn: () => fileApi.getFiles(String(productFileGroupId)),
     enabled: !!productFileGroupId,
     staleTime: 30_000,
   });
 
   const auctionsQuery = useQuery({
-    queryKey: ["auctions", "byProduct", productId],
+    queryKey: queryKeys.auctions.byProduct(productId),
     queryFn: () => auctionApi.getAuctionsByProductId(productId as string),
     enabled: !!productId,
     staleTime: 30_000,
@@ -97,7 +98,7 @@ const ProductDetail: React.FC = () => {
   const latestAuctionId = product?.latestAuctionId;
 
   const latestAuctionQuery = useQuery({
-    queryKey: ["auctions", "detail", latestAuctionId],
+    queryKey: queryKeys.auctions.detail(latestAuctionId),
     queryFn: () => auctionApi.getAuctionDetail(latestAuctionId as string),
     enabled: !!latestAuctionId,
     staleTime: 30_000,
@@ -280,13 +281,15 @@ const ProductDetail: React.FC = () => {
       setDeleteLoading(true);
       await productApi.deleteProduct(product.id);
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["products"] }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.products.lists() }),
         queryClient.invalidateQueries({
-          queryKey: ["products", "detail", product.id],
+          queryKey: queryKeys.products.detail(product.id),
         }),
-        queryClient.invalidateQueries({ queryKey: ["products", "mine"] }),
         queryClient.invalidateQueries({
-          queryKey: ["auctions", "byProduct", product.id],
+          queryKey: queryKeys.products.mine(user?.userId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.auctions.byProduct(product.id),
         }),
       ]);
       deleted = true;
@@ -322,7 +325,7 @@ const ProductDetail: React.FC = () => {
         prev.filter((item) => getAuctionKey(item) !== auctionKey)
       );
       queryClient.setQueryData(
-        ["auctions", "byProduct", productId],
+        queryKeys.auctions.byProduct(productId),
         (
           prev?: { data?: AuctionDetailResponse[] } | AuctionDetailResponse[]
         ) => {
@@ -338,13 +341,16 @@ const ProductDetail: React.FC = () => {
         await productApi.updateLatestAuctionId(product.id, null);
       }
       await queryClient.invalidateQueries({
-        queryKey: ["auctions", "byProduct", productId],
+        queryKey: queryKeys.auctions.byProduct(productId),
       });
       await queryClient.invalidateQueries({
-        queryKey: ["auctions", "detail", auctionKey],
+        queryKey: queryKeys.auctions.detail(auctionKey),
       });
       await queryClient.invalidateQueries({
-        queryKey: ["products", "detail", product?.id],
+        queryKey: queryKeys.auctions.lists(),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.products.detail(product?.id),
       });
       alert("경매가 삭제되었습니다.");
     } catch (err: any) {

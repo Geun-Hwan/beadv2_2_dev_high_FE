@@ -20,6 +20,7 @@ import {
   useInfiniteQuery,
   useMutation,
   useQueryClient,
+  type QueryKey,
 } from "@tanstack/react-query";
 import { useAuth } from "../contexts/AuthContext";
 import { notificationApi } from "../apis/notificationApi";
@@ -27,6 +28,7 @@ import type {
   NotificationInfo,
   PagedNotificationResponse,
 } from "@moreauction/types";
+import { queryKeys } from "../queries/queryKeys";
 
 const sortNotifications = (items: NotificationInfo[]) => {
   return [...items].sort((a, b) => {
@@ -52,10 +54,10 @@ const Notifications: React.FC = () => {
     PagedNotificationResponse,
     Error,
     InfiniteData<PagedNotificationResponse, number>,
-    (string | undefined)[],
+    QueryKey,
     number
   >({
-    queryKey: ["notifications", "list", user?.userId],
+    queryKey: queryKeys.notifications.list(user?.userId),
     queryFn: async ({ pageParam = 0 }) =>
       notificationApi.getNotifications({
         userId: user?.userId,
@@ -85,7 +87,7 @@ const Notifications: React.FC = () => {
     mutationFn: (notificationId: string) => notificationApi.getNotifi(notificationId),
     onSuccess: (_, notificationId) => {
       queryClient.setQueryData(
-        ["notifications", "list", user?.userId],
+        queryKeys.notifications.list(user?.userId),
         (oldData: any) => {
           if (!oldData?.pages) return oldData;
           return {
@@ -100,7 +102,7 @@ const Notifications: React.FC = () => {
         }
       );
       queryClient.setQueryData(
-        ["notifications", "unreadCount"],
+        queryKeys.notifications.unreadCount(),
         (prev: number | undefined) =>
           Math.max((typeof prev === "number" ? prev : 0) - 1, 0)
       );

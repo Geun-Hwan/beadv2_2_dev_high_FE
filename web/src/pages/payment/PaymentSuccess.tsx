@@ -14,6 +14,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { auctionApi } from "../../apis/auctionApi";
 import { depositApi } from "../../apis/depositApi";
 import { useAuth } from "../../contexts/AuthContext";
+import { queryKeys } from "../../queries/queryKeys";
 
 export default function PaymentSuccess() {
   const navigate = useNavigate();
@@ -32,26 +33,32 @@ export default function PaymentSuccess() {
   const queryClient = useQueryClient();
 
   const setDepositBalanceCache = useCallback((next: number) => {
-    queryClient.setQueryData(["deposit", "balance"], next);
+    queryClient.setQueryData(queryKeys.deposit.balance(), next);
     localStorage.setItem("depositBalance", String(next));
   }, [queryClient]);
 
   const incrementDepositBalance = useCallback((amount: number) => {
-    queryClient.setQueryData(["deposit", "balance"], (prev: number | undefined) => {
-      const base = typeof prev === "number" ? prev : 0;
-      const next = Math.max(base + amount, 0);
-      localStorage.setItem("depositBalance", String(next));
-      return next;
-    });
+    queryClient.setQueryData(
+      queryKeys.deposit.balance(),
+      (prev: number | undefined) => {
+        const base = typeof prev === "number" ? prev : 0;
+        const next = Math.max(base + amount, 0);
+        localStorage.setItem("depositBalance", String(next));
+        return next;
+      }
+    );
   }, [queryClient]);
 
   const decrementDepositBalance = useCallback((amount: number) => {
-    queryClient.setQueryData(["deposit", "balance"], (prev: number | undefined) => {
-      const base = typeof prev === "number" ? prev : 0;
-      const next = Math.max(base - amount, 0);
-      localStorage.setItem("depositBalance", String(next));
-      return next;
-    });
+    queryClient.setQueryData(
+      queryKeys.deposit.balance(),
+      (prev: number | undefined) => {
+        const base = typeof prev === "number" ? prev : 0;
+        const next = Math.max(base - amount, 0);
+        localStorage.setItem("depositBalance", String(next));
+        return next;
+      }
+    );
   }, [queryClient]);
 
   useEffect(() => {
@@ -75,6 +82,14 @@ export default function PaymentSuccess() {
       try {
         await depositApi.paymentSuccess({ paymentKey, orderId, amount });
         incrementDepositBalance(amount);
+        await Promise.all([
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.deposit.account(),
+          }),
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.deposit.history(),
+          }),
+        ]);
 
         const autoPurchaseRaw = sessionStorage.getItem(
           "autoPurchaseAfterCharge"
@@ -102,13 +117,27 @@ export default function PaymentSuccess() {
                   decrementDepositBalance(purchaseAmount);
                 }
                 queryClient.setQueryData(
-                  ["orders", "pendingCount"],
+                  queryKeys.orders.pendingCount(),
                   (prev: number | undefined) =>
                     Math.max((typeof prev === "number" ? prev : 0) - 1, 0)
                 );
                 await queryClient.invalidateQueries({
-                  queryKey: ["orders", "pendingCount"],
+                  queryKey: queryKeys.orders.pendingCount(),
                 });
+                await Promise.all([
+                  queryClient.invalidateQueries({
+                    queryKey: queryKeys.orders.pendings(),
+                  }),
+                  queryClient.invalidateQueries({
+                    queryKey: queryKeys.orders.histories(),
+                  }),
+                  queryClient.invalidateQueries({
+                    queryKey: queryKeys.deposit.account(),
+                  }),
+                  queryClient.invalidateQueries({
+                    queryKey: queryKeys.deposit.history(),
+                  }),
+                ]);
                 redirectPath = "/orders";
                 setStatus("success");
                 setTitle("충전과 구매가 완료되었어요");
@@ -191,6 +220,18 @@ export default function PaymentSuccess() {
                 } catch {
                   decrementDepositBalance(targetDepositAmount);
                 }
+
+                await Promise.all([
+                  queryClient.invalidateQueries({
+                    queryKey: queryKeys.auctions.detail(targetAuctionId),
+                  }),
+                  queryClient.invalidateQueries({
+                    queryKey: queryKeys.auctions.participation(targetAuctionId),
+                  }),
+                  queryClient.invalidateQueries({
+                    queryKey: queryKeys.auctions.bidHistory(targetAuctionId),
+                  }),
+                ]);
 
                 redirectPath = `/auctions/${targetAuctionId}`;
                 setStatus("success");

@@ -55,6 +55,7 @@ import { categoryApi } from "../apis/categoryApi";
 import { fileApi } from "../apis/fileApi";
 import { productApi } from "../apis/productApi";
 import { useAuth } from "../contexts/AuthContext";
+import { queryKeys } from "../queries/queryKeys";
 
 import { getProductImageUrls } from "@moreauction/utils";
 
@@ -194,7 +195,7 @@ const ProductRegistration: React.FC = () => {
   }, []);
 
   const categoriesQuery = useQuery({
-    queryKey: ["categories"],
+    queryKey: queryKeys.categories.all,
     queryFn: async () => {
       const response = await categoryApi.getCategories();
       return response.data as ProductCategory[];
@@ -203,7 +204,7 @@ const ProductRegistration: React.FC = () => {
   });
 
   const productDetailQuery = useQuery<Product | null>({
-    queryKey: ["products", "detail", productId],
+    queryKey: queryKeys.products.detail(productId),
     queryFn: async () => {
       const response = await productApi.getProductById(productId as string);
       const data = response.data as Product | null;
@@ -215,7 +216,7 @@ const ProductRegistration: React.FC = () => {
 
   const productFileGroupId = productDetailQuery.data?.fileGroupId;
   const fileGroupQuery = useQuery({
-    queryKey: ["files", "group", productFileGroupId],
+    queryKey: queryKeys.files.group(productFileGroupId),
     queryFn: () => fileApi.getFiles(String(productFileGroupId)),
     enabled: !!productFileGroupId,
     staleTime: 30_000,
@@ -401,12 +402,14 @@ const ProductRegistration: React.FC = () => {
         );
 
         const createdProduct = productResponse.data;
-        await queryClient.invalidateQueries({ queryKey: ["products"] });
         await queryClient.invalidateQueries({
-          queryKey: ["products", "detail", productId],
+          queryKey: queryKeys.products.lists(),
         });
         await queryClient.invalidateQueries({
-          queryKey: ["products", "mine", user?.userId],
+          queryKey: queryKeys.products.detail(productId),
+        });
+        await queryClient.invalidateQueries({
+          queryKey: queryKeys.products.mine(user?.userId),
         });
         alert("상품이 성공적으로 수정되었습니다.");
         navigate(`/products/${createdProduct?.id ?? productId}`);
@@ -421,9 +424,11 @@ const ProductRegistration: React.FC = () => {
 
         const productResponse = await productApi.createProduct(productData);
         const createdProduct = productResponse.data;
-        await queryClient.invalidateQueries({ queryKey: ["products"] });
         await queryClient.invalidateQueries({
-          queryKey: ["products", "mine", user?.userId],
+          queryKey: queryKeys.products.lists(),
+        });
+        await queryClient.invalidateQueries({
+          queryKey: queryKeys.products.mine(user?.userId),
         });
         alert("상품이 성공적으로 등록되었습니다.");
         navigate(`/products/${createdProduct?.id}`);

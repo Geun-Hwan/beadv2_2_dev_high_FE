@@ -29,6 +29,7 @@ import {
   useInfiniteQuery,
   useQuery,
   useQueryClient,
+  type QueryKey,
 } from "@tanstack/react-query";
 import AuctionParticipationStatus from "../components/auctions/AuctiobParticipationStatus";
 import AuctionBiddingPanel from "../components/auctions/AuctionBiddingPanel";
@@ -50,6 +51,7 @@ import {
   AuctionStatus,
 } from "@moreauction/types";
 import { DepositType } from "@moreauction/types";
+import { queryKeys } from "../queries/queryKeys";
 
 const AuctionDetail: React.FC = () => {
   const { id: auctionId } = useParams<{ id: string }>();
@@ -85,7 +87,7 @@ const AuctionDetail: React.FC = () => {
   const [chargeError, setChargeError] = useState<string | null>(null);
 
   const auctionDetailQuery = useQuery({
-    queryKey: ["auctions", "detail", auctionId],
+    queryKey: queryKeys.auctions.detail(auctionId),
     queryFn: async () => {
       const res = await auctionApi.getAuctionDetail(auctionId as string);
       return res.data as AuctionDetailResponse;
@@ -96,7 +98,7 @@ const AuctionDetail: React.FC = () => {
   });
 
   const participationQuery = useQuery({
-    queryKey: ["auctions", "participation", auctionId],
+    queryKey: queryKeys.auctions.participation(auctionId),
     queryFn: async () => {
       const res = await auctionApi.checkParticipationStatus(
         auctionId as string
@@ -171,7 +173,7 @@ const AuctionDetail: React.FC = () => {
   }, [auctionDetail]);
 
   const productDetailQuery = useQuery({
-    queryKey: ["products", "detail", productId],
+    queryKey: queryKeys.products.detail(productId),
     queryFn: async () => {
       const response = await productApi.getProductById(productId as string);
       return response.data;
@@ -182,7 +184,7 @@ const AuctionDetail: React.FC = () => {
 
   const productFileGroupId = productDetailQuery.data?.fileGroupId;
   const fileGroupQuery = useQuery({
-    queryKey: ["files", "group", productFileGroupId],
+    queryKey: queryKeys.files.group(productFileGroupId),
     queryFn: () => fileApi.getFiles(String(productFileGroupId)),
     enabled: !!productFileGroupId,
     staleTime: 30_000,
@@ -201,10 +203,10 @@ const AuctionDetail: React.FC = () => {
     PagedBidHistoryResponse,
     Error,
     InfiniteData<PagedBidHistoryResponse, number>,
-    (string | undefined)[],
+    QueryKey,
     number
   >({
-    queryKey: ["auctions", "bidHistory", auctionId],
+    queryKey: queryKeys.auctions.bidHistory(auctionId),
     queryFn: async ({ pageParam = 0 }) => {
       const response = await auctionApi.getAuctionBidHistory(
         auctionId as string,
@@ -230,7 +232,7 @@ const AuctionDetail: React.FC = () => {
 
   const refreshBidHistoryFirstPage = useCallback(async () => {
     await queryClient.invalidateQueries({
-      queryKey: ["auctions", "bidHistory", auctionId],
+      queryKey: queryKeys.auctions.bidHistory(auctionId),
     });
   }, [auctionId, queryClient]);
 
@@ -287,7 +289,7 @@ const AuctionDetail: React.FC = () => {
             });
             setCurrentUserCount(payload.currentUsers);
             queryClient.setQueryData(
-              ["auctions", "detail", auctionId],
+              queryKeys.auctions.detail(auctionId),
               (prev: AuctionDetailResponse | undefined) => {
                 if (!prev) return prev;
                 return {
@@ -298,7 +300,7 @@ const AuctionDetail: React.FC = () => {
               }
             );
             queryClient.setQueryData(
-              ["auctions", "bidHistory", auctionId],
+              queryKeys.auctions.bidHistory(auctionId),
               (
                 prev: InfiniteData<PagedBidHistoryResponse, number> | undefined
               ) => {
@@ -414,7 +416,7 @@ const AuctionDetail: React.FC = () => {
       setNewBidAmount("");
 
       queryClient.setQueryData(
-        ["auctions", "participation", auctionId],
+        queryKeys.auctions.participation(auctionId),
         (prev: AuctionParticipationResponse | undefined) => ({
           ...(prev ?? {
             isParticipated: true,
@@ -429,7 +431,7 @@ const AuctionDetail: React.FC = () => {
         connectionState === "disconnected" || connectionState === "failed";
       if (shouldFallbackRefetch) {
         await queryClient.invalidateQueries({
-          queryKey: ["auctions", "detail", auctionId],
+          queryKey: queryKeys.auctions.detail(auctionId),
         });
         await refreshBidHistoryFirstPage();
       }
@@ -449,9 +451,20 @@ const AuctionDetail: React.FC = () => {
       setNewBidAmount("");
 
       queryClient.setQueryData(
-        ["auctions", "participation", auctionId],
+        queryKeys.auctions.participation(auctionId),
         res.data
       );
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.deposit.balance(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.deposit.account(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.deposit.history(),
+        }),
+      ]);
       setOpenWithdrawnPopup(false);
       alert("경매 참여가 포기되었습니다.");
     } catch (err: any) {
@@ -505,7 +518,7 @@ const AuctionDetail: React.FC = () => {
       });
 
       queryClient.setQueryData(
-        ["deposit", "balance"],
+        queryKeys.deposit.balance(),
         (prev: number | undefined) => {
           const base = typeof prev === "number" ? prev : 0;
           const next = Math.max(base - depositAmount, 0);
@@ -515,9 +528,17 @@ const AuctionDetail: React.FC = () => {
       );
 
       queryClient.setQueryData(
-        ["auctions", "participation", auctionId],
+        queryKeys.auctions.participation(auctionId),
         res.data
       );
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.deposit.account(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.deposit.history(),
+        }),
+      ]);
       setOpenDepositPrompt(false);
       alert("보증금 결제가 완료되었습니다. 이제 입찰할 수 있습니다.");
     } catch (error: any) {

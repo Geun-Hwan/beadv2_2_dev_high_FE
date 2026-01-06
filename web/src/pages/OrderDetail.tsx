@@ -15,12 +15,13 @@ import { useQuery } from "@tanstack/react-query";
 import { orderApi } from "../apis/orderApi";
 import { getOrderStatusLabel, type OrderResponse } from "@moreauction/types";
 import { formatWon } from "@moreauction/utils";
+import { queryKeys } from "../queries/queryKeys";
 
 const OrderDetail: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
   const orderQuery = useQuery({
-    queryKey: ["orders", "detail", orderId],
+    queryKey: queryKeys.orders.detail(orderId),
     queryFn: async () => {
       if (!orderId) throw new Error("주문 ID가 올바르지 않습니다.");
       const res = await orderApi.getOrderDetail(orderId);

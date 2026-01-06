@@ -15,6 +15,7 @@ import React, { useState } from "react";
 import { userApi } from "../apis/userApi";
 import { ProfileTab } from "../components/mypage/ProfileTab";
 import { useAuth } from "../contexts/AuthContext";
+import { queryKeys } from "../queries/queryKeys";
 
 const Settings: React.FC = () => {
   const { user } = useAuth();
@@ -29,7 +30,7 @@ const Settings: React.FC = () => {
   });
 
   const profileQuery = useQuery({
-    queryKey: ["user", "me"],
+    queryKey: queryKeys.user.me(),
     queryFn: () => userApi.getMe(),
     staleTime: 60_000,
   });

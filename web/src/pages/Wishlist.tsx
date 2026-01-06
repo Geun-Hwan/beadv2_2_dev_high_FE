@@ -19,6 +19,7 @@ import { Link as RouterLink } from "react-router-dom";
 import { productApi } from "../apis/productApi";
 import { wishlistApi } from "../apis/wishlistApi";
 import { useAuth } from "../contexts/AuthContext";
+import { queryKeys } from "../queries/queryKeys";
 
 const Wishlist: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
@@ -26,7 +27,7 @@ const Wishlist: React.FC = () => {
   const queryClient = useQueryClient();
 
   const wishlistQuery = useQuery({
-    queryKey: ["wishlist", user?.userId],
+    queryKey: queryKeys.wishlist.list(user?.userId),
     queryFn: async () => {
       const data = await wishlistApi.getMyWishlist({
         page: 0,
@@ -93,7 +94,7 @@ const Wishlist: React.FC = () => {
     mutationFn: (productId: string) => wishlistApi.remove(productId),
     onSuccess: (_, productId) => {
       queryClient.setQueryData(
-        ["wishlist", user?.userId],
+        queryKeys.wishlist.list(user?.userId),
         (prev: Product[] | undefined) =>
           (prev ?? []).filter((product) => product.id !== productId)
       );

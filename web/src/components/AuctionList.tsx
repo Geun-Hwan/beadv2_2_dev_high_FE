@@ -23,6 +23,7 @@ import {
 import { formatWon } from "@moreauction/utils";
 import { getAuctionStatusText } from "@moreauction/utils";
 import RemainingTime from "./RemainingTime";
+import { queryKeys } from "../queries/queryKeys";
 
 type AuctionSortOption =
   | "ENDING_SOON"
@@ -58,7 +59,7 @@ const AuctionList: React.FC<AuctionListProps> = ({
   const statusKey = Array.isArray(status) ? status.join(",") : "";
 
   const auctionQuery = useQuery({
-    queryKey: ["auctions", "list", statusKey, sortOption, limit],
+    queryKey: queryKeys.auctions.list(statusKey, sortOption, limit),
     queryFn: async () => {
       const params: AuctionQueryParams = {
         page: 0,
@@ -75,7 +76,11 @@ const AuctionList: React.FC<AuctionListProps> = ({
   const errorMessage = useMemo(() => {
     if (!auctionQuery.isError) return null;
     const err: any = auctionQuery.error;
-    return err?.data?.message ?? err?.message ?? "경매 목록을 불러오는데 실패했습니다.";
+    return (
+      err?.data?.message ??
+      err?.message ??
+      "경매 목록을 불러오는데 실패했습니다."
+    );
   }, [auctionQuery.error, auctionQuery.isError]);
 
   const auctionData = auctionQuery.data ?? null;
@@ -89,7 +94,7 @@ const AuctionList: React.FC<AuctionListProps> = ({
   }, [auctions]);
 
   const productsQuery = useQuery({
-    queryKey: ["products", "many", productIds],
+    queryKey: queryKeys.products.many(productIds),
     queryFn: async () => {
       const response = await productApi.getProductsByIds(productIds);
       return response.data as Product[];
@@ -111,7 +116,7 @@ const AuctionList: React.FC<AuctionListProps> = ({
   }, [productsQuery.data]);
 
   const fileGroupsQuery = useQuery({
-    queryKey: ["files", "groups", fileGroupIds],
+    queryKey: queryKeys.files.groups(fileGroupIds),
     queryFn: async () => {
       const response = await fileApi.getFileGroupsByIds(fileGroupIds);
       return response.data ?? [];
@@ -142,10 +147,10 @@ const AuctionList: React.FC<AuctionListProps> = ({
       {errorMessage &&
         !auctionQuery.isLoading &&
         (auctionData?.content?.length ?? 0) === 0 && (
-        <Alert severity="error" sx={{ gridColumn: "1 / -1" }}>
-          {errorMessage}
-        </Alert>
-      )}
+          <Alert severity="error" sx={{ gridColumn: "1 / -1" }}>
+            {errorMessage}
+          </Alert>
+        )}
 
       {auctionQuery.isLoading && (auctionData?.content?.length ?? 0) === 0
         ? Array.from({ length: limit }).map((_, i) => (
@@ -181,8 +186,8 @@ const AuctionList: React.FC<AuctionListProps> = ({
               auction.status === AuctionStatus.READY
                 ? "시작 전"
                 : hasBid
-                  ? `현재 가격: ${formatWon(auction.currentBid)}`
-                  : "현재 가격: -";
+                ? `현재 가격: ${formatWon(auction.currentBid)}`
+                : "현재 가격: -";
             const product = auction.productId
               ? productMap.get(auction.productId)
               : undefined;
@@ -191,9 +196,7 @@ const AuctionList: React.FC<AuctionListProps> = ({
               ? fileGroupMap.get(fileGroupId)
               : undefined;
             const coverImage =
-              fileGroup?.files?.[0]?.filePath ??
-              auction.filePath ??
-              "/images/no_image.png";
+              fileGroup?.files?.[0]?.filePath ?? "/images/no_image.png";
 
             return (
               <Card
@@ -267,7 +270,7 @@ const AuctionList: React.FC<AuctionListProps> = ({
                           auction.status === "IN_PROGRESS"
                             ? "warning.main"
                             : auction.status === AuctionStatus.READY
-                              ? "primary.main"
+                            ? "primary.main"
                             : "text.secondary",
                         fontWeight:
                           auction.status === AuctionStatus.READY ? 700 : 500,
@@ -294,8 +297,8 @@ const AuctionList: React.FC<AuctionListProps> = ({
                     linkDestination === "product"
                       ? "outlined"
                       : auction.status === AuctionStatus.IN_PROGRESS
-                        ? "contained"
-                        : "outlined"
+                      ? "contained"
+                      : "outlined"
                   }
                   component={RouterLink}
                   to={
@@ -308,8 +311,8 @@ const AuctionList: React.FC<AuctionListProps> = ({
                   {linkDestination === "product"
                     ? "상품 보러가기"
                     : auction.status === AuctionStatus.IN_PROGRESS
-                      ? "경매 바로 참여하기"
-                      : "경매 상세보기"}
+                    ? "경매 바로 참여하기"
+                    : "경매 상세보기"}
                 </Button>
               </Card>
             );
