@@ -55,8 +55,9 @@ export const AppHeader: React.FC = () => {
   const queryClient = useQueryClient();
   const [notificationAnchorEl, setNotificationAnchorEl] =
     useState<HTMLElement | null>(null);
-  const [accountAnchorEl, setAccountAnchorEl] =
-    useState<HTMLElement | null>(null);
+  const [accountAnchorEl, setAccountAnchorEl] = useState<HTMLElement | null>(
+    null
+  );
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedNotification, setSelectedNotification] =
     useState<NotificationInfo | null>(null);
@@ -238,20 +239,7 @@ export const AppHeader: React.FC = () => {
     navigate("/notifications");
   };
 
-  const handleLogout = async () => {
-    try {
-      await userApi.logout();
-    } catch (err) {
-      console.warn("로그아웃 API 실패(무시):", err);
-    } finally {
-      logout();
-      alert("로그아웃 되었습니다.");
-    }
-  };
-
-  const handleOpenAccountMenu = (
-    event: React.MouseEvent<HTMLElement>
-  ) => {
+  const handleOpenAccountMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAccountAnchorEl(event.currentTarget);
   };
 
@@ -398,7 +386,7 @@ export const AppHeader: React.FC = () => {
                   </IconButton>
                 </Tooltip>
                 <Tooltip title="로그아웃">
-                  <IconButton color="inherit" onClick={handleLogout}>
+                  <IconButton color="inherit" onClick={logout}>
                     <LogoutIcon />
                   </IconButton>
                 </Tooltip>
@@ -454,32 +442,32 @@ export const AppHeader: React.FC = () => {
                 <Skeleton width="95%" />
               </Box>
             ))}
-          {!notificationsQuery.isLoading && unreadNotifications.length === 0 && (
-            <Typography variant="body2" color="text.secondary">
-              새로운 알림이 없습니다.
-            </Typography>
-          )}
           {!notificationsQuery.isLoading &&
-            unreadNotifications.length > 0 && (
-              <List disablePadding>
-                {unreadNotifications.map((notification) => (
-                  <ListItemButton
-                    key={notification.id ?? notification.createdAt}
-                    onClick={() => handleClickNotification(notification)}
-                  >
-                    <ListItemText
-                      primary={notification.title}
-                      secondary={notification.content}
-                      primaryTypographyProps={{ fontWeight: 600 }}
-                      secondaryTypographyProps={{
-                        noWrap: true,
-                        color: "text.secondary",
-                      }}
-                    />
-                  </ListItemButton>
-                ))}
-              </List>
+            unreadNotifications.length === 0 && (
+              <Typography variant="body2" color="text.secondary">
+                새로운 알림이 없습니다.
+              </Typography>
             )}
+          {!notificationsQuery.isLoading && unreadNotifications.length > 0 && (
+            <List disablePadding>
+              {unreadNotifications.map((notification) => (
+                <ListItemButton
+                  key={notification.id ?? notification.createdAt}
+                  onClick={() => handleClickNotification(notification)}
+                >
+                  <ListItemText
+                    primary={notification.title}
+                    secondary={notification.content}
+                    primaryTypographyProps={{ fontWeight: 600 }}
+                    secondaryTypographyProps={{
+                      noWrap: true,
+                      color: "text.secondary",
+                    }}
+                  />
+                </ListItemButton>
+              ))}
+            </List>
+          )}
         </Box>
         <Divider sx={{ my: 1.5 }} />
         <Box display="flex" justifyContent="flex-end" gap={1}>

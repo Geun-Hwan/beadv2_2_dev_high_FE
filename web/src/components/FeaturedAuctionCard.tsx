@@ -4,7 +4,6 @@ import {
   Button,
   Card,
   CardContent,
-  CardMedia,
   Chip,
   Skeleton,
   Stack,
@@ -19,6 +18,7 @@ import { getAuctionStatusText } from "@moreauction/utils";
 import RemainingTime from "./RemainingTime";
 import { formatWon } from "@moreauction/utils";
 import { queryKeys } from "../queries/queryKeys";
+import { ImageWithFallback } from "./common/ImageWithFallback";
 
 /**
  * 홈 히어로에 들어갈 "오늘의 인기 경매" 카드
@@ -64,11 +64,10 @@ const FeaturedAuctionCard: React.FC = () => {
       {topAuctionQuery.isLoading ? (
         <Skeleton variant="rectangular" height={220} />
       ) : (
-        <CardMedia
-          component="img"
-          height="220"
-          image={"/images/no_image.png"}
+        <ImageWithFallback
+          src={""}
           alt={auction?.productName ?? "오늘의 인기 경매"}
+          height={220}
           sx={{ objectFit: "cover" }}
         />
       )}

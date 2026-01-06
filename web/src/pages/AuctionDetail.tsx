@@ -95,6 +95,8 @@ const AuctionDetail: React.FC = () => {
     enabled: !!auctionId,
     staleTime: 0,
     refetchOnMount: "always",
+    placeholderData: () =>
+      queryClient.getQueryData(queryKeys.auctions.detail(auctionId)),
   });
 
   const participationQuery = useQuery({
@@ -230,6 +232,7 @@ const AuctionDetail: React.FC = () => {
     return merged;
   }, [bidHistoryQuery.data?.pages]);
 
+
   const refreshBidHistoryFirstPage = useCallback(async () => {
     await queryClient.invalidateQueries({
       queryKey: queryKeys.auctions.bidHistory(auctionId),
@@ -263,6 +266,13 @@ const AuctionDetail: React.FC = () => {
       "실시간 입찰 내역을 불러오지 못했습니다."
     );
   }, [bidHistoryQuery.error, bidHistoryQuery.isError, isAuthenticated]);
+
+  const hasBidHistory = bidHistory.length > 0;
+  const showBidHistoryWarning = !!bidHistoryErrorMessage && hasBidHistory;
+  const showParticipationWarning =
+    !!participationErrorMessage && !!participationQuery.data;
+  const showAuctionDetailWarning = !!errorMessage && !!auctionDetail;
+  const shouldBlockDetail = !!errorMessage && !auctionDetail;
 
   useEffect(() => {
     const highestUserId = auctionDetail?.highestUserId ?? undefined;
@@ -607,6 +617,7 @@ const AuctionDetail: React.FC = () => {
       </Container>
     );
   const canRenderDetail = !!auctionDetail;
+  const showSocketWarning = connectionState === "failed";
 
   const isAuctionInProgress =
     auctionDetail?.status === AuctionStatus.IN_PROGRESS;
@@ -648,15 +659,22 @@ const AuctionDetail: React.FC = () => {
                     overflow: "auto",
                   }}
                 >
-                  {bidHistoryErrorMessage ? (
+                  {bidHistoryErrorMessage && !hasBidHistory ? (
                     <Alert severity="error">{bidHistoryErrorMessage}</Alert>
                   ) : (
-                    <BidHistory
-                      isAuthenticated={isAuthenticated}
-                      bidHistory={bidHistory}
-                      fetchMoreHistory={() => bidHistoryQuery.fetchNextPage()}
-                      hasMore={!!bidHistoryQuery.hasNextPage}
-                    />
+                    <>
+                      {showBidHistoryWarning && (
+                        <Alert severity="warning" sx={{ mb: 1 }}>
+                          {bidHistoryErrorMessage}
+                        </Alert>
+                      )}
+                      <BidHistory
+                        isAuthenticated={isAuthenticated}
+                        bidHistory={bidHistory}
+                        fetchMoreHistory={() => bidHistoryQuery.fetchNextPage()}
+                        hasMore={!!bidHistoryQuery.hasNextPage}
+                      />
+                    </>
                   )}
                 </CardContent>
               </Card>
@@ -664,20 +682,27 @@ const AuctionDetail: React.FC = () => {
                 <CardHeader title="참여 현황" />
 
                 <CardContent>
-                  {participationErrorMessage ? (
+                  {participationErrorMessage && !participationQuery.data ? (
                     <Alert severity="error">{participationErrorMessage}</Alert>
                   ) : !isAuthenticated ? (
                     <Alert severity="info">
                       로그인 후 참여 현황을 확인할 수 있습니다.
                     </Alert>
                   ) : canRenderDetail ? (
-                    <AuctionParticipationStatus
-                      participationStatus={participationStatus}
-                      depositAmount={auctionDetail.depositAmount}
-                      auctionStatus={auctionDetail.status}
-                      setOpenPopup={() => setOpenWithdrawnPopup(true)}
-                      refundRequest={refundRequest}
-                    />
+                    <>
+                      {showParticipationWarning && (
+                        <Alert severity="warning" sx={{ mb: 1 }}>
+                          {participationErrorMessage}
+                        </Alert>
+                      )}
+                      <AuctionParticipationStatus
+                        participationStatus={participationStatus}
+                        depositAmount={auctionDetail.depositAmount}
+                        auctionStatus={auctionDetail.status}
+                        setOpenPopup={() => setOpenWithdrawnPopup(true)}
+                        refundRequest={refundRequest}
+                      />
+                    </>
                   ) : (
                     <Alert severity="error">
                       경매 정보를 불러오지 못했습니다.
@@ -705,18 +730,30 @@ const AuctionDetail: React.FC = () => {
             />
             <CardContent>
               <Stack spacing={2}>
-                {errorMessage ? (
+                {shouldBlockDetail ? (
                   <Alert severity="error">{errorMessage}</Alert>
                 ) : canRenderDetail ? (
-                  <AuctionInfoPanel
-                    productName={
-                      auctionDetail.productName ?? "TODO : auctionDetail"
-                    }
-                    status={auctionDetail.status}
-                    isAuctionInProgress={isAuctionInProgress}
-                    isConnected={isConnected}
-                    isRetrying={isRetrying}
-                  />
+                  <>
+                    {showAuctionDetailWarning && (
+                      <Alert severity="warning" sx={{ mb: 1 }}>
+                        {errorMessage}
+                      </Alert>
+                    )}
+                    {showSocketWarning && (
+                      <Alert severity="warning" sx={{ mb: 1 }}>
+                        실시간 연결이 끊어졌습니다. 자동 재연결 중입니다.
+                      </Alert>
+                    )}
+                    <AuctionInfoPanel
+                      productName={
+                        auctionDetail.productName ?? "TODO : auctionDetail"
+                      }
+                      status={auctionDetail.status}
+                      isAuctionInProgress={isAuctionInProgress}
+                      isConnected={isConnected}
+                      isRetrying={isRetrying}
+                    />
+                  </>
                 ) : (
                   <Alert severity="error">
                     경매 정보를 불러오지 못했습니다.

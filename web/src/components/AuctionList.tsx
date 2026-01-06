@@ -4,7 +4,6 @@ import {
   Button,
   Card,
   CardContent,
-  CardMedia,
   Skeleton,
   Typography,
 } from "@mui/material";
@@ -24,6 +23,7 @@ import { formatWon } from "@moreauction/utils";
 import { getAuctionStatusText } from "@moreauction/utils";
 import RemainingTime from "./RemainingTime";
 import { queryKeys } from "../queries/queryKeys";
+import { ImageWithFallback } from "./common/ImageWithFallback";
 
 type AuctionSortOption =
   | "ENDING_SOON"
@@ -129,7 +129,6 @@ const AuctionList: React.FC<AuctionListProps> = ({
     const list = fileGroupsQuery.data ?? [];
     return new Map(list.map((group) => [group.fileGroupId, group]));
   }, [fileGroupsQuery.data]);
-  const isImageLoading = productsQuery.isLoading || fileGroupsQuery.isLoading;
 
   return (
     <Box
@@ -207,21 +206,16 @@ const AuctionList: React.FC<AuctionListProps> = ({
                   flexDirection: "column",
                 }}
               >
-                {isImageLoading ? (
-                  <Skeleton
-                    variant="rectangular"
-                    height={220}
-                    sx={{ borderBottom: "1px solid", borderColor: "divider" }}
-                  />
-                ) : (
-                  <CardMedia
-                    component="img"
-                    height="220"
-                    image={coverImage}
-                    alt={auction.productName}
-                    sx={{ borderBottom: "1px solid", borderColor: "divider" }}
-                  />
-                )}
+                <ImageWithFallback
+                  src={coverImage}
+                  alt={auction.id}
+                  height={220}
+                  sx={{ borderBottom: "1px solid", borderColor: "divider" }}
+                  skeletonSx={{
+                    borderBottom: "1px solid",
+                    borderColor: "divider",
+                  }}
+                />
                 <CardContent
                   sx={{ flexGrow: 1, display: "flex", flexDirection: "column" }}
                 >

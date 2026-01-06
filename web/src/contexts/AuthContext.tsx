@@ -13,6 +13,7 @@ import React, {
   useState,
   type ReactNode,
 } from "react";
+import { userApi } from "src/apis/userApi";
 
 export interface AuthContextType {
   isAuthenticated: boolean;
@@ -89,14 +90,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = () => {
-    localStorage.removeItem("user");
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-    localStorage.removeItem("sessionExpired");
-    localStorage.removeItem("depositBalance");
-    setToken(null);
-    setUser(null);
-    queryClient.clear();
+    userApi
+      .logout()
+      .catch((error) => {
+        console.warn("로그아웃 API 실패:", error);
+      })
+      .finally(() => {
+        // 무조건 로컬 스토리지 정리
+        localStorage.removeItem("user");
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("sessionExpired");
+        localStorage.removeItem("depositBalance");
+        setToken(null);
+        setUser(null);
+
+        queryClient.clear();
+      });
   };
   const updateAccessToken = (newToken: string | null) => {
     if (!newToken) {
@@ -129,6 +139,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         );
         localStorage.removeItem("sessionExpired");
       }
+      logout();
     }
 
     if (wasAuthenticated !== isAuthenticated) {

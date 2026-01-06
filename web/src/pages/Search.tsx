@@ -3,7 +3,6 @@ import {
   Card,
   CardActionArea,
   CardContent,
-  CardMedia,
   Chip,
   Container,
   InputAdornment,
@@ -27,6 +26,7 @@ import { getAuctionStatusText } from "@moreauction/utils";
 import { AuctionStatus } from "@moreauction/types";
 import { formatWon } from "@moreauction/utils";
 import { queryKeys } from "../queries/queryKeys";
+import { ImageWithFallback } from "../components/common/ImageWithFallback";
 
 const SearchPage: React.FC = () => {
   const formatDateTime = (value?: string) => {
@@ -224,8 +224,6 @@ const SearchPage: React.FC = () => {
     const list = fileGroupsQuery.data ?? [];
     return new Map(list.map((group) => [group.fileGroupId, group]));
   }, [fileGroupsQuery.data]);
-
-  const isImageLoading = fileGroupsQuery.isLoading;
 
   // 입력 핸들러들 (아직 검색 조건에는 적용하지 않음)
   const handleInputKeywordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -508,21 +506,13 @@ const SearchPage: React.FC = () => {
                   height: "100%",
                 }}
               >
-                {isImageLoading ? (
-                  <Skeleton
-                    variant="rectangular"
-                    height={150}
-                    sx={{ width: "100%" }}
-                  />
-                ) : (
-                  <CardMedia
-                    component="img"
-                    height="150"
-                    image={coverImage}
-                    alt={doc.productName}
-                    sx={{ objectFit: "cover", width: "100%" }}
-                  />
-                )}
+                <ImageWithFallback
+                  src={coverImage}
+                  alt={doc.productName}
+                  height={150}
+                  sx={{ objectFit: "cover", width: "100%" }}
+                  skeletonSx={{ width: "100%" }}
+                />
                 <CardContent
                   sx={{
                     flex: 1,
