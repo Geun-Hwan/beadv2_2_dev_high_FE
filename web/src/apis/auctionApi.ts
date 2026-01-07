@@ -10,7 +10,7 @@ import type {
   PagedAuctionResponse,
   PagedBidHistoryResponse,
 } from "@moreauction/types";
-import { client } from "./client";
+import { client } from "@/apis/client";
 // Auction 타입 임포트
 import qs from "qs";
 

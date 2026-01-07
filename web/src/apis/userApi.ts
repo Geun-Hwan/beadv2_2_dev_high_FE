@@ -7,7 +7,7 @@ import type {
   SignupParams,
   User,
 } from "@moreauction/types";
-import { client } from "./client";
+import { client } from "@/apis/client";
 
 // 로그인 요청 파라미터 타입
 

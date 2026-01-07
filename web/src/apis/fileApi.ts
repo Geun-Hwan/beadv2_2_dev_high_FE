@@ -1,7 +1,7 @@
 // src/apis/fileApi.ts
 
 import type { ApiResponseDto, FileGroup } from "@moreauction/types";
-import { client } from "./client";
+import { client } from "@/apis/client";
 
 export interface UploadedFileInfo {
   id: string;

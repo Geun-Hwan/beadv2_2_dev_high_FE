@@ -3,10 +3,10 @@ import React, { useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
-import { userApi } from "../apis/userApi";
-import FormContainer from "../components/FormContainer";
-import AdminShell from "../components/AdminShell";
-import { useAuth } from "../contexts/AuthContext";
+import { userApi } from "@/apis/userApi";
+import FormContainer from "@/components/FormContainerx";
+import AdminShell from "@/components/AdminShellx";
+import { useAuth } from "@/contexts/AuthContextx";
 import { hasRole, UserRole, type LoginParams, type LoginResponse } from "@moreauction/types";
 
 const Login: React.FC = () => {

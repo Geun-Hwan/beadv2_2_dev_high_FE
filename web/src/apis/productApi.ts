@@ -7,7 +7,7 @@ import type {
   ProductUpdateRequest,
 } from "@moreauction/types";
 import qs from "qs";
-import { client } from "./client";
+import { client } from "@/apis/client";
 
 // 상품 목록 조회 시 사용될 쿼리 파라미터 인터페이스 (필요에 따라 확장)
 interface ProductLatestAuctionUpdateRequest {

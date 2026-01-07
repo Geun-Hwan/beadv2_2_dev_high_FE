@@ -1,6 +1,6 @@
 import type { ApiResponseDto } from "@moreauction/types";
 import type { OrderResponse, OrderStatus } from "@moreauction/types";
-import { client } from "./client";
+import { client } from "@/apis/client";
 
 export const orderApi = {
   getOrderByStatus: async (

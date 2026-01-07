@@ -6,7 +6,6 @@ import {
 } from "@moreauction/types";
 import { CircularProgress } from "@mui/material";
 import { useQueryClient } from "@tanstack/react-query";
-import { is } from "date-fns/locale";
 import React, {
   createContext,
   useContext,
@@ -15,7 +14,7 @@ import React, {
   useRef,
   type ReactNode,
 } from "react";
-import { userApi } from "src/apis/userApi";
+import { userApi } from "@/apis/userApi";
 
 export interface AuthContextType {
   isAuthenticated: boolean;

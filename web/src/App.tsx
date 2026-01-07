@@ -1,8 +1,9 @@
 import { Box } from "@mui/material";
 import React from "react";
 import { Outlet, useLocation } from "react-router-dom";
-import { AppHeader } from "./components/AppHeader";
-import Footer from "./components/Footer";
+import { AppHeader } from "@/shared/components/AppHeader";
+import Footer from "@/shared/components/Footer";
+import { ChatWidget } from "@/features/chat/components/ChatWidget";
 
 function App() {
   const location = useLocation();
@@ -24,6 +25,7 @@ function App() {
         <Outlet />
       </Box>
       {!hideChrome && <Footer />}
+      {!hideChrome && <ChatWidget />}
     </Box>
   );
 }

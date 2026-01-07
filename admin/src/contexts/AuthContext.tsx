@@ -10,7 +10,7 @@ import React, {
   useRef,
   type ReactNode,
 } from "react";
-import { userApi } from "../apis/userApi";
+import { userApi } from "@/apis/userApi";
 
 export interface AuthContextType {
   isAuthenticated: boolean;
