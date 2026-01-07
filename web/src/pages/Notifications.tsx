@@ -29,6 +29,7 @@ import type {
   PagedNotificationResponse,
 } from "@moreauction/types";
 import { queryKeys } from "../queries/queryKeys";
+import { getErrorMessage } from "../utils/getErrorMessage";
 
 const sortNotifications = (items: NotificationInfo[]) => {
   return [...items].sort((a, b) => {
@@ -79,8 +80,10 @@ const Notifications: React.FC = () => {
 
   const errorMessage = useMemo(() => {
     if (!notificationsQuery.isError) return null;
-    const err: any = notificationsQuery.error;
-    return err?.data?.message ?? err?.message ?? "알림을 불러오는데 실패했습니다.";
+    return getErrorMessage(
+      notificationsQuery.error,
+      "알림을 불러오는데 실패했습니다."
+    );
   }, [notificationsQuery.error, notificationsQuery.isError]);
 
   const markAsReadMutation = useMutation({

@@ -1,12 +1,12 @@
 import {
   Box,
-  CardMedia,
   Divider,
   Paper,
   Stack,
   Typography,
 } from "@mui/material";
 import React, { useMemo, useState } from "react";
+import { ImageWithFallback } from "../common/ImageWithFallback";
 
 interface ProductInfoProps {
   imageUrls?: string[];
@@ -32,11 +32,10 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
   return (
     <Stack spacing={3}>
       <Paper sx={{ p: 2 }}>
-        <CardMedia
-          component="img"
-          height="300"
-          image={selectedUrl}
+        <ImageWithFallback
+          src={selectedUrl}
           alt={productName}
+          height={300}
           sx={{ borderRadius: 2, objectFit: "contain" }}
         />
         {urls.length > 1 && (
@@ -70,10 +69,11 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
                   cursor: "pointer",
                 }}
               >
-                <Box
-                  component="img"
+                <ImageWithFallback
                   src={url}
                   alt={`${productName} 이미지 ${idx + 1}`}
+                  height={64}
+                  width={64}
                   sx={{
                     width: "100%",
                     height: "100%",

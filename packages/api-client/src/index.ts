@@ -18,10 +18,13 @@ const refreshToken = async (baseUrl: string): Promise<string | null> => {
         withCredentials: true,
       }
     );
-    const data = response.data as ApiResponseDto<{ accessToken: string }>;
-    const newAccessToken = data.data.accessToken;
-    localStorage.setItem("accessToken", newAccessToken);
-    return newAccessToken;
+    const res: any = response.data as ApiResponseDto<{ accessToken: string }>;
+    const newAccessToken = res?.data?.accessToken ?? null;
+    if (typeof newAccessToken === "string" && newAccessToken.length > 0) {
+      localStorage.setItem("accessToken", newAccessToken);
+      return newAccessToken;
+    }
+    return null;
   } catch (error) {
     console.error("토큰 재발급 실패:", error);
     return null;
@@ -108,12 +111,14 @@ export const createApiClient = ({
           if (newToken) {
             refreshFailed = false;
             onUpdateToken(newToken);
-            originalRequest.headers["Authorization"] = `Bearer ${newToken}`;
+            originalRequest.headers = originalRequest.headers ?? {};
+            (
+              originalRequest.headers as Record<string, string>
+            ).Authorization = `Bearer ${newToken}`;
             return client(originalRequest);
           }
 
           refreshFailed = true;
-          localStorage.setItem("sessionExpired", "true");
           onUpdateToken(null);
           throw new Error("토큰 재발급 실패");
         } catch (err) {

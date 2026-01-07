@@ -25,6 +25,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { OrderStatus, type OrderResponse } from "@moreauction/types";
 import { formatWon } from "@moreauction/utils";
 import { queryKeys } from "../queries/queryKeys";
+import { getErrorMessage } from "../utils/getErrorMessage";
 
 const PendingOrders: React.FC = () => {
   const location = useLocation();
@@ -68,10 +69,8 @@ const PendingOrders: React.FC = () => {
 
   const pendingErrorMessage = useMemo(() => {
     if (!pendingQuery.isError) return null;
-    const err: any = pendingQuery.error;
-    return (
-      err?.data?.message ??
-      err?.message ??
+    return getErrorMessage(
+      pendingQuery.error,
       "구매 대기 주문을 불러오는 데 실패했습니다."
     );
   }, [pendingQuery.error, pendingQuery.isError]);

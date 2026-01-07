@@ -7,6 +7,7 @@ interface AuctionInfoPanelProps {
   isAuctionInProgress: boolean;
   isConnected: boolean;
   isRetrying: boolean;
+  showConnectionStatus: boolean;
 }
 
 const AuctionInfoPanel: React.FC<AuctionInfoPanelProps> = ({
@@ -14,6 +15,7 @@ const AuctionInfoPanel: React.FC<AuctionInfoPanelProps> = ({
   isAuctionInProgress,
   isConnected,
   isRetrying,
+  showConnectionStatus,
 }) => {
   return (
     <Box>
@@ -24,13 +26,15 @@ const AuctionInfoPanel: React.FC<AuctionInfoPanelProps> = ({
             color={isAuctionInProgress ? "success" : "default"}
             size="small"
           />
-          <Chip
-            label={
-              isConnected ? "실시간 연결" : isRetrying ? "연결중" : "연결 끊김"
-            }
-            color={isConnected ? "success" : isRetrying ? "warning" : "error"}
-            size="small"
-          />
+          {showConnectionStatus && (
+            <Chip
+              label={
+                isConnected ? "실시간 연결" : isRetrying ? "연결중" : "연결 끊김"
+              }
+              color={isConnected ? "success" : isRetrying ? "warning" : "error"}
+              size="small"
+            />
+          )}
         </Stack>
       </Stack>
     </Box>

@@ -56,6 +56,7 @@ import { fileApi } from "../apis/fileApi";
 import { productApi } from "../apis/productApi";
 import { useAuth } from "../contexts/AuthContext";
 import { queryKeys } from "../queries/queryKeys";
+import { getErrorMessage } from "../utils/getErrorMessage";
 
 import { getProductImageUrls } from "@moreauction/utils";
 
@@ -227,8 +228,9 @@ const ProductRegistration: React.FC = () => {
   const dataError = useMemo(() => {
     const err: any = categoriesQuery.error ?? productDetailQuery.error;
     if (!err) return null;
-    return (
-      err?.data?.message ?? err?.message ?? "데이터를 불러오는 데 실패했습니다."
+    return getErrorMessage(
+      err,
+      "데이터를 불러오는 데 실패했습니다."
     );
   }, [categoriesQuery.error, productDetailQuery.error]);
   const pageError = dataError ?? error;
@@ -873,7 +875,7 @@ const ProductRegistration: React.FC = () => {
 
             {error && !dataError && (
               <Alert severity="error" sx={{ mt: 2 }}>
-                {error}
+                {getErrorMessage(error, "요청에 실패했습니다.")}
               </Alert>
             )}
 

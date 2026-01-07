@@ -11,6 +11,7 @@ import {
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import {
+  Alert,
   Box,
   Button,
   ButtonBase,
@@ -34,6 +35,7 @@ import { wishlistApi } from "../apis/wishlistApi";
 import RemainingTime from "../components/RemainingTime";
 import { useAuth } from "../contexts/AuthContext";
 import { queryKeys } from "../queries/queryKeys";
+import { getErrorMessage } from "../utils/getErrorMessage";
 
 const ProductDetail: React.FC = () => {
   const formatDateTime = (value?: string | null) => {
@@ -122,11 +124,11 @@ const ProductDetail: React.FC = () => {
       return;
     }
     if (productQuery.isError) {
-      const err: any = productQuery.error;
       setError(
-        err?.data?.message ??
-          err?.message ??
-          "Failed to load product details or auctions."
+        getErrorMessage(
+          productQuery.error,
+          "상품 정보를 불러오지 못했습니다."
+        )
       );
     } else {
       setError(null);
@@ -141,6 +143,16 @@ const ProductDetail: React.FC = () => {
   }
 
   const galleryItems = useMemo<GalleryItem[]>(() => {
+    if (fileGroupQuery.isError) {
+      return [
+        {
+          key: "fallback",
+          url: "/images/fallback.png",
+          label: "이미지 로딩 실패",
+          isPlaceholder: true,
+        },
+      ];
+    }
     const fileItems =
       fileGroup?.files
         ?.map((file, idx) => {
@@ -175,7 +187,24 @@ const ProductDetail: React.FC = () => {
         isPlaceholder: true,
       },
     ];
-  }, [fileGroup]);
+  }, [fileGroup, fileGroupQuery.isError]);
+
+  const auctionErrorMessage = useMemo(() => {
+    if (!productId) {
+      return "경매 정보를 불러오지 못했습니다.";
+    }
+    if (!auctionsQuery.isError && !latestAuctionQuery.isError) return null;
+    const err: any = auctionsQuery.error ?? latestAuctionQuery.error;
+    return getErrorMessage(err, "경매 정보를 불러오지 못했습니다.");
+  }, [
+    auctionsQuery.error,
+    auctionsQuery.isError,
+    latestAuctionQuery.error,
+    latestAuctionQuery.isError,
+    productId,
+  ]);
+  const isAuctionLoading =
+    auctionsQuery.isLoading || latestAuctionQuery.isLoading;
 
   useEffect(() => {
     setActiveImageIndex(0);
@@ -390,68 +419,10 @@ const ProductDetail: React.FC = () => {
     fetchWishlistStatus();
   }, [productId, user]);
 
-  if (productQuery.isLoading) {
-    return (
-      <Container maxWidth="lg">
-        <Box sx={{ my: 4 }}>
-          <Stack
-            direction={{ xs: "column", md: "row" }}
-            spacing={4}
-            alignItems="flex-start"
-          >
-            {/* 상품 카드 스켈레톤 */}
-            <Box flex={{ xs: "1 1 auto", md: "0 0 40%" }}>
-              <Card>
-                <Skeleton variant="rectangular" height={260} />
-                <CardContent>
-                  <Skeleton variant="text" width="70%" />
-                  <Skeleton variant="text" width="90%" />
-                  <Skeleton variant="text" width="80%" />
-                </CardContent>
-              </Card>
-            </Box>
-
-            {/* 경매 영역 스켈레톤 */}
-            <Box flex={1}>
-              <Stack spacing={3}>
-                <Card>
-                  <CardContent>
-                    <Skeleton variant="text" width="40%" />
-                    <Skeleton variant="text" width="60%" />
-                    <Skeleton variant="text" width="50%" />
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent>
-                    <Skeleton variant="text" width="30%" />
-                    <Skeleton variant="text" width="80%" />
-                    <Skeleton variant="text" width="75%" />
-                    <Skeleton variant="text" width="65%" />
-                  </CardContent>
-                </Card>
-              </Stack>
-            </Box>
-          </Stack>
-        </Box>
-      </Container>
-    );
-  }
-
-  if (error) {
-    return (
-      <Container sx={{ mt: 4 }}>
-        <Typography color="error">{error}</Typography>
-      </Container>
-    );
-  }
-
-  if (!product) {
-    return (
-      <Container sx={{ mt: 4 }}>
-        <Typography>상품을 찾을 수 없습니다.</Typography>
-      </Container>
-    );
-  }
+  const showProductSkeleton = productQuery.isLoading;
+  const showProductError = !!error;
+  const showProductEmpty = !productQuery.isLoading && !error && !product;
+  const hasProduct = !!product;
 
   return (
     <Container maxWidth="lg">
@@ -473,7 +444,7 @@ const ProductDetail: React.FC = () => {
               maxWidth: { xs: "100%", md: "auto" },
             }}
           >
-            {showAuctionActions && (
+            {showAuctionActions && hasProduct && (
               <Stack direction="row" spacing={1} alignItems="center">
                 {isOwner && !hasInProgressAuction && (
                   <Button
@@ -497,15 +468,18 @@ const ProductDetail: React.FC = () => {
                 )}
               </Stack>
             )}
-            {showAuctionActions && hasPendingAuction && isOwner && (
-              <Typography
-                variant="body2"
-                color="warning.main"
-                sx={{ textAlign: { xs: "left", md: "right" } }}
-              >
-                대기 중인 경매를 먼저 삭제해야 상품을 삭제할 수 있습니다.
-              </Typography>
-            )}
+            {showAuctionActions &&
+              hasProduct &&
+              hasPendingAuction &&
+              isOwner && (
+                <Typography
+                  variant="body2"
+                  color="warning.main"
+                  sx={{ textAlign: { xs: "left", md: "right" } }}
+                >
+                  대기 중인 경매를 먼저 삭제해야 상품을 삭제할 수 있습니다.
+                </Typography>
+              )}
           </Box>
         </Stack>
 
@@ -516,166 +490,196 @@ const ProductDetail: React.FC = () => {
         >
           {/* 상품 기본 정보 */}
           <Box flex={{ xs: "1 1 auto", md: "0 0 40%" }}>
-            <Card>
-              <CardMedia
-                component="img"
-                height="260"
-                image={heroImage}
-                alt={product.name}
-                sx={{
-                  objectFit: "contain",
-                  backgroundColor: "grey.50",
-                  borderBottom: "1px solid",
-                  borderColor: "divider",
-                }}
-              />
-              {galleryItems.length > 1 && (
-                <Stack
-                  direction="row"
-                  spacing={1}
-                  flexWrap="wrap"
-                  useFlexGap
-                  sx={{ px: 2, py: 1 }}
-                >
-                  {galleryItems.map((item, idx) => {
-                    const isActive = idx === activeImageIndex;
-                    return (
-                      <ButtonBase
-                        key={item.key}
-                        onClick={() => setActiveImageIndex(idx)}
-                        sx={{
-                          width: 64,
-                          height: 64,
-                          borderRadius: 1,
-                          overflow: "hidden",
-                          border: "2px solid",
-                          borderColor: isActive
-                            ? "primary.main"
-                            : "transparent",
-                          boxShadow: isActive ? 2 : 0,
-                        }}
-                      >
-                        <Box
-                          component="img"
-                          src={item.url}
-                          alt={item.label}
-                          sx={{
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "cover",
-                          }}
-                        />
-                      </ButtonBase>
-                    );
-                  })}
-                </Stack>
-              )}
-
-              <CardContent>
-                <Box
+            {showProductSkeleton ? (
+              <Card>
+                <Skeleton variant="rectangular" height={260} />
+                <CardContent>
+                  <Skeleton variant="text" width="70%" />
+                  <Skeleton variant="text" width="90%" />
+                  <Skeleton variant="text" width="80%" />
+                </CardContent>
+              </Card>
+            ) : showProductError ? (
+              <Card>
+                <CardContent>
+                  <Alert severity="error">
+                    {getErrorMessage(error, "상품 정보를 불러오지 못했습니다.")}
+                  </Alert>
+                </CardContent>
+              </Card>
+            ) : showProductEmpty ? (
+              <Card>
+                <CardContent>
+                  <Alert severity="info">상품을 찾을 수 없습니다.</Alert>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                {fileGroupQuery.isError && (
+                  <Alert severity="warning" sx={{ m: 2 }}>
+                    이미지 로드에 실패했습니다.
+                  </Alert>
+                )}
+                <CardMedia
+                  component="img"
+                  height="260"
+                  image={heroImage}
+                  alt={product?.name}
                   sx={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    justifyContent: "space-between",
-                    gap: 1,
+                    objectFit: "contain",
+                    backgroundColor: "grey.50",
+                    borderBottom: "1px solid",
+                    borderColor: "divider",
                   }}
-                >
-                  <Box>
-                    <Typography variant="h5" gutterBottom noWrap>
-                      {product.name}
-                    </Typography>
-                    {categoryLabels.length > 0 && (
-                      <Stack
-                        direction="row"
-                        spacing={0.75}
-                        flexWrap="wrap"
-                        useFlexGap
-                        sx={{ mb: 1 }}
-                      >
-                        {categoryLabels.map((label) => (
-                          <Chip
-                            key={label}
-                            label={label}
-                            size="small"
-                            variant="outlined"
+                />
+                {galleryItems.length > 1 && (
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    flexWrap="wrap"
+                    useFlexGap
+                    sx={{ px: 2, py: 1 }}
+                  >
+                    {galleryItems.map((item, idx) => {
+                      const isActive = idx === activeImageIndex;
+                      return (
+                        <ButtonBase
+                          key={item.key}
+                          onClick={() => setActiveImageIndex(idx)}
+                          sx={{
+                            width: 64,
+                            height: 64,
+                            borderRadius: 1,
+                            overflow: "hidden",
+                            border: "2px solid",
+                            borderColor: isActive
+                              ? "primary.main"
+                              : "transparent",
+                            boxShadow: isActive ? 2 : 0,
+                          }}
+                        >
+                          <Box
+                            component="img"
+                            src={item.url}
+                            alt={item.label}
+                            sx={{
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "cover",
+                            }}
                           />
-                        ))}
-                      </Stack>
-                    )}
-                  </Box>
-                  <IconButton
-                    size="small"
-                    onClick={async () => {
-                      if (!user) {
-                        alert("로그인 후 찜하기를 사용할 수 있습니다.");
-                        navigate("/login");
-                        return;
-                      }
-                      if (!product) return;
+                        </ButtonBase>
+                      );
+                    })}
+                  </Stack>
+                )}
 
-                      // Optimistic: disable 없이 즉시 UI 반영 + 연타 시 마지막 의도만 서버에 반영
-                      wishActionSeqRef.current += 1;
-                      const seqAtClick = wishActionSeqRef.current;
-
-                      const nextDesired = !wishDesiredRef.current;
-                      wishDesiredRef.current = nextDesired;
-                      setIsWish(nextDesired);
-
-                      if (wishInFlightRef.current) return;
-                      wishInFlightRef.current = true;
-                      setWishLoading(true);
-
-                      try {
-                        while (
-                          wishServerRef.current !== wishDesiredRef.current
-                        ) {
-                          const target = wishDesiredRef.current;
-                          if (target) {
-                            await wishlistApi.add(product.id);
-                          } else {
-                            await wishlistApi.remove(product.id);
-                          }
-                          wishServerRef.current = target;
-                        }
-                      } catch (err: any) {
-                        console.error("찜 토글 실패:", err);
-                        if (wishActionSeqRef.current === seqAtClick) {
-                          wishDesiredRef.current = wishServerRef.current;
-                          setIsWish(wishServerRef.current);
-                        }
-                        alert(
-                          err?.response?.data?.message ??
-                            "찜하기 처리 중 오류가 발생했습니다."
-                        );
-                      } finally {
-                        wishInFlightRef.current = false;
-                        if (wishActionSeqRef.current === seqAtClick) {
-                          setWishLoading(false);
-                        }
-                      }
+                <CardContent>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      justifyContent: "space-between",
+                      gap: 1,
                     }}
                   >
-                    {isWish ? (
-                      <FavoriteIcon color="error" fontSize="small" />
-                    ) : (
-                      <FavoriteBorderIcon fontSize="small" />
-                    )}
-                  </IconButton>
-                </Box>
-                <Box sx={{ mb: 2.5, mt: 1 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    상품 설명
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ mt: 0.5, whiteSpace: "pre-line", minHeight: 96 }}
-                  >
-                    {product.description || "설명 없음"}
-                  </Typography>
-                </Box>
-              </CardContent>
-            </Card>
+                    <Box>
+                      <Typography variant="h5" gutterBottom noWrap>
+                        {product?.name}
+                      </Typography>
+                      {categoryLabels.length > 0 && (
+                        <Stack
+                          direction="row"
+                          spacing={0.75}
+                          flexWrap="wrap"
+                          useFlexGap
+                          sx={{ mb: 1 }}
+                        >
+                          {categoryLabels.map((label) => (
+                            <Chip
+                              key={label}
+                              label={label}
+                              size="small"
+                              variant="outlined"
+                            />
+                          ))}
+                        </Stack>
+                      )}
+                    </Box>
+                    <IconButton
+                      size="small"
+                      onClick={async () => {
+                        if (!user) {
+                          alert("로그인 후 찜하기를 사용할 수 있습니다.");
+                          navigate("/login");
+                          return;
+                        }
+                        if (!product) return;
+
+                        // Optimistic: disable 없이 즉시 UI 반영 + 연타 시 마지막 의도만 서버에 반영
+                        wishActionSeqRef.current += 1;
+                        const seqAtClick = wishActionSeqRef.current;
+
+                        const nextDesired = !wishDesiredRef.current;
+                        wishDesiredRef.current = nextDesired;
+                        setIsWish(nextDesired);
+
+                        if (wishInFlightRef.current) return;
+                        wishInFlightRef.current = true;
+                        setWishLoading(true);
+
+                        try {
+                          while (
+                            wishServerRef.current !== wishDesiredRef.current
+                          ) {
+                            const target = wishDesiredRef.current;
+                            if (target) {
+                              await wishlistApi.add(product.id);
+                            } else {
+                              await wishlistApi.remove(product.id);
+                            }
+                            wishServerRef.current = target;
+                          }
+                        } catch (err: any) {
+                          console.error("찜 토글 실패:", err);
+                          if (wishActionSeqRef.current === seqAtClick) {
+                            wishDesiredRef.current = wishServerRef.current;
+                            setIsWish(wishServerRef.current);
+                          }
+                          alert(
+                            err?.response?.data?.message ??
+                              "찜하기 처리 중 오류가 발생했습니다."
+                          );
+                        } finally {
+                          wishInFlightRef.current = false;
+                          if (wishActionSeqRef.current === seqAtClick) {
+                            setWishLoading(false);
+                          }
+                        }
+                      }}
+                    >
+                      {isWish ? (
+                        <FavoriteIcon color="error" fontSize="small" />
+                      ) : (
+                        <FavoriteBorderIcon fontSize="small" />
+                      )}
+                    </IconButton>
+                  </Box>
+                  <Box sx={{ mb: 2.5, mt: 1 }}>
+                    <Typography variant="caption" color="text.secondary">
+                      상품 설명
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mt: 0.5, whiteSpace: "pre-line", minHeight: 96 }}
+                    >
+                      {product?.description || "설명 없음"}
+                    </Typography>
+                  </Box>
+                </CardContent>
+              </Card>
+            )}
           </Box>
 
           {/* 경매 영역 */}
@@ -756,7 +760,16 @@ const ProductDetail: React.FC = () => {
                     )}
                   </Stack>
 
-                  {activeAuction ? (
+                  {auctionErrorMessage ? (
+                    <Alert severity="error">{auctionErrorMessage}</Alert>
+                  ) : isAuctionLoading ? (
+                    <Stack spacing={1}>
+                      <Skeleton variant="text" width="45%" />
+                      <Skeleton variant="text" width="60%" />
+                      <Skeleton variant="text" width="40%" />
+                      <Skeleton variant="rounded" height={36} width="35%" />
+                    </Stack>
+                  ) : activeAuction ? (
                     <>
                       <Typography
                         variant="body2"
@@ -826,20 +839,22 @@ const ProductDetail: React.FC = () => {
                       <Typography variant="body2" color="text.secondary">
                         이 상품에 진행 중인 경매가 없습니다.
                       </Typography>
-                      {showAuctionActions && canReregisterAuction && (
-                        <Box sx={{ mt: 2, textAlign: "right" }}>
-                          <Button
-                            variant="contained"
-                            color="primary"
-                            component={RouterLink}
-                            to={`/auctions/new/${product.id}`}
-                          >
-                            {auctions.length === 0
-                              ? "경매 등록"
-                              : "경매 재등록"}
-                          </Button>
-                        </Box>
-                      )}
+                      {showAuctionActions &&
+                        canReregisterAuction &&
+                        product?.id && (
+                          <Box sx={{ mt: 2, textAlign: "right" }}>
+                            <Button
+                              variant="contained"
+                              color="primary"
+                              component={RouterLink}
+                              to={`/auctions/new/${product.id}`}
+                            >
+                              {auctions.length === 0
+                                ? "경매 등록"
+                                : "경매 재등록"}
+                            </Button>
+                          </Box>
+                        )}
                     </>
                   )}
                 </CardContent>
@@ -849,7 +864,23 @@ const ProductDetail: React.FC = () => {
                 <Typography variant="subtitle1" sx={{ mb: 1 }}>
                   다른 경매 이력
                 </Typography>
-                {auctions.length === 0 ? (
+                {auctionErrorMessage ? (
+                  <Alert severity="error">{auctionErrorMessage}</Alert>
+                ) : isAuctionLoading ? (
+                  <Stack spacing={1.5}>
+                    {Array.from({ length: 3 }).map((_, idx) => (
+                      <Card key={`auction-skeleton-${idx}`} variant="outlined">
+                        <CardContent>
+                          <Stack spacing={1}>
+                            <Skeleton variant="text" width="35%" />
+                            <Skeleton variant="text" width="55%" />
+                            <Skeleton variant="text" width="45%" />
+                          </Stack>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </Stack>
+                ) : auctions.length === 0 ? (
                   <Typography variant="body2" color="text.secondary">
                     연관된 경매가 없습니다.
                   </Typography>

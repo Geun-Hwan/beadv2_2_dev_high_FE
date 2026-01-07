@@ -11,10 +11,16 @@ const queryClient = new QueryClient({
     queries: {
       refetchOnWindowFocus: true,
       refetchOnMount: false,
+      retryOnMount: false,
       refetchOnReconnect: true,
       staleTime: 30_000,
       gcTime: 10 * 60_000,
-      retry: 1,
+      retry: (failureCount, error: any) => {
+        const status =
+          error?.response?.status ?? error?.status ?? error?.statusCode;
+        if (status === 403 || status === 500) return false;
+        return failureCount < 1;
+      },
     },
   },
 });

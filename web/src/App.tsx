@@ -1,10 +1,16 @@
 import { Box } from "@mui/material";
 import React from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import { AppHeader } from "./components/AppHeader";
 import Footer from "./components/Footer";
 
 function App() {
+  const location = useLocation();
+  const isPopup =
+    typeof window !== "undefined" && !!window.opener && !window.opener.closed;
+  const isOAuthRoute = location.pathname.startsWith("/oauth");
+  const hideChrome = isPopup && isOAuthRoute;
+
   return (
     <Box
       sx={{
@@ -13,11 +19,11 @@ function App() {
         minHeight: "100vh",
       }}
     >
-      <AppHeader />
-      <Box component="main" sx={{ flexGrow: 1, my: 3 }}>
+      {!hideChrome && <AppHeader />}
+      <Box component="main" sx={{ flexGrow: 1, my: hideChrome ? 0 : 3 }}>
         <Outlet />
       </Box>
-      <Footer />
+      {!hideChrome && <Footer />}
     </Box>
   );
 }

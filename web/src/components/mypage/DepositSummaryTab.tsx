@@ -10,23 +10,54 @@ import {
   Skeleton,
   Typography,
 } from "@mui/material";
-import { hasRole, UserRole, type UserRoles } from "@moreauction/types";
+import { hasRole, UserRole } from "@moreauction/types";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { depositApi } from "../../apis/depositApi";
+import { userApi } from "../../apis/userApi";
+import { useAuth } from "../../contexts/AuthContext";
+import { queryKeys } from "../../queries/queryKeys";
+import { getErrorMessage } from "../../utils/getErrorMessage";
 
-interface DepositSummaryTabProps {
-  loading: boolean;
-  error: string | null;
-  sellerInfo: { bankName?: string; bankAccount?: string } | null;
-  roles?: UserRoles;
-  onCreateAccount: () => void;
-}
+export const DepositSummaryTab: React.FC = () => {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const roles = user?.roles;
+  const sellerInfoQuery = useQuery({
+    queryKey: queryKeys.seller.info(),
+    queryFn: () => userApi.getSellerInfo(),
+    staleTime: 60_000,
+  });
+  const sellerInfo = sellerInfoQuery.data?.data ?? null;
+  const loading = sellerInfoQuery.isLoading;
+  const errorMessage = sellerInfoQuery.isError
+    ? getErrorMessage(
+        sellerInfoQuery.error,
+        "정산 계좌 정보를 불러오지 못했습니다."
+      )
+    : null;
 
-export const DepositSummaryTab: React.FC<DepositSummaryTabProps> = ({
-  loading,
-  error,
-  sellerInfo,
-  roles,
-  onCreateAccount,
-}) => {
+  const handleCreateAccount = async () => {
+    try {
+      const res = await depositApi.createAccount(user?.userId);
+      if (res?.data) {
+        alert("예치금 계좌가 생성되었습니다.");
+        queryClient.setQueryData(queryKeys.deposit.account(), res);
+        if (typeof res.data.balance === "number") {
+          queryClient.setQueryData(
+            queryKeys.deposit.balance(),
+            res.data.balance
+          );
+          localStorage.setItem("depositBalance", String(res.data.balance));
+        }
+        await queryClient.invalidateQueries({
+          queryKey: queryKeys.deposit.history(),
+        });
+      }
+    } catch (err: any) {
+      alert("계좌 생성 실패: " + (err?.data?.message ?? "알 수 없는 오류"));
+    }
+  };
+
   const isBuyerOnly =
     hasRole(roles, UserRole.USER) && !hasRole(roles, UserRole.SELLER);
 
@@ -49,9 +80,9 @@ export const DepositSummaryTab: React.FC<DepositSummaryTabProps> = ({
         정산 계좌 정보
       </Typography>
 
-      {error && (
+      {errorMessage && (
         <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
+          {errorMessage}
         </Alert>
       )}
 
@@ -88,7 +119,7 @@ export const DepositSummaryTab: React.FC<DepositSummaryTabProps> = ({
         <Box sx={{ mt: 2 }}>
           <Button
             variant="contained"
-            onClick={onCreateAccount}
+            onClick={handleCreateAccount}
             disabled={loading}
           >
             정산 계좌 등록/갱신

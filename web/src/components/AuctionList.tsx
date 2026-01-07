@@ -24,6 +24,7 @@ import { getAuctionStatusText } from "@moreauction/utils";
 import RemainingTime from "./RemainingTime";
 import { queryKeys } from "../queries/queryKeys";
 import { ImageWithFallback } from "./common/ImageWithFallback";
+import { getErrorMessage } from "../utils/getErrorMessage";
 
 type AuctionSortOption =
   | "ENDING_SOON"
@@ -48,6 +49,9 @@ interface AuctionListProps extends AuctionQueryParams {
    * - product: 상품 상세
    */
   linkDestination?: "auction" | "product";
+  showEmptyState?: boolean;
+  emptyTitle?: string;
+  emptyDescription?: string;
 }
 
 const AuctionList: React.FC<AuctionListProps> = ({
@@ -55,6 +59,9 @@ const AuctionList: React.FC<AuctionListProps> = ({
   sortOption = "ENDING_SOON",
   limit = 4,
   linkDestination = "auction",
+  showEmptyState = false,
+  emptyTitle = "표시할 경매가 없습니다",
+  emptyDescription = "조건에 맞는 경매가 없어요. 다른 조건을 찾아보세요.",
 }) => {
   const statusKey = Array.isArray(status) ? status.join(",") : "";
 
@@ -75,16 +82,19 @@ const AuctionList: React.FC<AuctionListProps> = ({
 
   const errorMessage = useMemo(() => {
     if (!auctionQuery.isError) return null;
-    const err: any = auctionQuery.error;
-    return (
-      err?.data?.message ??
-      err?.message ??
+    return getErrorMessage(
+      auctionQuery.error,
       "경매 목록을 불러오는데 실패했습니다."
     );
   }, [auctionQuery.error, auctionQuery.isError]);
 
   const auctionData = auctionQuery.data ?? null;
   const auctions = auctionData?.content ?? [];
+  const showEmpty =
+    showEmptyState &&
+    !auctionQuery.isLoading &&
+    !errorMessage &&
+    auctions.length === 0;
 
   const productIds = useMemo(() => {
     const ids = auctions
@@ -111,7 +121,8 @@ const AuctionList: React.FC<AuctionListProps> = ({
   const fileGroupIds = useMemo(() => {
     const ids = (productsQuery.data ?? [])
       .map((product) => product.fileGroupId)
-      .filter((id): id is string => !!id);
+      .filter((id) => id != null && id !== "" && id !== undefined)
+      .map((id) => String(id));
     return Array.from(new Set(ids));
   }, [productsQuery.data]);
 
@@ -127,8 +138,9 @@ const AuctionList: React.FC<AuctionListProps> = ({
 
   const fileGroupMap = useMemo(() => {
     const list = fileGroupsQuery.data ?? [];
-    return new Map(list.map((group) => [group.fileGroupId, group]));
+    return new Map(list.map((group) => [String(group.fileGroupId), group]));
   }, [fileGroupsQuery.data]);
+  const isImageLoading = productsQuery.isLoading || fileGroupsQuery.isLoading;
 
   return (
     <Box
@@ -150,6 +162,29 @@ const AuctionList: React.FC<AuctionListProps> = ({
             {errorMessage}
           </Alert>
         )}
+
+      {showEmpty && (
+        <Card
+          sx={{
+            gridColumn: "1 / -1",
+            borderRadius: 3,
+            border: "1px dashed",
+            borderColor: "divider",
+            p: 3,
+            textAlign: "center",
+            bgcolor: "background.paper",
+          }}
+        >
+          <CardContent sx={{ p: 0 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+              {emptyTitle}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {emptyDescription}
+            </Typography>
+          </CardContent>
+        </Card>
+      )}
 
       {auctionQuery.isLoading && (auctionData?.content?.length ?? 0) === 0
         ? Array.from({ length: limit }).map((_, i) => (
@@ -190,12 +225,20 @@ const AuctionList: React.FC<AuctionListProps> = ({
             const product = auction.productId
               ? productMap.get(auction.productId)
               : undefined;
-            const fileGroupId = product?.fileGroupId;
+            const fileGroupId =
+              product?.fileGroupId != null
+                ? String(product.fileGroupId)
+                : undefined;
             const fileGroup = fileGroupId
               ? fileGroupMap.get(fileGroupId)
               : undefined;
-            const coverImage =
-              fileGroup?.files?.[0]?.filePath ?? "/images/no_image.png";
+            const coverImage = fileGroup?.files?.[0]?.filePath ?? "";
+            const hasFileGroupId = !!fileGroupId;
+            const emptyImage =
+              productsQuery.isError ||
+              (fileGroupsQuery.isError && hasFileGroupId)
+                ? "/images/fallback.png"
+                : "/images/no_image.png";
 
             return (
               <Card
@@ -208,8 +251,10 @@ const AuctionList: React.FC<AuctionListProps> = ({
               >
                 <ImageWithFallback
                   src={coverImage}
-                  alt={auction.id}
+                  alt={auction?.productName ?? "경매 이미지"}
                   height={220}
+                  loading={isImageLoading}
+                  emptySrc={emptyImage}
                   sx={{ borderBottom: "1px solid", borderColor: "divider" }}
                   skeletonSx={{
                     borderBottom: "1px solid",

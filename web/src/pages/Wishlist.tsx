@@ -20,6 +20,7 @@ import { productApi } from "../apis/productApi";
 import { wishlistApi } from "../apis/wishlistApi";
 import { useAuth } from "../contexts/AuthContext";
 import { queryKeys } from "../queries/queryKeys";
+import { getErrorMessage } from "../utils/getErrorMessage";
 
 const Wishlist: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
@@ -84,9 +85,9 @@ const Wishlist: React.FC = () => {
 
   const errorMessage = useMemo(() => {
     if (!wishlistQuery.isError) return null;
-    const err: any = wishlistQuery.error;
-    return (
-      err?.data?.message ?? err?.message ?? "찜 목록을 불러오는데 실패했습니다."
+    return getErrorMessage(
+      wishlistQuery.error,
+      "찜 목록을 불러오는데 실패했습니다."
     );
   }, [wishlistQuery.error, wishlistQuery.isError]);
 

@@ -27,6 +27,7 @@ import { AuctionStatus } from "@moreauction/types";
 import { formatWon } from "@moreauction/utils";
 import { queryKeys } from "../queries/queryKeys";
 import { ImageWithFallback } from "../components/common/ImageWithFallback";
+import { getErrorMessage } from "../utils/getErrorMessage";
 
 const SearchPage: React.FC = () => {
   const formatDateTime = (value?: string) => {
@@ -198,15 +199,18 @@ const SearchPage: React.FC = () => {
   const loading = searchQuery.isLoading;
   const searchErrorMessage = useMemo(() => {
     if (!searchQuery.isError) return null;
-    const err: any = searchQuery.error;
-    return err?.data?.message ?? err?.message ?? "검색 결과를 불러오는데 실패했습니다.";
+    return getErrorMessage(
+      searchQuery.error,
+      "검색 결과를 불러오는데 실패했습니다."
+    );
   }, [searchQuery.error, searchQuery.isError]);
 
   const fileGroupIds = useMemo(
     () =>
       result.content
-        .map((doc) => (doc as { fileGroupId?: string }).fileGroupId)
-        .filter((id): id is string => !!id),
+        .map((doc) => (doc as { fileGroupId?: string | number }).fileGroupId)
+        .filter((id): id is string | number => id != null && id !== "")
+        .map((id) => String(id)),
     [result.content]
   );
 
@@ -222,8 +226,9 @@ const SearchPage: React.FC = () => {
 
   const fileGroupMap = useMemo(() => {
     const list = fileGroupsQuery.data ?? [];
-    return new Map(list.map((group) => [group.fileGroupId, group]));
+    return new Map(list.map((group) => [String(group.fileGroupId), group]));
   }, [fileGroupsQuery.data]);
+  const isImageLoading = fileGroupsQuery.isLoading;
 
   // 입력 핸들러들 (아직 검색 조건에는 적용하지 않음)
   const handleInputKeywordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -478,135 +483,140 @@ const SearchPage: React.FC = () => {
           }}
         >
           {result.content.map((doc) => {
-            const fileGroupId = (doc as { fileGroupId?: string }).fileGroupId;
+            const fileGroupId = doc.fileGroupId;
             const fileGroup = fileGroupId
               ? fileGroupMap.get(fileGroupId)
               : undefined;
             const coverImage =
-              fileGroup?.files?.[0]?.filePath ??
-              doc.imageUrl ??
-              "/images/no_image.png";
+              fileGroup?.files?.[0]?.filePath || doc.imageUrl || "";
+            const hasFileGroupId = fileGroupId != null && fileGroupId !== "";
+            const emptyImage =
+              fileGroupsQuery.isError && hasFileGroupId
+                ? "/images/fallback.png"
+                : "/images/no_image.png";
 
             return (
-            <Card
-              key={doc.auctionId}
-              sx={{
-                height: 280,
-                overflow: "hidden",
-                display: "flex",
-                flexDirection: "column",
-              }}
-            >
-              <CardActionArea
-                component={RouterLink}
-                to={`/products/${doc.productId}`}
+              <Card
+                key={doc.auctionId}
                 sx={{
+                  height: 280,
+                  overflow: "hidden",
                   display: "flex",
                   flexDirection: "column",
-                  height: "100%",
                 }}
               >
-                <ImageWithFallback
-                  src={coverImage}
-                  alt={doc.productName}
-                  height={150}
-                  sx={{ objectFit: "cover", width: "100%" }}
-                  skeletonSx={{ width: "100%" }}
-                />
-                <CardContent
+                <CardActionArea
+                  component={RouterLink}
+                  to={`/products/${doc.productId}`}
                   sx={{
-                    flex: 1,
                     display: "flex",
                     flexDirection: "column",
-                    py: 1.25,
+                    height: "100%",
                   }}
                 >
-                  <Typography
-                    variant="subtitle1"
+                  <ImageWithFallback
+                    src={coverImage}
+                    alt={doc.productName}
+                    height={150}
+                    loading={isImageLoading}
+                    emptySrc={emptyImage}
+                    sx={{ objectFit: "cover", width: "100%" }}
+                    skeletonSx={{ width: "100%" }}
+                  />
+                  <CardContent
                     sx={{
-                      fontWeight: 600,
-                      overflow: "hidden",
-                      whiteSpace: "nowrap",
-                      textOverflow: "ellipsis",
-                      mb: 0.5,
+                      flex: 1,
+                      display: "flex",
+                      flexDirection: "column",
+                      py: 1.25,
                     }}
                   >
-                    {doc.productName}
-                  </Typography>
-
-                  {(doc.categories?.length ?? 0) > 0 && (
-                    <Stack
-                      direction="row"
-                      spacing={0.75}
-                      sx={{ mb: 0.75, flexWrap: "wrap" }}
-                    >
-                      {doc.categories!.slice(0, 2).map((c) => (
-                        <Chip
-                          key={c}
-                          label={c}
-                          size="small"
-                          variant="outlined"
-                          sx={{ mb: 0.5 }}
-                        />
-                      ))}
-                      {doc.categories!.length > 2 && (
-                        <Chip
-                          label={`+${doc.categories!.length - 2}`}
-                          size="small"
-                          variant="outlined"
-                          sx={{ mb: 0.5 }}
-                        />
-                      )}
-                    </Stack>
-                  )}
-
-                  {doc.description && (
                     <Typography
-                      variant="body2"
-                      color="text.secondary"
+                      variant="subtitle1"
                       sx={{
-                        display: "-webkit-box",
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: "vertical",
+                        fontWeight: 600,
                         overflow: "hidden",
-                        mb: 0.75,
+                        whiteSpace: "nowrap",
+                        textOverflow: "ellipsis",
+                        mb: 0.5,
                       }}
                     >
-                      {doc.description}
+                      {doc.productName}
                     </Typography>
-                  )}
 
-                  <Stack
-                    direction="row"
-                    justifyContent="space-between"
-                    sx={{ mb: 0.25 }}
-                  >
-                    <Typography variant="caption" color="text.secondary">
-                      시작가{" "}
-                      {doc.startPrice != null
-                        ? formatWon(doc.startPrice)
-                        : "-"}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      보증금{" "}
-                      {doc.depositAmount != null
-                        ? formatWon(doc.depositAmount)
-                        : "-"}
-                    </Typography>
-                  </Stack>
-                  <Box sx={{ mt: "auto", textAlign: "right" }}>
-                    <Typography variant="caption" color="text.secondary">
-                      상태: {getAuctionStatusText(doc.status)}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {doc.status === AuctionStatus.READY
-                        ? `시작시간: ${formatDateTime(doc.auctionStartAt)}`
-                        : `종료예정: ${formatDateTime(doc.auctionEndAt)}`}
-                    </Typography>
-                  </Box>
-                </CardContent>
-              </CardActionArea>
-            </Card>
+                    {(doc.categories?.length ?? 0) > 0 && (
+                      <Stack
+                        direction="row"
+                        spacing={0.75}
+                        sx={{ mb: 0.75, flexWrap: "wrap" }}
+                      >
+                        {doc.categories!.slice(0, 2).map((c) => (
+                          <Chip
+                            key={c}
+                            label={c}
+                            size="small"
+                            variant="outlined"
+                            sx={{ mb: 0.5 }}
+                          />
+                        ))}
+                        {doc.categories!.length > 2 && (
+                          <Chip
+                            label={`+${doc.categories!.length - 2}`}
+                            size="small"
+                            variant="outlined"
+                            sx={{ mb: 0.5 }}
+                          />
+                        )}
+                      </Stack>
+                    )}
+
+                    {doc.description && (
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                          mb: 0.75,
+                        }}
+                      >
+                        {doc.description}
+                      </Typography>
+                    )}
+
+                    <Stack
+                      direction="row"
+                      justifyContent="space-between"
+                      sx={{ mb: 0.25 }}
+                    >
+                      <Typography variant="caption" color="text.secondary">
+                        시작가{" "}
+                        {doc.startPrice != null
+                          ? formatWon(doc.startPrice)
+                          : "-"}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        보증금{" "}
+                        {doc.depositAmount != null
+                          ? formatWon(doc.depositAmount)
+                          : "-"}
+                      </Typography>
+                    </Stack>
+                    <Box sx={{ mt: "auto", textAlign: "right" }}>
+                      <Typography variant="caption" color="text.secondary">
+                        상태: {getAuctionStatusText(doc.status)}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {doc.status === AuctionStatus.READY
+                          ? `시작시간: ${formatDateTime(doc.auctionStartAt)}`
+                          : `종료예정: ${formatDateTime(doc.auctionEndAt)}`}
+                      </Typography>
+                    </Box>
+                  </CardContent>
+                </CardActionArea>
+              </Card>
             );
           })}
         </Box>

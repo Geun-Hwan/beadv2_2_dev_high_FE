@@ -13,7 +13,6 @@ import ProfileAddresses from "../pages/ProfileAddresses";
 import ProfileEdit from "../pages/ProfileEdit";
 import ProfilePassword from "../pages/ProfilePassword";
 import ProductRegistration from "../pages/ProductRegistration";
-import Products from "../pages/Products";
 import SellerRegistration from "../pages/SellerRegistration";
 import SignUp from "../pages/SignUp";
 import Wishlist from "../pages/Wishlist"; // 새로운 임포트
@@ -23,6 +22,7 @@ import PaymentFail from "../pages/payment/PayementFail";
 import SearchPage from "../pages/Search";
 import OrderDetail from "../pages/OrderDetail";
 import OAuthRedirect from "../pages/oauth/OAuthRedirect";
+import NotFound from "../pages/NotFound";
 
 /**
  * React Router v6.4+의 createBrowserRouter를 사용한 라우터 설정입니다.
@@ -59,10 +59,6 @@ export const router = createBrowserRouter([
       {
         path: "signup",
         element: <SignUp />,
-      },
-      {
-        path: "products",
-        element: <Products />,
       },
       {
         path: "products/:id",
@@ -156,6 +152,10 @@ export const router = createBrowserRouter([
             element: <OrderDetail />,
           },
         ],
+      },
+      {
+        path: "*",
+        element: <NotFound />,
       },
     ],
   },

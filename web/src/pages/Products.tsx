@@ -20,6 +20,7 @@ import React, { useMemo, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import { productApi } from "../apis/productApi";
 import { queryKeys } from "../queries/queryKeys";
+import { getErrorMessage } from "../utils/getErrorMessage";
 
 // 경매 목록 API 응답 타입 정의 (페이징 포함)
 const Products: React.FC = () => {
@@ -47,10 +48,8 @@ const Products: React.FC = () => {
   const showPageLoading = productsQuery.isFetching && !productsQuery.isLoading;
   const errorMessage = useMemo(() => {
     if (!productsQuery.isError) return null;
-    const err: any = productsQuery.error;
-    return (
-      err?.data?.message ??
-      err?.message ??
+    return getErrorMessage(
+      productsQuery.error,
       "상품 목록을 불러오는데 실패했습니다."
     );
   }, [productsQuery.error, productsQuery.isError]);

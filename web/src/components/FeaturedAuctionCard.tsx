@@ -19,6 +19,7 @@ import RemainingTime from "./RemainingTime";
 import { formatWon } from "@moreauction/utils";
 import { queryKeys } from "../queries/queryKeys";
 import { ImageWithFallback } from "./common/ImageWithFallback";
+import { getErrorMessage } from "../utils/getErrorMessage";
 
 /**
  * 홈 히어로에 들어갈 "오늘의 인기 경매" 카드
@@ -41,9 +42,9 @@ const FeaturedAuctionCard: React.FC = () => {
 
   const errorMessage = useMemo(() => {
     if (!topAuctionQuery.isError) return null;
-    const err: any = topAuctionQuery.error;
-    return (
-      err?.data?.message ?? err?.message ?? "인기 경매를 불러오지 못했습니다."
+    return getErrorMessage(
+      topAuctionQuery.error,
+      "인기 경매를 불러오지 못했습니다."
     );
   }, [topAuctionQuery.error, topAuctionQuery.isError]);
 

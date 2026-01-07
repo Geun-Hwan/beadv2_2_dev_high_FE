@@ -10,29 +10,50 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import React from "react";
+import React, { useMemo } from "react";
 import { getOrderStatusLabel, type OrderResponse } from "@moreauction/types";
 import { Link as RouterLink } from "react-router-dom";
 import { formatWon } from "@moreauction/utils";
+import { useQuery } from "@tanstack/react-query";
+import { orderApi } from "../../apis/orderApi";
+import { useAuth } from "../../contexts/AuthContext";
+import { queryKeys } from "../../queries/queryKeys";
+import { getErrorMessage } from "../../utils/getErrorMessage";
 
 interface OrdersTabProps {
   title: string;
-  loading: boolean;
-  error: string | null;
-  orders: OrderResponse[];
+  status: "bought" | "sold";
   emptyText: string;
   showAdditionalPayment?: boolean;
 }
 
 export const OrdersTab: React.FC<OrdersTabProps> = ({
   title,
-  loading,
-  error,
-  orders,
+  status,
   emptyText,
   showAdditionalPayment = false,
 }) => {
-  const showSkeleton = loading && !error && orders.length === 0;
+  const { user } = useAuth();
+  const ordersQuery = useQuery({
+    queryKey: queryKeys.orders.history(status, user?.userId),
+    queryFn: async () => {
+      if (!user?.userId) return [];
+      const response = await orderApi.getOrderByStatus(status);
+      return Array.isArray(response.data) ? response.data : [];
+    },
+    staleTime: 30_000,
+  });
+
+  const orders = ordersQuery.data ?? [];
+  const errorMessage = useMemo(() => {
+    if (!ordersQuery.isError) return null;
+    return getErrorMessage(
+      ordersQuery.error,
+      "주문 내역을 불러오지 못했습니다."
+    );
+  }, [ordersQuery.error, ordersQuery.isError]);
+  const showSkeleton =
+    ordersQuery.isLoading && !errorMessage && orders.length === 0;
 
   return (
     <Paper sx={{ p: 2 }}>
@@ -40,8 +61,8 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
         {title}
       </Typography>
 
-      {error ? (
-        <Alert severity="error">{error}</Alert>
+      {errorMessage ? (
+        <Alert severity="error">{errorMessage}</Alert>
       ) : showSkeleton ? (
         <List sx={{ maxHeight: "60vh", overflowY: "auto" }}>
           {Array.from({ length: 3 }).map((_, idx) => (

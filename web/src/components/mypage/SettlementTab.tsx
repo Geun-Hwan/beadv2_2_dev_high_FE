@@ -20,6 +20,7 @@ import { settlementApi } from "../../apis/settlementApi";
 import type { SettlementResponse, SettlementSummary } from "@moreauction/types";
 import { formatNumber, formatWon } from "@moreauction/utils";
 import { queryKeys } from "../../queries/queryKeys";
+import { getErrorMessage } from "../../utils/getErrorMessage";
 
 type SettlementView = "SUMMARY" | "HISTORY";
 
@@ -42,57 +43,6 @@ export const SettlementTab: React.FC = () => {
 
   const pageSize = 20;
 
-  const summaryQuery = useInfiniteQuery({
-    queryKey: queryKeys.settlement.summary(pageSize),
-    initialPageParam: 0,
-    queryFn: async ({ pageParam }) => {
-      const res = await settlementApi.getSettlementSummary({
-        page: pageParam,
-        size: pageSize,
-      });
-      return res.data;
-    },
-    getNextPageParam: (lastPage) =>
-      lastPage.last ? undefined : lastPage.number + 1,
-    enabled: view === "SUMMARY",
-    staleTime: 30_000,
-  });
-
-  const historyQuery = useInfiniteQuery({
-    queryKey: queryKeys.settlement.history(pageSize),
-    initialPageParam: 0,
-    queryFn: async ({ pageParam }) => {
-      const res = await settlementApi.getSettlementHistory({
-        page: pageParam,
-        size: pageSize,
-      });
-      return res.data;
-    },
-    getNextPageParam: (lastPage) =>
-      lastPage.last ? undefined : lastPage.number + 1,
-    enabled: view === "HISTORY",
-    staleTime: 30_000,
-  });
-
-  const errorMessage = useMemo(() => {
-    const activeQuery = view === "SUMMARY" ? summaryQuery : historyQuery;
-    if (!activeQuery.isError) return null;
-    const err: any = activeQuery.error;
-    const isNetworkError =
-      err?.code === "ERR_NETWORK" || err?.message === "Network Error";
-    return (
-      err?.data?.message ??
-      (!isNetworkError ? err?.message : null) ??
-      "정산 내역을 불러오는데 실패했습니다."
-    );
-  }, [
-    historyQuery.error,
-    historyQuery.isError,
-    summaryQuery.error,
-    summaryQuery.isError,
-    view,
-  ]);
-
   const renderSkeletonList = () => (
     <List>
       {Array.from({ length: 6 }).map((_, idx) => (
@@ -109,14 +59,46 @@ export const SettlementTab: React.FC = () => {
     </List>
   );
 
-  const renderSummary = () => {
+  const SummaryPanel = () => {
+    const summaryQuery = useInfiniteQuery({
+      queryKey: queryKeys.settlement.summary(pageSize),
+      initialPageParam: 0,
+      queryFn: async ({ pageParam }) => {
+        const res = await settlementApi.getSettlementSummary({
+          page: pageParam,
+          size: pageSize,
+        });
+        return res.data;
+      },
+      getNextPageParam: (lastPage) =>
+        lastPage.last ? undefined : lastPage.number + 1,
+      staleTime: 30_000,
+    });
+    const errorMessage = useMemo(() => {
+      if (!summaryQuery.isError) return null;
+      const err: any = summaryQuery.error;
+      const isNetworkError =
+        err?.code === "ERR_NETWORK" || err?.message === "Network Error";
+      if (isNetworkError) {
+        return "정산 내역을 불러오는데 실패했습니다.";
+      }
+      return getErrorMessage(err, "정산 내역을 불러오는데 실패했습니다.");
+    }, [summaryQuery.error, summaryQuery.isError]);
+
     const list: SettlementSummary[] =
       summaryQuery.data?.pages.flatMap((p) => p.content ?? []) ?? [];
 
-    if (summaryQuery.isLoading && list.length === 0)
+    if (summaryQuery.isLoading && list.length === 0) {
       return renderSkeletonList();
+    }
+    if (errorMessage) {
+      return (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {errorMessage}
+        </Alert>
+      );
+    }
     if (list.length === 0) {
-      if (summaryQuery.isError) return null;
       return <Alert severity="info">정산 내역이 없습니다.</Alert>;
     }
 
@@ -163,14 +145,46 @@ export const SettlementTab: React.FC = () => {
     );
   };
 
-  const renderHistory = () => {
+  const HistoryPanel = () => {
+    const historyQuery = useInfiniteQuery({
+      queryKey: queryKeys.settlement.history(pageSize),
+      initialPageParam: 0,
+      queryFn: async ({ pageParam }) => {
+        const res = await settlementApi.getSettlementHistory({
+          page: pageParam,
+          size: pageSize,
+        });
+        return res.data;
+      },
+      getNextPageParam: (lastPage) =>
+        lastPage.last ? undefined : lastPage.number + 1,
+      staleTime: 30_000,
+    });
+    const errorMessage = useMemo(() => {
+      if (!historyQuery.isError) return null;
+      const err: any = historyQuery.error;
+      const isNetworkError =
+        err?.code === "ERR_NETWORK" || err?.message === "Network Error";
+      if (isNetworkError) {
+        return "정산 내역을 불러오는데 실패했습니다.";
+      }
+      return getErrorMessage(err, "정산 내역을 불러오는데 실패했습니다.");
+    }, [historyQuery.error, historyQuery.isError]);
+
     const list: SettlementResponse[] =
       historyQuery.data?.pages.flatMap((p) => p.content ?? []) ?? [];
 
-    if (historyQuery.isLoading && list.length === 0)
+    if (historyQuery.isLoading && list.length === 0) {
       return renderSkeletonList();
+    }
+    if (errorMessage) {
+      return (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {errorMessage}
+        </Alert>
+      );
+    }
     if (list.length === 0) {
-      if (historyQuery.isError) return null;
       return <Alert severity="info">정산 내역이 없습니다.</Alert>;
     }
 
@@ -247,13 +261,7 @@ export const SettlementTab: React.FC = () => {
         </ToggleButtonGroup>
       </Stack>
 
-      {errorMessage && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {errorMessage}
-        </Alert>
-      )}
-
-      <Box>{view === "SUMMARY" ? renderSummary() : renderHistory()}</Box>
+      <Box>{view === "SUMMARY" ? <SummaryPanel /> : <HistoryPanel />}</Box>
     </Paper>
   );
 };

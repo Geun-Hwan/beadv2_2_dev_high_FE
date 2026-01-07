@@ -52,6 +52,7 @@ import {
 } from "@moreauction/types";
 import { DepositType } from "@moreauction/types";
 import { queryKeys } from "../queries/queryKeys";
+import { getErrorMessage } from "../utils/getErrorMessage";
 
 const AuctionDetail: React.FC = () => {
   const { id: auctionId } = useParams<{ id: string }>();
@@ -93,8 +94,7 @@ const AuctionDetail: React.FC = () => {
       return res.data as AuctionDetailResponse;
     },
     enabled: !!auctionId,
-    staleTime: 0,
-    refetchOnMount: "always",
+    staleTime: 30_000,
     placeholderData: () =>
       queryClient.getQueryData(queryKeys.auctions.detail(auctionId)),
   });
@@ -193,13 +193,16 @@ const AuctionDetail: React.FC = () => {
   });
 
   const productImageUrls = useMemo(() => {
+    if (fileGroupQuery.isError) {
+      return ["/images/fallback.png"];
+    }
     const fileGroup = fileGroupQuery.data?.data;
     const fileUrls =
       fileGroup?.files
         ?.map((file) => file.filePath)
         .filter((path): path is string => !!path && path.length > 0) ?? [];
     return fileUrls.length > 0 ? fileUrls : getProductImageUrls();
-  }, [fileGroupQuery.data, getProductImageUrls]);
+  }, [fileGroupQuery.data, fileGroupQuery.isError, getProductImageUrls]);
 
   const bidHistoryQuery = useInfiniteQuery<
     PagedBidHistoryResponse,
@@ -241,28 +244,24 @@ const AuctionDetail: React.FC = () => {
 
   const errorMessage = useMemo(() => {
     if (!auctionDetailQuery.isError) return null;
-    const err: any = auctionDetailQuery.error;
-    return (
-      err?.data?.message ??
-      err?.message ??
+    return getErrorMessage(
+      auctionDetailQuery.error,
       "경매 상세 정보를 불러오는 데 실패했습니다."
     );
   }, [auctionDetailQuery.error, auctionDetailQuery.isError]);
 
   const participationErrorMessage = useMemo(() => {
     if (!participationQuery.isError) return null;
-    const err: any = participationQuery.error;
-    return (
-      err?.data?.message ?? err?.message ?? "참여 내역을 불러오지 못했습니다."
+    return getErrorMessage(
+      participationQuery.error,
+      "참여 내역을 불러오지 못했습니다."
     );
   }, [participationQuery.error, participationQuery.isError]);
 
   const bidHistoryErrorMessage = useMemo(() => {
     if (!isAuthenticated || !bidHistoryQuery.isError) return null;
-    const err: any = bidHistoryQuery.error;
-    return (
-      err?.data?.message ??
-      err?.message ??
+    return getErrorMessage(
+      bidHistoryQuery.error,
       "실시간 입찰 내역을 불러오지 못했습니다."
     );
   }, [bidHistoryQuery.error, bidHistoryQuery.isError, isAuthenticated]);
@@ -273,6 +272,11 @@ const AuctionDetail: React.FC = () => {
     !!participationErrorMessage && !!participationQuery.data;
   const showAuctionDetailWarning = !!errorMessage && !!auctionDetail;
   const shouldBlockDetail = !!errorMessage && !auctionDetail;
+  const isBidHistoryLoading =
+    bidHistoryQuery.isLoading && bidHistory.length === 0;
+  const isParticipationLoading = participationQuery.isLoading && isAuthenticated;
+  const isParticipationUnavailable =
+    isAuthenticated && !!participationErrorMessage;
 
   useEffect(() => {
     const highestUserId = auctionDetail?.highestUserId ?? undefined;
@@ -353,8 +357,10 @@ const AuctionDetail: React.FC = () => {
     [auctionId, queryClient]
   );
 
+  const shouldConnect =
+    auctionDetail?.status === AuctionStatus.IN_PROGRESS && !!auctionId;
   const { isConnected, isRetrying, connectionState } = useStomp({
-    topic: auctionId ? `/topic/auction.${auctionId}` : "",
+    topic: shouldConnect ? `/topic/auction.${auctionId}` : "",
     onMessage: handleNewMessage,
   });
 
@@ -617,7 +623,7 @@ const AuctionDetail: React.FC = () => {
       </Container>
     );
   const canRenderDetail = !!auctionDetail;
-  const showSocketWarning = connectionState === "failed";
+  const showSocketWarning = shouldConnect && connectionState === "failed";
 
   const isAuctionInProgress =
     auctionDetail?.status === AuctionStatus.IN_PROGRESS;
@@ -661,6 +667,12 @@ const AuctionDetail: React.FC = () => {
                 >
                   {bidHistoryErrorMessage && !hasBidHistory ? (
                     <Alert severity="error">{bidHistoryErrorMessage}</Alert>
+                  ) : isBidHistoryLoading ? (
+                    <Stack spacing={1}>
+                      <Skeleton variant="text" width="60%" />
+                      <Skeleton variant="text" width="45%" />
+                      <Skeleton variant="text" width="70%" />
+                    </Stack>
                   ) : (
                     <>
                       {showBidHistoryWarning && (
@@ -688,6 +700,12 @@ const AuctionDetail: React.FC = () => {
                     <Alert severity="info">
                       로그인 후 참여 현황을 확인할 수 있습니다.
                     </Alert>
+                  ) : isParticipationLoading ? (
+                    <Stack spacing={1}>
+                      <Skeleton variant="text" width="55%" />
+                      <Skeleton variant="text" width="70%" />
+                      <Skeleton variant="text" width="40%" />
+                    </Stack>
                   ) : canRenderDetail ? (
                     <>
                       {showParticipationWarning && (
@@ -739,11 +757,6 @@ const AuctionDetail: React.FC = () => {
                         {errorMessage}
                       </Alert>
                     )}
-                    {showSocketWarning && (
-                      <Alert severity="warning" sx={{ mb: 1 }}>
-                        실시간 연결이 끊어졌습니다. 자동 재연결 중입니다.
-                      </Alert>
-                    )}
                     <AuctionInfoPanel
                       productName={
                         auctionDetail.productName ?? "TODO : auctionDetail"
@@ -752,6 +765,7 @@ const AuctionDetail: React.FC = () => {
                       isAuctionInProgress={isAuctionInProgress}
                       isConnected={isConnected}
                       isRetrying={isRetrying}
+                      showConnectionStatus={shouldConnect}
                     />
                   </>
                 ) : (
@@ -776,20 +790,23 @@ const AuctionDetail: React.FC = () => {
                 )}
                 <Divider />
                 {canRenderDetail ? (
-                  <AuctionBidForm
-                    isAuctionInReady={isAuctionInReday}
-                    isAuctionInProgress={isAuctionInProgress}
-                    currentBidPrice={currentBidPrice}
-                    minBidPrice={minBidPrice}
-                    hasAnyBid={hasAnyBid}
-                    newBidAmount={newBidAmount}
-                    setNewBidAmount={setNewBidAmount}
-                    handleBidSubmit={handleBidSubmit}
-                    bidLoading={bidLoading}
-                    isConnected={isConnected}
-                    isWithdrawn={participationStatus.isWithdrawn}
-                    isAuthenticated={isAuthenticated}
-                  />
+                    <AuctionBidForm
+                      isAuctionInReady={isAuctionInReday}
+                      isAuctionInProgress={isAuctionInProgress}
+                      currentBidPrice={currentBidPrice}
+                      minBidPrice={minBidPrice}
+                      hasAnyBid={hasAnyBid}
+                      newBidAmount={newBidAmount}
+                      setNewBidAmount={setNewBidAmount}
+                      handleBidSubmit={handleBidSubmit}
+                      bidLoading={bidLoading}
+                      isConnected={isConnected}
+                      showConnectionStatus={shouldConnect}
+                      isRetrying={isRetrying}
+                      isWithdrawn={participationStatus.isWithdrawn}
+                      isAuthenticated={isAuthenticated}
+                      isParticipationUnavailable={isParticipationUnavailable}
+                    />
                 ) : (
                   <Alert severity="info">
                     경매 정보를 불러오면 입찰할 수 있습니다.
@@ -933,17 +950,37 @@ const AuctionDetail: React.FC = () => {
               상품 상세보기
             </Button>
           </Stack>
-          <ProductInfo
-            imageUrls={productImageUrls}
-            productName={
-              productDetailQuery.data?.name ?? auctionDetail?.productName ?? ""
-            }
-            description={
-              productDetailQuery.data?.description ??
-              auctionDetail?.description ??
-              ""
-            }
-          />
+          {productDetailQuery.isLoading ? (
+            <Stack spacing={2}>
+              <Skeleton variant="rectangular" height={300} />
+              <Skeleton variant="text" width="60%" />
+              <Skeleton variant="text" width="90%" />
+              <Skeleton variant="text" width="80%" />
+            </Stack>
+          ) : productDetailQuery.isError ? (
+            <Alert severity="error">상품 정보를 불러오지 못했습니다.</Alert>
+          ) : (
+            <>
+              {fileGroupQuery.isError && (
+                <Alert severity="warning">
+                  이미지 로드에 실패했습니다.
+                </Alert>
+              )}
+              <ProductInfo
+                imageUrls={productImageUrls}
+                productName={
+                  productDetailQuery.data?.name ??
+                  auctionDetail?.productName ??
+                  ""
+                }
+                description={
+                  productDetailQuery.data?.description ??
+                  auctionDetail?.description ??
+                  ""
+                }
+              />
+            </>
+          )}
         </Stack>
       </Drawer>
     </>

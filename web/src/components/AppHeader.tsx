@@ -61,6 +61,7 @@ export const AppHeader: React.FC = () => {
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedNotification, setSelectedNotification] =
     useState<NotificationInfo | null>(null);
+  const isNotificationOpen = Boolean(notificationAnchorEl);
   const storedBalance = useMemo(() => {
     const raw = localStorage.getItem("depositBalance");
     const parsed = raw != null ? Number(raw) : NaN;
@@ -70,8 +71,8 @@ export const AppHeader: React.FC = () => {
   // 로그인된 경우에만 미확인 알림 개수 조회
   const unreadQuery = useQuery({
     queryKey: queryKeys.notifications.unreadCount(),
-    queryFn: notificationApi.getUnreadCount,
-    enabled: isAuthenticated,
+    queryFn: () => notificationApi.getUnreadCount(),
+    enabled: isAuthenticated && !!user?.userId,
     staleTime: 30_000,
     gcTime: 5 * 60_000,
   });
@@ -80,11 +81,10 @@ export const AppHeader: React.FC = () => {
     queryKey: queryKeys.notifications.headerList(user?.userId),
     queryFn: () =>
       notificationApi.getNotifications({
-        userId: user?.userId,
         page: 0,
         size: 50,
       }),
-    enabled: isAuthenticated && !!user?.userId,
+    enabled: isAuthenticated && !!user?.userId && isNotificationOpen,
     staleTime: 30_000,
     gcTime: 5 * 60_000,
   });
@@ -200,6 +200,8 @@ export const AppHeader: React.FC = () => {
     if (Number.isNaN(date.getTime())) return value;
     return date.toLocaleString();
   };
+  const safeText = (value?: unknown) =>
+    typeof value === "string" ? value : "";
 
   const handleMarkAllRead = () => {
     queryClient.setQueryData(
@@ -456,8 +458,8 @@ export const AppHeader: React.FC = () => {
                   onClick={() => handleClickNotification(notification)}
                 >
                   <ListItemText
-                    primary={notification.title}
-                    secondary={notification.content}
+                    primary={safeText(notification.title)}
+                    secondary={safeText(notification.content)}
                     primaryTypographyProps={{ fontWeight: 600 }}
                     secondaryTypographyProps={{
                       noWrap: true,
@@ -514,13 +516,13 @@ export const AppHeader: React.FC = () => {
         </MenuItem>
       </Menu>
       <Dialog open={detailOpen} onClose={() => setDetailOpen(false)} fullWidth>
-        <DialogTitle>{selectedNotification?.title}</DialogTitle>
+        <DialogTitle>{safeText(selectedNotification?.title)}</DialogTitle>
         <DialogContent dividers>
           <Typography variant="caption" color="text.secondary">
             받은 시각: {formatDateTime(selectedNotification?.createdAt)}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {selectedNotification?.content}
+            {safeText(selectedNotification?.content)}
           </Typography>
         </DialogContent>
         <DialogActions>

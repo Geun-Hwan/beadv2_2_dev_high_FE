@@ -10,30 +10,45 @@ import {
   Paper,
   Typography,
 } from "@mui/material";
-import React from "react";
+import React, { useMemo } from "react";
 import { Link as RouterLink } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import type { Product } from "@moreauction/types";
+import { productApi } from "../../apis/productApi";
+import { useAuth } from "../../contexts/AuthContext";
+import { queryKeys } from "../../queries/queryKeys";
+import { getErrorMessage } from "../../utils/getErrorMessage";
 
-interface MyProductsTabProps {
-  loading: boolean;
-  error: string | null;
-  products: Product[];
-}
+export const MyProductsTab: React.FC = () => {
+  const { user } = useAuth();
+  const productsQuery = useQuery({
+    queryKey: queryKeys.products.mine(user?.userId),
+    queryFn: async () => {
+      if (!user?.userId) return [];
+      const response = await productApi.getMyProducts(user.userId);
+      return response.data as Product[];
+    },
+    staleTime: 30_000,
+  });
 
-export const MyProductsTab: React.FC<MyProductsTabProps> = ({
-  loading,
-  error,
-  products,
-}) => {
-  const showSkeleton = loading && !error && products.length === 0;
+  const products = productsQuery.data ?? [];
+  const errorMessage = useMemo(() => {
+    if (!productsQuery.isError) return null;
+    return getErrorMessage(
+      productsQuery.error,
+      "내 상품 목록을 불러오지 못했습니다."
+    );
+  }, [productsQuery.error, productsQuery.isError]);
+  const showSkeleton =
+    productsQuery.isLoading && !errorMessage && products.length === 0;
 
-  if (error) {
+  if (errorMessage) {
     return (
       <Paper sx={{ p: 2 }}>
         <Typography variant="h6" sx={{ mb: 2 }}>
           내 상품 목록
         </Typography>
-        <Alert severity="error">{error}</Alert>
+        <Alert severity="error">{errorMessage}</Alert>
       </Paper>
     );
   }

@@ -15,8 +15,11 @@ interface AuctionBidFormProps {
   handleBidSubmit: (event: React.FormEvent) => Promise<void>;
   bidLoading: boolean;
   isConnected: boolean;
+  showConnectionStatus: boolean;
+  isRetrying: boolean;
   isWithdrawn: boolean;
   isAuthenticated: boolean;
+  isParticipationUnavailable?: boolean;
 }
 
 const AuctionBidForm: React.FC<AuctionBidFormProps> = ({
@@ -30,8 +33,11 @@ const AuctionBidForm: React.FC<AuctionBidFormProps> = ({
   handleBidSubmit,
   bidLoading,
   isConnected,
+  showConnectionStatus,
+  isRetrying,
   isWithdrawn,
   isAuthenticated,
+  isParticipationUnavailable = false,
 }) => {
   const navigate = useNavigate();
   return (
@@ -63,7 +69,15 @@ const AuctionBidForm: React.FC<AuctionBidFormProps> = ({
               </Button>
             </Alert>
           )}
-          {isAuthenticated && !isConnected && (
+          {isAuthenticated && isParticipationUnavailable && (
+            <Alert severity="error">
+              참여 현황을 불러오지 못해 입찰을 진행할 수 없습니다.
+            </Alert>
+          )}
+          {isAuthenticated &&
+            showConnectionStatus &&
+            !isConnected &&
+            !isRetrying && (
             <Alert severity="warning">
               실시간 서버와 연결이 끊어졌습니다. 입찰은 접수되지만
               최고입찰가/내역 갱신이 늦을 수 있습니다.
@@ -80,7 +94,9 @@ const AuctionBidForm: React.FC<AuctionBidFormProps> = ({
           onChange={(e) => setNewBidAmount(e.target.value)}
           fullWidth
           onFocus={() => !newBidAmount && setNewBidAmount(String(minBidPrice))}
-          disabled={isWithdrawn || !isAuctionInProgress}
+          disabled={
+            isWithdrawn || !isAuctionInProgress || isParticipationUnavailable
+          }
           inputProps={{ min: minBidPrice, step: 100 }}
         />
 
@@ -88,7 +104,12 @@ const AuctionBidForm: React.FC<AuctionBidFormProps> = ({
           type="submit"
           variant="contained"
           size="large"
-          disabled={isWithdrawn || bidLoading || !isAuctionInProgress}
+          disabled={
+            isWithdrawn ||
+            bidLoading ||
+            !isAuctionInProgress ||
+            isParticipationUnavailable
+          }
           fullWidth
         >
           {isAuctionInReady

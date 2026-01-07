@@ -11,10 +11,13 @@ interface ImageWithFallbackProps {
   width?: number | string;
   sx?: SxProps<Theme>;
   skeletonSx?: SxProps<Theme>;
+  emptySrc?: string;
   fallbackSrc?: string;
+  loading?: boolean;
 }
 
-const defaultFallback = "/images/no_image.png";
+const defaultEmpty = "/images/no_image.png";
+const defaultFallback = "/images/fallback.png";
 
 export const ImageWithFallback = ({
   src,
@@ -23,7 +26,9 @@ export const ImageWithFallback = ({
   width,
   sx,
   skeletonSx,
+  emptySrc = defaultEmpty,
   fallbackSrc = defaultFallback,
+  loading = false,
 }: ImageWithFallbackProps) => {
   const trimmedSrc = src?.trim();
   const resolvedSrc = trimmedSrc && trimmedSrc.length > 0 ? trimmedSrc : "";
@@ -33,6 +38,9 @@ export const ImageWithFallback = ({
   );
 
   useEffect(() => {
+    if (loading) {
+      return;
+    }
     if (!resolvedSrc) {
       setStatus("loaded");
       return;
@@ -50,11 +58,12 @@ export const ImageWithFallback = ({
     return () => {
       active = false;
     };
-  }, [resolvedSrc]);
+  }, [loading, resolvedSrc]);
 
-  const imageSrc = status === "error" || !resolvedSrc ? fallbackSrc : resolvedSrc;
+  const imageSrc =
+    status === "error" ? fallbackSrc : resolvedSrc || emptySrc;
 
-  if (status === "loading") {
+  if (loading || status === "loading") {
     return (
       <Skeleton
         variant="rectangular"
