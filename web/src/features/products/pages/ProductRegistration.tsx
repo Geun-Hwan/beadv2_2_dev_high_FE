@@ -443,6 +443,18 @@ const ProductRegistration: React.FC = () => {
     }
   };
 
+  const canDeleteProduct = !!(
+    isEditMode &&
+    currentProduct &&
+    user?.userId === currentProduct.sellerId
+  );
+
+  const existingImageUrls = useMemo(
+    () => getProductImageUrls(fileGroup),
+    [fileGroup]
+  );
+  const showExistingImages = isEditMode;
+
   if (!hasRole(user?.roles, UserRole.SELLER) && !isEditMode) {
     return (
       <Container maxWidth="md">
@@ -463,18 +475,6 @@ const ProductRegistration: React.FC = () => {
       </Container>
     );
   }
-
-  const canDeleteProduct = !!(
-    isEditMode &&
-    currentProduct &&
-    user?.userId === currentProduct.sellerId
-  );
-
-  const existingImageUrls = useMemo(
-    () => getProductImageUrls(fileGroup),
-    [fileGroup]
-  );
-  const showExistingImages = isEditMode;
 
   return (
     <Container maxWidth="md">

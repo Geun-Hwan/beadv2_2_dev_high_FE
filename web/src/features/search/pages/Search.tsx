@@ -16,16 +16,21 @@ import {
 import { Search as SearchIcon } from "@mui/icons-material";
 import React, { useEffect, useMemo, useState } from "react";
 import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { auctionApi } from "@/apis/auctionApi";
 import { fileApi } from "@/apis/fileApi";
-import type { AuctionDocument } from "@moreauction/types";
-import { type ProductCategory } from "@moreauction/types";
+import type {
+  ApiResponseDto,
+  AuctionDocument,
+  FileGroup,
+  ProductCategory,
+} from "@moreauction/types";
 import { categoryApi } from "@/apis/categoryApi";
 import { getAuctionStatusText } from "@moreauction/utils";
 import { AuctionStatus } from "@moreauction/types";
 import { formatWon } from "@moreauction/utils";
 import { queryKeys } from "@/queries/queryKeys";
+import { seedFileGroupCache } from "@/queries/seedFileGroupCache";
 import { ImageWithFallback } from "@/shared/components/common/ImageWithFallback";
 import { getErrorMessage } from "@/utils/getErrorMessage";
 
@@ -214,20 +219,36 @@ const SearchPage: React.FC = () => {
     [result.content]
   );
 
+  const queryClient = useQueryClient();
+  const cachedFileGroups = fileGroupIds
+    .map(
+      (id) =>
+        queryClient.getQueryData<ApiResponseDto<FileGroup>>(
+          queryKeys.files.group(id)
+        )?.data
+    )
+    .filter((group): group is FileGroup => !!group);
+  const cachedFileGroupIds = new Set(
+    cachedFileGroups.map((group) => String(group.fileGroupId))
+  );
+  const missingFileGroupIds = fileGroupIds.filter(
+    (id) => !cachedFileGroupIds.has(id)
+  );
   const fileGroupsQuery = useQuery({
-    queryKey: queryKeys.files.searchGroups(fileGroupIds),
+    queryKey: queryKeys.files.searchGroups(missingFileGroupIds),
     queryFn: async () => {
-      const response = await fileApi.getFileGroupsByIds(fileGroupIds);
+      const response = await fileApi.getFileGroupsByIds(missingFileGroupIds);
+      seedFileGroupCache(queryClient, response);
       return response.data ?? [];
     },
-    enabled: fileGroupIds.length > 0,
+    enabled: missingFileGroupIds.length > 0,
     staleTime: 30_000,
   });
 
   const fileGroupMap = useMemo(() => {
-    const list = fileGroupsQuery.data ?? [];
+    const list = [...cachedFileGroups, ...(fileGroupsQuery.data ?? [])];
     return new Map(list.map((group) => [String(group.fileGroupId), group]));
-  }, [fileGroupsQuery.data]);
+  }, [cachedFileGroups, fileGroupsQuery.data]);
   const isImageLoading = fileGroupsQuery.isLoading;
 
   // 입력 핸들러들 (아직 검색 조건에는 적용하지 않음)

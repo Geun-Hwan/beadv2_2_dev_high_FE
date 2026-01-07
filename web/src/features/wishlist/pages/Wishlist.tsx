@@ -17,7 +17,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useMemo, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import { productApi } from "@/apis/productApi";
-import { wishlistApi } from "@/apis/wishlistApi";
+import { wishlistApi, type WishlistEntry } from "@/apis/wishlistApi";
 import { useAuth } from "@/contexts/AuthContext";
 import { queryKeys } from "@/queries/queryKeys";
 import { getErrorMessage } from "@/utils/getErrorMessage";
@@ -37,23 +37,46 @@ const Wishlist: React.FC = () => {
       const page = data.data;
       const entries = page?.content ?? [];
 
-      if (entries.length === 0) return [];
+      if (entries.length === 0) {
+        return { entries, products: [] as Product[] };
+      }
 
       const uniqueProductIds = Array.from(
         new Set(entries.map((e) => e.productId))
       );
 
-      const productResults = await Promise.all(
-        uniqueProductIds.map(async (productId) => {
-          try {
-            const res = await productApi.getProductById(productId);
-            return res.data;
-          } catch (err) {
-            console.error("상품 조회 실패:", productId, err);
-            return null;
-          }
-        })
+      const cachedProducts = uniqueProductIds
+        .map((productId) =>
+          queryClient.getQueryData<Product>(
+            queryKeys.products.detail(productId)
+          )
+        )
+        .filter((product): product is Product => !!product);
+
+      const cachedProductIds = new Set(
+        cachedProducts.map((product) => product.id)
       );
+      const missingProductIds = uniqueProductIds.filter(
+        (productId) => !cachedProductIds.has(productId)
+      );
+
+      const fetchedProducts = missingProductIds.length
+        ? await Promise.all(
+            missingProductIds.map(async (productId) => {
+              try {
+                const res = await productApi.getProductById(productId);
+                queryClient.setQueryData(
+                  queryKeys.products.detail(productId),
+                  res.data
+                );
+                return res.data;
+              } catch (err) {
+                console.error("상품 조회 실패:", productId, err);
+                return null;
+              }
+            })
+          )
+        : [];
 
       // const auctionList = await Promise.all(
       //   uniqueProductIds.map(async (productId) => {
@@ -67,17 +90,22 @@ const Wishlist: React.FC = () => {
       //   })
       // );
 
-      return productResults
-        .map((result) => {
-          if (!result) return null;
-          // const latestAuction: any = auctionList.pop();
-          const mergedProduct: any = {
-            // ...latestAuction,
-            ...result,
-          };
-          return mergedProduct;
-        })
-        .filter((p): p is Product => p !== null);
+      const productMap = new Map(
+        [...cachedProducts, ...fetchedProducts]
+          .filter((result): result is Product => result !== null)
+          .map((product) => [product.id, product])
+      );
+
+      const products = entries.map((entry) => {
+        const product = productMap.get(entry.productId);
+        if (product) return product;
+        return {
+          id: entry.productId,
+          name: "상품 정보를 불러오지 못했습니다.",
+          createdAt: undefined,
+        } as Product;
+      });
+      return { entries, products };
     },
     enabled: isAuthenticated && !!user?.userId,
     staleTime: 30_000,
@@ -96,8 +124,22 @@ const Wishlist: React.FC = () => {
     onSuccess: (_, productId) => {
       queryClient.setQueryData(
         queryKeys.wishlist.list(user?.userId),
-        (prev: Product[] | undefined) =>
-          (prev ?? []).filter((product) => product.id !== productId)
+        (
+          prev:
+            | {
+                entries: WishlistEntry[];
+                products: Product[];
+              }
+            | undefined
+        ) => {
+          if (!prev) return prev;
+          return {
+            entries: prev.entries.filter(
+              (entry) => entry.productId !== productId
+            ),
+            products: prev.products.filter((product) => product.id !== productId),
+          };
+        }
       );
     },
   });
@@ -132,7 +174,8 @@ const Wishlist: React.FC = () => {
     );
   }
 
-  const products = wishlistQuery.data ?? [];
+  const products = wishlistQuery.data?.products ?? [];
+  const entries = wishlistQuery.data?.entries ?? [];
 
   return (
     <Container maxWidth="md">
@@ -161,7 +204,7 @@ const Wishlist: React.FC = () => {
           )}
           {!wishlistQuery.isLoading &&
             !errorMessage &&
-            products.length === 0 && (
+            entries.length === 0 && (
               <Alert severity="info">
                 찜한 상품이 없습니다. 마음에 드는 상품을 찜해보세요.
               </Alert>
@@ -203,11 +246,13 @@ const Wishlist: React.FC = () => {
                         {product.name}
                       </Typography>
                     }
-                    secondary={`등록일: ${
+                    secondary={
                       product.createdAt
-                        ? new Date(product.createdAt).toLocaleDateString()
-                        : "-"
-                    }`}
+                        ? `등록일: ${new Date(
+                            product.createdAt
+                          ).toLocaleDateString()}`
+                        : undefined
+                    }
                   />
                 </ListItem>
               ))}

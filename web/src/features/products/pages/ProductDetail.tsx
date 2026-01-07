@@ -391,33 +391,31 @@ const ProductDetail: React.FC = () => {
     }
   };
 
+  const wishlistQuery = useQuery({
+    queryKey: queryKeys.wishlist.list(user?.userId),
+    queryFn: async () => {
+      const res = await wishlistApi.getMyWishlist({ page: 0, size: 100 });
+      return res.data;
+    },
+    enabled: false,
+    staleTime: 30_000,
+    retryOnMount: false,
+  });
+
   useEffect(() => {
-    const fetchWishlistStatus = async () => {
-      if (!productId) return;
-      if (!user) {
-        setIsWish(false);
-        wishDesiredRef.current = false;
-        wishServerRef.current = false;
-        return;
-      }
-      try {
-        const seqAtStart = wishActionSeqRef.current;
-        const res = await wishlistApi.getMyWishlist({
-          page: 0,
-          size: 100,
-        });
-        const items = res.data?.content ?? [];
-        const exists = items.some((item) => item.productId === productId);
-        if (wishActionSeqRef.current !== seqAtStart) return;
-        setIsWish(exists);
-        wishDesiredRef.current = exists;
-        wishServerRef.current = exists;
-      } catch (e) {
-        console.error("찜 상태 조회 실패:", e);
-      }
-    };
-    fetchWishlistStatus();
-  }, [productId, user]);
+    if (!productId) return;
+    if (!user) {
+      setIsWish(false);
+      wishDesiredRef.current = false;
+      wishServerRef.current = false;
+      return;
+    }
+    const items = wishlistQuery.data?.content ?? [];
+    const exists = items.some((item) => item.productId === productId);
+    setIsWish(exists);
+    wishDesiredRef.current = exists;
+    wishServerRef.current = exists;
+  }, [productId, user, wishlistQuery.data]);
 
   const showProductSkeleton = productQuery.isLoading;
   const showProductError = !!error;

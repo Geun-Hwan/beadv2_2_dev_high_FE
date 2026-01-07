@@ -21,9 +21,13 @@ export const useStomp = ({ topic, onMessage }: UseStompProps) => {
   const clientRef = useRef<Client | null>(null);
   const subscriptionRef = useRef<StompSubscription | null>(null);
   const retryCountRef = useRef(0);
+  const [retryCount, setRetryCount] = useState(0);
   const isCleanupRef = useRef(false); // 페이지 이동 등으로 인한 cleanup 플래그
   const reconnectTimeoutRef = useRef<any | null>(null);
   const connectionStateRef = useRef(connectionState);
+  const connectRef = useRef<() => void>(() => {});
+  const disconnectRef = useRef<(isReconnecting?: boolean) => void>(() => {});
+  const attemptReconnectRef = useRef<() => void>(() => {});
   const MAX_RETRIES = 3;
   const RECONNECT_DELAY = 3000; // 운영용으로 3초로 복원
 
@@ -54,6 +58,32 @@ export const useStomp = ({ topic, onMessage }: UseStompProps) => {
     }
   }, []);
 
+  // 재연결 함수
+  const attemptReconnect = useCallback(() => {
+    // 이미 재연결 타이머가 설정되어 있거나, 의도적으로 연결을 해제한 경우 중복 실행 방지
+    if (reconnectTimeoutRef.current || isCleanupRef.current) {
+      return;
+    }
+
+    if (retryCountRef.current >= MAX_RETRIES) {
+      console.log("STOMP: 재연결 최대 시도 도달, 연결 실패");
+      setConnectionState("failed");
+      return;
+    }
+
+    retryCountRef.current += 1;
+    setRetryCount(retryCountRef.current);
+    setConnectionState("reconnecting");
+    console.log(`STOMP: 재연결 시도 ${retryCountRef.current}/${MAX_RETRIES}`);
+
+    reconnectTimeoutRef.current = setTimeout(() => {
+      if (isCleanupRef.current) return;
+
+      disconnectRef.current(true); // 재연결 중이므로 상태를 'disconnected'로 바꾸지 않음
+      connectRef.current();
+    }, RECONNECT_DELAY);
+  }, []);
+
   const connect = useCallback(() => {
     // - VITE_WS_BASE_URL 없으면 http://localhost:8000
     // - /ws-auction은 공통으로 붙음
@@ -75,6 +105,7 @@ export const useStomp = ({ topic, onMessage }: UseStompProps) => {
 
       setConnectionState("connected");
       retryCountRef.current = 0; // 성공 시 재시도 카운트 리셋
+      setRetryCount(0);
 
       try {
         subscriptionRef.current = client.subscribe(topic, onMessage);
@@ -91,7 +122,7 @@ export const useStomp = ({ topic, onMessage }: UseStompProps) => {
         console.error("STOMP: 구독 또는 join 메시지 전송 실패:", error);
         // 구독 실패 시 재연결 시도
         setConnectionState("disconnected");
-        attemptReconnect();
+        attemptReconnectRef.current();
       }
     };
 
@@ -115,7 +146,7 @@ export const useStomp = ({ topic, onMessage }: UseStompProps) => {
         return;
       }
       // 서버 문제로 인한 연결 끊김 - 재연결 시도
-      attemptReconnect();
+      attemptReconnectRef.current();
     };
 
     client.onStompError = () => {
@@ -133,7 +164,7 @@ export const useStomp = ({ topic, onMessage }: UseStompProps) => {
         !reconnectTimeoutRef.current
       ) {
         setConnectionState("disconnected");
-        attemptReconnect();
+        attemptReconnectRef.current();
       }
     };
 
@@ -152,7 +183,7 @@ export const useStomp = ({ topic, onMessage }: UseStompProps) => {
         !reconnectTimeoutRef.current
       ) {
         setConnectionState("disconnected");
-        attemptReconnect();
+        attemptReconnectRef.current();
       }
     };
 
@@ -162,30 +193,17 @@ export const useStomp = ({ topic, onMessage }: UseStompProps) => {
     client.activate();
   }, [topic, onMessage]);
 
-  // 재연결 함수
-  const attemptReconnect = useCallback(() => {
-    // 이미 재연결 타이머가 설정되어 있거나, 의도적으로 연결을 해제한 경우 중복 실행 방지
-    if (reconnectTimeoutRef.current || isCleanupRef.current) {
-      return;
-    }
+  useEffect(() => {
+    connectRef.current = connect;
+  }, [connect]);
 
-    if (retryCountRef.current >= MAX_RETRIES) {
-      console.log("STOMP: 재연결 최대 시도 도달, 연결 실패");
-      setConnectionState("failed");
-      return;
-    }
+  useEffect(() => {
+    disconnectRef.current = disconnect;
+  }, [disconnect]);
 
-    retryCountRef.current += 1;
-    setConnectionState("reconnecting");
-    console.log(`STOMP: 재연결 시도 ${retryCountRef.current}/${MAX_RETRIES}`);
-
-    reconnectTimeoutRef.current = setTimeout(() => {
-      if (isCleanupRef.current) return;
-
-      disconnect(true); // 재연결 중이므로 상태를 'disconnected'로 바꾸지 않음
-      connect();
-    }, RECONNECT_DELAY);
-  }, [connect, disconnect]);
+  useEffect(() => {
+    attemptReconnectRef.current = attemptReconnect;
+  }, [attemptReconnect]);
 
   // 클라이언트 생성 및 연결
   useEffect(() => {
@@ -198,7 +216,7 @@ export const useStomp = ({ topic, onMessage }: UseStompProps) => {
     const handleOnline = () => {
       if (isCleanupRef.current) return;
       if (connectionStateRef.current === "failed") {
-        attemptReconnect();
+        attemptReconnectRef.current();
       }
     };
     const handleOffline = () => {
@@ -246,7 +264,7 @@ export const useStomp = ({ topic, onMessage }: UseStompProps) => {
     isRetrying,
     connectionState,
     sendMessage,
-    retryCount: retryCountRef.current,
+    retryCount,
     maxRetries: MAX_RETRIES,
   };
 };

@@ -8,6 +8,7 @@ import { CircularProgress } from "@mui/material";
 import { useQueryClient } from "@tanstack/react-query";
 import React, {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useState,
@@ -44,21 +45,6 @@ const LOGGED_IN_FLAG = "auth_logged_in";
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const queryClient = useQueryClient();
   const isLoggingOutRef = useRef(false);
-  const clearQueryCache = () => {
-    queryClient.cancelQueries();
-    queueMicrotask(() => {
-      queryClient.clear();
-    });
-  };
-  const finalizeLogout = () => {
-    localStorage.removeItem("user");
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-    localStorage.removeItem("depositBalance");
-    localStorage.removeItem(LOGGED_IN_FLAG);
-    setUser(null);
-    clearQueryCache();
-  };
   const normalizeUser = (nextUser: User | null): User | null => {
     if (!nextUser) return null;
     return { ...nextUser, roles: normalizeRoles(nextUser.roles) };
@@ -69,16 +55,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return storedUser ? normalizeUser(JSON.parse(storedUser)) : null;
   });
 
-  const [isAuthenticating, setIsAuthenticating] = useState(true);
+  const clearQueryCache = useCallback(() => {
+    queryClient.cancelQueries();
+    queueMicrotask(() => {
+      queryClient.clear();
+    });
+  }, [queryClient]);
+  const finalizeLogout = useCallback(() => {
+    localStorage.removeItem("user");
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("depositBalance");
+    localStorage.removeItem(LOGGED_IN_FLAG);
+    setUser(null);
+    clearQueryCache();
+  }, [clearQueryCache]);
 
-  useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    const wasLoggedIn = localStorage.getItem(LOGGED_IN_FLAG) === "true";
-    if (!storedUser && wasLoggedIn) {
-      logout();
-    }
-    setIsAuthenticating(false);
-  }, []);
+  const [isAuthenticating, setIsAuthenticating] = useState(true);
 
   const login = (data: LoginResponse) => {
     const { accessToken, ...rest } = data;
@@ -89,7 +82,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(normalizedUser);
   };
 
-  const logout = () => {
+  const logout = useCallback(() => {
     if (isLoggingOutRef.current) {
       finalizeLogout();
       return;
@@ -104,15 +97,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       .finally(() => {
         isLoggingOutRef.current = false;
       });
-  };
-  const updateAccessToken = (newToken: string | null) => {
+  }, [finalizeLogout]);
+
+  const updateAccessToken = useCallback((newToken: string | null) => {
     if (!newToken) {
       logout();
       return;
     }
     localStorage.setItem("accessToken", newToken);
-  };
-  updateAccessTokenExternal = updateAccessToken;
+  }, [logout]);
+
+  useEffect(() => {
+    updateAccessTokenExternal = updateAccessToken;
+    return () => {
+      if (updateAccessTokenExternal === updateAccessToken) {
+        updateAccessTokenExternal = null;
+      }
+    };
+  }, [updateAccessToken]);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    const wasLoggedIn = localStorage.getItem(LOGGED_IN_FLAG) === "true";
+    if (!storedUser && wasLoggedIn) {
+      logout();
+    }
+    setIsAuthenticating(false);
+  }, [logout]);
   const isAuthenticated = !!user;
   useEffect(() => {
     if (isAuthenticating) return;
@@ -120,7 +131,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (!user && wasLoggedIn) {
       logout();
     }
-  }, [isAuthenticating, user]);
+  }, [isAuthenticating, logout, user]);
 
   if (isAuthenticating) {
     return (

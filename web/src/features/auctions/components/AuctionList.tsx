@@ -9,7 +9,7 @@ import {
 } from "@mui/material";
 import React, { useMemo } from "react";
 import { Link as RouterLink } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { auctionApi } from "@/apis/auctionApi";
 import { fileApi } from "@/apis/fileApi";
 import { productApi } from "@/apis/productApi";
@@ -19,10 +19,12 @@ import {
   type Product,
   AuctionStatus,
 } from "@moreauction/types";
+import type { ApiResponseDto, FileGroup } from "@moreauction/types";
 import { formatWon } from "@moreauction/utils";
 import { getAuctionStatusText } from "@moreauction/utils";
 import RemainingTime from "@/shared/components/RemainingTime";
 import { queryKeys } from "@/queries/queryKeys";
+import { seedFileGroupCache } from "@/queries/seedFileGroupCache";
 import { ImageWithFallback } from "@/shared/components/common/ImageWithFallback";
 import { getErrorMessage } from "@/utils/getErrorMessage";
 
@@ -103,43 +105,95 @@ const AuctionList: React.FC<AuctionListProps> = ({
     return Array.from(new Set(ids));
   }, [auctions]);
 
+  const queryClient = useQueryClient();
+  const cachedProducts = useMemo(
+    () =>
+      productIds
+        .map((productId) =>
+          queryClient.getQueryData<Product>(
+            queryKeys.products.detail(productId)
+          )
+        )
+        .filter((product): product is Product => !!product),
+    [productIds, queryClient]
+  );
+  const cachedProductIds = useMemo(
+    () => new Set(cachedProducts.map((product) => product.id)),
+    [cachedProducts]
+  );
+  const missingProductIds = useMemo(
+    () => productIds.filter((id) => !cachedProductIds.has(id)),
+    [cachedProductIds, productIds]
+  );
   const productsQuery = useQuery({
-    queryKey: queryKeys.products.many(productIds),
+    queryKey: queryKeys.products.many(missingProductIds),
     queryFn: async () => {
-      const response = await productApi.getProductsByIds(productIds);
-      return response.data as Product[];
+      const response = await productApi.getProductsByIds(missingProductIds);
+      const products = (response.data ?? []) as Product[];
+      products.forEach((product) => {
+        queryClient.setQueryData(
+          queryKeys.products.detail(product.id),
+          product
+        );
+      });
+      return products;
     },
-    enabled: productIds.length > 0,
+    enabled: missingProductIds.length > 0,
     staleTime: 30_000,
   });
 
+  const mergedProducts = useMemo(
+    () => [...cachedProducts, ...(productsQuery.data ?? [])],
+    [cachedProducts, productsQuery.data]
+  );
   const productMap = useMemo(() => {
-    const list = productsQuery.data ?? [];
+    const list = mergedProducts;
     return new Map(list.map((product) => [product.id, product]));
-  }, [productsQuery.data]);
+  }, [mergedProducts]);
 
   const fileGroupIds = useMemo(() => {
-    const ids = (productsQuery.data ?? [])
+    const ids = mergedProducts
       .map((product) => product.fileGroupId)
       .filter((id) => id != null && id !== "" && id !== undefined)
       .map((id) => String(id));
     return Array.from(new Set(ids));
-  }, [productsQuery.data]);
+  }, [mergedProducts]);
 
+  const cachedFileGroups = useMemo(
+    () =>
+      fileGroupIds
+        .map(
+          (id) =>
+            queryClient.getQueryData<ApiResponseDto<FileGroup>>(
+              queryKeys.files.group(id)
+            )?.data
+        )
+        .filter((group): group is FileGroup => !!group),
+    [fileGroupIds, queryClient]
+  );
+  const cachedFileGroupIds = useMemo(
+    () => new Set(cachedFileGroups.map((group) => String(group.fileGroupId))),
+    [cachedFileGroups]
+  );
+  const missingFileGroupIds = useMemo(
+    () => fileGroupIds.filter((id) => !cachedFileGroupIds.has(id)),
+    [cachedFileGroupIds, fileGroupIds]
+  );
   const fileGroupsQuery = useQuery({
-    queryKey: queryKeys.files.groups(fileGroupIds),
+    queryKey: queryKeys.files.groups(missingFileGroupIds),
     queryFn: async () => {
-      const response = await fileApi.getFileGroupsByIds(fileGroupIds);
+      const response = await fileApi.getFileGroupsByIds(missingFileGroupIds);
+      seedFileGroupCache(queryClient, response);
       return response.data ?? [];
     },
-    enabled: fileGroupIds.length > 0,
+    enabled: missingFileGroupIds.length > 0,
     staleTime: 30_000,
   });
 
   const fileGroupMap = useMemo(() => {
-    const list = fileGroupsQuery.data ?? [];
+    const list = [...cachedFileGroups, ...(fileGroupsQuery.data ?? [])];
     return new Map(list.map((group) => [String(group.fileGroupId), group]));
-  }, [fileGroupsQuery.data]);
+  }, [cachedFileGroups, fileGroupsQuery.data]);
   const isImageLoading = productsQuery.isLoading || fileGroupsQuery.isLoading;
 
   return (
