@@ -19,8 +19,8 @@ import {
 } from "@mui/icons-material";
 import React, { useMemo, useState } from "react";
 import { Link as RouterLink, Outlet, useLocation } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContextx";
-import AdminHeader from "@/components/AdminHeaderx";
+import { useAuth } from "@/contexts/AuthContext";
+import AdminHeader from "@/components/AdminHeader";
 
 const drawerWidth = 240;
 

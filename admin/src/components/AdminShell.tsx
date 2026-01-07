@@ -1,6 +1,6 @@
 import React from "react";
 import { Box } from "@mui/material";
-import AdminHeader from "@/components/AdminHeaderx";
+import AdminHeader from "@/components/AdminHeader";
 
 interface AdminShellProps {
   children: React.ReactNode;

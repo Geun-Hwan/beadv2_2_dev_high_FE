@@ -61,7 +61,6 @@ const Notifications: React.FC = () => {
     queryKey: queryKeys.notifications.list(user?.userId),
     queryFn: async ({ pageParam = 0 }) =>
       notificationApi.getNotifications({
-        userId: user?.userId,
         page: pageParam,
         size: 20,
       }),
@@ -87,7 +86,8 @@ const Notifications: React.FC = () => {
   }, [notificationsQuery.error, notificationsQuery.isError]);
 
   const markAsReadMutation = useMutation({
-    mutationFn: (notificationId: string) => notificationApi.getNotifi(notificationId),
+    mutationFn: (notificationId: string) =>
+      notificationApi.getNotifi(notificationId),
     onSuccess: (_, notificationId) => {
       queryClient.setQueryData(
         queryKeys.notifications.list(user?.userId),
@@ -148,8 +148,7 @@ const Notifications: React.FC = () => {
   };
 
   const showSkeleton =
-    (notificationsQuery.isLoading ||
-      notificationsQuery.isFetchingNextPage) &&
+    (notificationsQuery.isLoading || notificationsQuery.isFetchingNextPage) &&
     notifications.length === 0 &&
     !errorMessage;
 
@@ -245,20 +244,20 @@ const Notifications: React.FC = () => {
               !errorMessage &&
               notifications.length > 0 &&
               notificationsQuery.hasNextPage && (
-              <Box sx={{ display: "flex", justifyContent: "center", py: 1 }}>
-                <Button
-                  variant="outlined"
-                  onClick={() => notificationsQuery.fetchNextPage()}
-                  disabled={notificationsQuery.isFetchingNextPage}
-                >
-                  {notificationsQuery.isFetchingNextPage ? (
-                    <CircularProgress size={18} />
-                  ) : (
-                    "더 보기"
-                  )}
-                </Button>
-              </Box>
-            )}
+                <Box sx={{ display: "flex", justifyContent: "center", py: 1 }}>
+                  <Button
+                    variant="outlined"
+                    onClick={() => notificationsQuery.fetchNextPage()}
+                    disabled={notificationsQuery.isFetchingNextPage}
+                  >
+                    {notificationsQuery.isFetchingNextPage ? (
+                      <CircularProgress size={18} />
+                    ) : (
+                      "더 보기"
+                    )}
+                  </Button>
+                </Box>
+              )}
           </Box>
         </Paper>
         <Dialog
