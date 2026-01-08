@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Client, type IMessage, type StompSubscription } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
+import { API_BASE_URL } from "@/apis/client";
 
 interface UseStompProps {
   topic: string; // 구독할 토픽 (auctionId 포함된 완전한 형태)
@@ -204,7 +205,6 @@ export const useStomp = ({ topic, onMessage }: UseStompProps) => {
   useEffect(() => {
     attemptReconnectRef.current = attemptReconnect;
   }, [attemptReconnect]);
-
 
   // 클라이언트 생성 및 연결
   useEffect(() => {

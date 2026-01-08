@@ -206,6 +206,9 @@ const AuctionDetail: React.FC = () => {
     return fileUrls.length > 0 ? fileUrls : getProductImageUrls();
   }, [fileGroupQuery.data, fileGroupQuery.isError, getProductImageUrls]);
 
+  const sellerId = auctionDetail?.sellerId ?? productDetailQuery.data?.sellerId;
+  const isSeller = !!user?.userId && !!sellerId && user.userId === sellerId;
+
   const bidHistoryQuery = useInfiniteQuery<
     PagedBidHistoryResponse,
     Error,
@@ -488,7 +491,7 @@ const AuctionDetail: React.FC = () => {
       setOpenLoginPrompt(true);
       return;
     }
-    if (user?.userId === auctionDetail?.sellerId) {
+    if (isSeller) {
       alert("본인이 등록한 경매에는 입찰할 수 없습니다.");
       return;
     }
@@ -915,6 +918,7 @@ const AuctionDetail: React.FC = () => {
                       isWithdrawn={participationStatus.isWithdrawn}
                       isAuthenticated={isAuthenticated}
                       isParticipationUnavailable={isParticipationUnavailable}
+                      isSeller={isSeller}
                     />
                 ) : (
                   <Alert severity="info">
@@ -997,6 +1001,7 @@ const AuctionDetail: React.FC = () => {
         setOpenDepositPrompt={setOpenDepositPrompt}
         handleCloseDepositPrompt={handleCloseDepositPrompt}
         depositAmount={auctionDetail?.depositAmount ?? 0}
+        isDepositLoading={depositLoading}
         openWithdrawnPopup={openWithdrawnPopup}
         setOpenWithdrawnPopup={setOpenWithdrawnPopup}
         handleWithdraw={handleWithdraw}

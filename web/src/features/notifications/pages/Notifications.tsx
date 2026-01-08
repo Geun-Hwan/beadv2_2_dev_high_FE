@@ -7,10 +7,6 @@ import {
   Box,
   Skeleton,
   Alert,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   Button,
   CircularProgress,
 } from "@mui/material";
@@ -46,9 +42,6 @@ const Notifications: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  const [detailOpen, setDetailOpen] = useState(false);
-  const [selectedNotification, setSelectedNotification] =
-    useState<NotificationInfo | null>(null);
   const [showUnreadOnly, setShowUnreadOnly] = useState(true);
   const queryClient = useQueryClient();
 
@@ -185,12 +178,6 @@ const Notifications: React.FC = () => {
 
     if (target.relatedUrl) {
       navigate(target.relatedUrl);
-    } else {
-      setSelectedNotification({
-        ...target,
-        readYn: true,
-      });
-      setDetailOpen(true);
     }
   };
 
@@ -362,24 +349,6 @@ const Notifications: React.FC = () => {
               )}
           </Box>
         </Paper>
-        <Dialog
-          open={detailOpen}
-          onClose={() => setDetailOpen(false)}
-          fullWidth
-        >
-          <DialogTitle>{selectedNotification?.title}</DialogTitle>
-          <DialogContent dividers>
-            <Typography variant="caption" color="text.secondary">
-              받은 시각: {formatDateTime(selectedNotification?.createdAt)}
-            </Typography>
-            <Typography variant="body1" sx={{ mt: 2, whiteSpace: "pre-line" }}>
-              {selectedNotification?.content}
-            </Typography>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setDetailOpen(false)}>닫기</Button>
-          </DialogActions>
-        </Dialog>
       </Box>
     </Container>
   );
