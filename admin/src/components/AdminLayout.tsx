@@ -16,6 +16,7 @@ import {
   ReceiptLong as OrdersIcon,
   Settings as SettingsIcon,
   Logout as LogoutIcon,
+  AccountBalanceWallet as SettlementIcon,
 } from "@mui/icons-material";
 import React, { useMemo, useState } from "react";
 import { Link as RouterLink, Outlet, useLocation } from "react-router-dom";
@@ -30,6 +31,7 @@ const navItems = [
   { label: "경매 관리", to: "/auctions", icon: <GavelIcon /> },
   { label: "상품 관리", to: "/products", icon: <InventoryIcon /> },
   { label: "주문 관리", to: "/orders", icon: <OrdersIcon /> },
+  { label: "정산 관리", to: "/settlements", icon: <SettlementIcon /> },
   { label: "설정", to: "/settings", icon: <SettingsIcon /> },
 ];
 

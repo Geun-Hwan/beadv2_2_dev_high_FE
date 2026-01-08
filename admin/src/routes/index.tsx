@@ -2,6 +2,8 @@ import { createBrowserRouter } from "react-router-dom";
 import AdminLayout from "@/components/AdminLayout";
 import Login from "@/pages/Login";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
+import AdminOrders from "@/pages/admin/AdminOrders";
+import AdminSettlements from "@/pages/admin/AdminSettlements";
 import AdminPlaceholder from "@/pages/admin/AdminPlaceholder";
 import ProtectedRoute from "@/routes/ProtectedRoute";
 
@@ -52,12 +54,11 @@ export const router = createBrowserRouter([
           },
           {
             path: "orders",
-            element: (
-              <AdminPlaceholder
-                title="주문 관리"
-                description="주문 상태 변경 및 환불 처리 기능을 준비 중입니다."
-              />
-            ),
+            element: <AdminOrders />,
+          },
+          {
+            path: "settlements",
+            element: <AdminSettlements />,
           },
           {
             path: "settings",
