@@ -87,7 +87,7 @@ export default function PaymentSuccess() {
             queryKey: queryKeys.deposit.account(),
           }),
           queryClient.invalidateQueries({
-            queryKey: queryKeys.deposit.history(),
+                  queryKey: queryKeys.deposit.historyAll(),
           }),
         ]);
 
@@ -135,7 +135,7 @@ export default function PaymentSuccess() {
                     queryKey: queryKeys.deposit.account(),
                   }),
                   queryClient.invalidateQueries({
-                    queryKey: queryKeys.deposit.history(),
+                  queryKey: queryKeys.deposit.historyAll(),
                   }),
                 ]);
                 redirectPath = "/orders";

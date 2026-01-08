@@ -85,26 +85,21 @@ export const MyProductsTab: React.FC = () => {
                     to={`/products/${product.id}`}
                   >
                     <ListItemText
-                      primary={
-                        <Typography variant="subtitle1" fontWeight={600}>
-                          {product.name}
-                        </Typography>
-                      }
-                      secondary={
-                        <>
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            sx={{
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            {product.description || "상품 설명이 없습니다."}
-                          </Typography>
-                        </>
-                      }
+                      primary={product.name}
+                      primaryTypographyProps={{
+                        variant: "subtitle1",
+                        fontWeight: 600,
+                      }}
+                      secondary={product.description || "상품 설명이 없습니다."}
+                      secondaryTypographyProps={{
+                        variant: "body2",
+                        color: "text.secondary",
+                        sx: {
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        },
+                      }}
                     />
                     <Chip label="상세보기" size="small" />
                   </ListItemButton>

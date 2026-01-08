@@ -24,6 +24,7 @@ import { auctionApi } from "@/apis/auctionApi";
 import { depositApi } from "@/apis/depositApi";
 import { fileApi } from "@/apis/fileApi";
 import { productApi } from "@/apis/productApi";
+import { userApi } from "@/apis/userApi";
 import {
   type InfiniteData,
   useInfiniteQuery,
@@ -49,6 +50,7 @@ import {
   type AuctionParticipationResponse,
   type PagedBidHistoryResponse,
   AuctionStatus,
+  type User,
 } from "@moreauction/types";
 import { DepositType } from "@moreauction/types";
 import { queryKeys } from "@/queries/queryKeys";
@@ -286,6 +288,107 @@ const AuctionDetail: React.FC = () => {
     );
   }, [auctionDetail?.highestUserId]);
 
+  const bidderUserIds = useMemo(() => {
+    const ids = bidHistory
+      .map((bid) => bid.highestUserId)
+      .filter((id): id is string => !!id);
+    if (auctionDetail?.highestUserId) {
+      ids.push(auctionDetail.highestUserId);
+    }
+    if (highestBidderInfo?.id) {
+      ids.push(highestBidderInfo.id);
+    }
+    return Array.from(new Set(ids));
+  }, [auctionDetail?.highestUserId, bidHistory, highestBidderInfo?.id]);
+
+  const cachedUsers = useMemo(() => {
+    const map = new Map<string, User>();
+    bidderUserIds.forEach((id) => {
+      const cached = queryClient.getQueryData<User>(
+        queryKeys.user.detail(id)
+      );
+      if (cached) {
+        map.set(id, cached);
+      }
+    });
+    return map;
+  }, [bidderUserIds, queryClient]);
+
+  const missingUserIds = useMemo(() => {
+    return bidderUserIds.filter((id) => {
+      const cached = cachedUsers.get(id);
+      if (!cached) return true;
+      return !cached.email;
+    });
+  }, [bidderUserIds, cachedUsers]);
+
+  const usersQuery = useQuery({
+    queryKey: queryKeys.user.many(missingUserIds),
+    queryFn: async () => {
+      const response = await userApi.getUsersByIds(missingUserIds);
+      const users = response.data ?? [];
+      users.forEach((userInfo) => {
+        if (!userInfo?.userId) return;
+        queryClient.setQueryData(
+          queryKeys.user.detail(userInfo.userId),
+          userInfo
+        );
+      });
+      return users;
+    },
+    enabled: missingUserIds.length > 0,
+    staleTime: 5 * 60_000,
+  });
+
+  const userLabelMap = useMemo(() => {
+    const map = new Map<string, string>();
+    cachedUsers.forEach((userInfo, userId) => {
+      const nickname = userInfo.nickname?.trim();
+      const email = userInfo.email?.trim();
+      if (nickname && email) {
+        map.set(userId, `${nickname} (${email})`);
+      } else if (nickname) {
+        map.set(userId, nickname);
+      } else if (email) {
+        map.set(userId, email);
+      }
+    });
+    (usersQuery.data ?? []).forEach((userInfo) => {
+      if (!userInfo?.userId) return;
+      const nickname = userInfo.nickname?.trim();
+      const email = userInfo.email?.trim();
+      if (nickname && email) {
+        map.set(userInfo.userId, `${nickname} (${email})`);
+      } else if (nickname) {
+        map.set(userInfo.userId, nickname);
+      } else if (email) {
+        map.set(userInfo.userId, email);
+      }
+    });
+    return map;
+  }, [cachedUsers, usersQuery.data]);
+
+  const getBidderLabel = useCallback(
+    (userId?: string, fallbackName?: string) => {
+      if (!userId) return "-";
+      const label = userLabelMap.get(userId);
+      if (label) return label;
+      if (fallbackName) return fallbackName;
+      return null;
+    },
+    [userLabelMap]
+  );
+
+  const isUserInfoLoading =
+    missingUserIds.length > 0 && usersQuery.isLoading;
+
+  const resolvedHighestBidderId =
+    auctionDetail?.highestUserId ?? highestBidderInfo?.id;
+  const resolvedHighestBidderLabel = getBidderLabel(
+    resolvedHighestBidderId,
+    highestBidderInfo?.username
+  );
+
   const handleNewMessage = useCallback(
     (message: IMessage) => {
       try {
@@ -478,7 +581,7 @@ const AuctionDetail: React.FC = () => {
           queryKey: queryKeys.deposit.account(),
         }),
         queryClient.invalidateQueries({
-          queryKey: queryKeys.deposit.history(),
+          queryKey: queryKeys.deposit.historyAll(),
         }),
       ]);
       setOpenWithdrawnPopup(false);
@@ -552,7 +655,7 @@ const AuctionDetail: React.FC = () => {
           queryKey: queryKeys.deposit.account(),
         }),
         queryClient.invalidateQueries({
-          queryKey: queryKeys.deposit.history(),
+          queryKey: queryKeys.deposit.historyAll(),
         }),
       ]);
       setOpenDepositPrompt(false);
@@ -685,6 +788,8 @@ const AuctionDetail: React.FC = () => {
                         bidHistory={bidHistory}
                         fetchMoreHistory={() => bidHistoryQuery.fetchNextPage()}
                         hasMore={!!bidHistoryQuery.hasNextPage}
+                        getBidderLabel={getBidderLabel}
+                        isBidderLoading={isUserInfoLoading}
                       />
                     </>
                   )}
@@ -779,7 +884,9 @@ const AuctionDetail: React.FC = () => {
                     status={auctionDetail.status}
                     currentBidPrice={currentBidPrice}
                     hasAnyBid={hasAnyBid}
-                    highestBidderInfo={highestBidderInfo}
+                    highestBidderId={resolvedHighestBidderId}
+                    highestBidderLabel={resolvedHighestBidderLabel}
+                    isBidderLoading={isUserInfoLoading}
                     currentUserCount={currentUserCount}
                     auctionEndAt={auctionDetail.auctionEndAt}
                     auctionStartAt={auctionDetail.auctionStartAt}
@@ -829,7 +936,7 @@ const AuctionDetail: React.FC = () => {
         openWithdrawnPopup={openWithdrawnPopup}
         setOpenWithdrawnPopup={setOpenWithdrawnPopup}
         handleWithdraw={handleWithdraw}
-        isCurrentUserHighestBidder={highestBidderInfo?.id === user?.userId}
+        isCurrentUserHighestBidder={resolvedHighestBidderId === user?.userId}
       />
 
       <Dialog

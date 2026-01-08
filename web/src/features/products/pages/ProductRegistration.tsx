@@ -404,14 +404,30 @@ const ProductRegistration: React.FC = () => {
         );
 
         const createdProduct = productResponse.data;
+        if (createdProduct) {
+          queryClient.setQueryData(
+            queryKeys.products.detail(productId),
+            createdProduct
+          );
+          if (user?.userId) {
+            queryClient.setQueryData(
+              queryKeys.products.mine(user.userId),
+              (prev?: Product[]) => {
+                if (!prev) return prev;
+                return prev.map((item) =>
+                  item.id === createdProduct.id ? createdProduct : item
+                );
+              }
+            );
+          }
+        }
         await queryClient.invalidateQueries({
           queryKey: queryKeys.products.lists(),
-        });
-        await queryClient.invalidateQueries({
-          queryKey: queryKeys.products.detail(productId),
+          refetchType: "none",
         });
         await queryClient.invalidateQueries({
           queryKey: queryKeys.products.mine(user?.userId),
+          refetchType: "none",
         });
         alert("상품이 성공적으로 수정되었습니다.");
         navigate(`/products/${createdProduct?.id ?? productId}`);
@@ -426,11 +442,26 @@ const ProductRegistration: React.FC = () => {
 
         const productResponse = await productApi.createProduct(productData);
         const createdProduct = productResponse.data;
+        if (createdProduct?.id) {
+          queryClient.setQueryData(
+            queryKeys.products.detail(createdProduct.id),
+            createdProduct
+          );
+          if (user?.userId) {
+            queryClient.setQueryData(
+              queryKeys.products.mine(user.userId),
+              (prev?: Product[]) =>
+                prev ? [createdProduct, ...prev] : prev
+            );
+          }
+        }
         await queryClient.invalidateQueries({
           queryKey: queryKeys.products.lists(),
+          refetchType: "none",
         });
         await queryClient.invalidateQueries({
           queryKey: queryKeys.products.mine(user?.userId),
+          refetchType: "none",
         });
         alert("상품이 성공적으로 등록되었습니다.");
         navigate(`/products/${createdProduct?.id}`);

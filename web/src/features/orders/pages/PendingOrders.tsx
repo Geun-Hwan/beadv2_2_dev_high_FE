@@ -151,7 +151,7 @@ const PendingOrders: React.FC = () => {
           queryKey: queryKeys.deposit.account(),
         }),
         queryClient.invalidateQueries({
-          queryKey: queryKeys.deposit.history(),
+          queryKey: queryKeys.deposit.historyAll(),
         }),
       ]);
     } catch (err: any) {

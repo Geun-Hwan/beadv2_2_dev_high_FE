@@ -1,5 +1,5 @@
 import { People, Timer } from "@mui/icons-material";
-import { Box, Paper, Stack, Typography } from "@mui/material";
+import { Box, Paper, Skeleton, Stack, Typography } from "@mui/material";
 import RemainingTime from "@/shared/components/RemainingTime";
 import { AuctionStatus } from "@moreauction/types";
 import { formatWon } from "@moreauction/utils";
@@ -16,7 +16,9 @@ interface AuctionBiddingPanelProps {
   startBid: number;
   currentBidPrice: number;
   hasAnyBid: boolean;
-  highestBidderInfo: { id?: string; username?: string } | null;
+  highestBidderId?: string;
+  highestBidderLabel?: string | null;
+  isBidderLoading?: boolean;
   currentUserCount: number;
   auctionEndAt: string;
   auctionStartAt: string;
@@ -27,7 +29,9 @@ const AuctionBiddingPanel: React.FC<AuctionBiddingPanelProps> = ({
   startBid,
   currentBidPrice,
   hasAnyBid,
-  highestBidderInfo,
+  highestBidderId,
+  highestBidderLabel,
+  isBidderLoading = false,
   currentUserCount,
   auctionEndAt,
   auctionStartAt,
@@ -56,12 +60,17 @@ const AuctionBiddingPanel: React.FC<AuctionBiddingPanelProps> = ({
             )}
             <Typography variant="body2" color="text.secondary">
               최고 입찰자:{" "}
-              {highestBidderInfo?.id
-                ? `${highestBidderInfo.username} (${highestBidderInfo.id.slice(
-                    0,
-                    4
-                  )}****)`
-                : "없음"}
+              {highestBidderId ? (
+                highestBidderLabel ? (
+                  highestBidderLabel
+                ) : isBidderLoading ? (
+                  <Skeleton width={120} sx={{ display: "inline-block" }} />
+                ) : (
+                  "-"
+                )
+              ) : (
+                "없음"
+              )}
             </Typography>
           </>
         )}

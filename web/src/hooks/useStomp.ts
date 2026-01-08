@@ -115,7 +115,7 @@ export const useStomp = ({ topic, onMessage }: UseStompProps) => {
         if (auctionId) {
           client.publish({
             destination: `/auctions/join/${auctionId}`,
-            body: JSON.stringify({}),
+            body: JSON.stringify(null),
           });
         }
       } catch (error) {
@@ -204,6 +204,7 @@ export const useStomp = ({ topic, onMessage }: UseStompProps) => {
   useEffect(() => {
     attemptReconnectRef.current = attemptReconnect;
   }, [attemptReconnect]);
+
 
   // 클라이언트 생성 및 연결
   useEffect(() => {

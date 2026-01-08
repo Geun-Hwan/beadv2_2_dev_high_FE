@@ -3,6 +3,7 @@ import { Box, Container, Tab, Tabs, Typography } from "@mui/material";
 import React, { useMemo, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { DepositHistoryTab } from "@/features/mypage/components/DepositHistoryTab";
+import { DepositPaymentHistoryTab } from "@/features/mypage/components/DepositPaymentHistoryTab";
 import { DepositSummaryTab } from "@/features/mypage/components/DepositSummaryTab";
 import { MyProductsTab } from "@/features/mypage/components/MyProductsTab";
 import { OrdersTab } from "@/features/mypage/components/OrdersTab";
@@ -17,7 +18,7 @@ const MyPage: React.FC = () => {
 
   const isSeller = hasRole(user?.roles, UserRole.SELLER);
 
-  const maxTabIndex = isSeller ? 5 : 1;
+  const maxTabIndex = isSeller ? 6 : 2;
   const parsedTab = useMemo(() => {
     const params = new URLSearchParams(location.search);
     const tabParam = params.get("tab");
@@ -50,6 +51,7 @@ const MyPage: React.FC = () => {
       <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
         <Tabs value={safeTabValue} onChange={handleTabChange}>
           <Tab label="예치금 내역" />
+          <Tab label="결제 내역" />
           <Tab label="구매 내역" />
           {isSeller && <Tab label="판매 내역" />}
           {isSeller && <Tab label="정산 계좌" />}
@@ -62,6 +64,9 @@ const MyPage: React.FC = () => {
           <DepositHistoryTab />
         )}
         {safeTabValue === 1 && (
+          <DepositPaymentHistoryTab />
+        )}
+        {safeTabValue === 2 && (
           <OrdersTab
             title="구매 내역"
             status="bought"
@@ -69,18 +74,18 @@ const MyPage: React.FC = () => {
             showAdditionalPayment
           />
         )}
-        {safeTabValue === 2 && isSeller && (
+        {safeTabValue === 3 && isSeller && (
           <OrdersTab
             title="판매 내역"
             status="sold"
             emptyText="판매한 주문이 없습니다."
           />
         )}
-        {safeTabValue === 3 && isSeller && (
+        {safeTabValue === 4 && isSeller && (
           <DepositSummaryTab />
         )}
-        {safeTabValue === 4 && isSeller && <SettlementTab />}
-        {safeTabValue === 5 && isSeller && (
+        {safeTabValue === 5 && isSeller && <SettlementTab />}
+        {safeTabValue === 6 && isSeller && (
           <MyProductsTab />
         )}
       </Box>

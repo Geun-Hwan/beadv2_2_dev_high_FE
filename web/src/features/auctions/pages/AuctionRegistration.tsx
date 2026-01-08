@@ -67,7 +67,10 @@ const AuctionRegistration: React.FC = () => {
 
   const auctionDetailQuery = useQuery({
     queryKey: queryKeys.auctions.detail(auctionId),
-    queryFn: () => auctionApi.getAuctionDetail(auctionId as string),
+    queryFn: async () => {
+      const response = await auctionApi.getAuctionDetail(auctionId as string);
+      return response.data;
+    },
     enabled: isEditMode && !!auctionId,
     staleTime: 30_000,
   });
@@ -82,7 +85,7 @@ const AuctionRegistration: React.FC = () => {
     staleTime: 30_000,
   });
 
-  const auctionProductId = auctionDetailQuery.data?.data?.productId;
+  const auctionProductId = auctionDetailQuery.data?.productId;
   const productForEditQuery = useQuery({
     queryKey: queryKeys.products.detail(auctionProductId),
     queryFn: async () => {
@@ -121,7 +124,7 @@ const AuctionRegistration: React.FC = () => {
   }, [initTimes, isEditMode]);
 
   useEffect(() => {
-    const auction = auctionDetailQuery.data?.data;
+    const auction = auctionDetailQuery.data;
     if (!auction) return;
 
     if (!hasRole(user?.roles, UserRole.SELLER)) {
@@ -263,18 +266,38 @@ const AuctionRegistration: React.FC = () => {
           response.data.auctionId ?? response.data.id ?? auctionId;
         const targetProductId =
           selectedProduct?.id ?? response.data.productId ?? "";
-        await queryClient.invalidateQueries({
-          queryKey: queryKeys.auctions.detail(targetAuctionId),
-        });
+        if (response.data) {
+          queryClient.setQueryData(
+            queryKeys.auctions.detail(targetAuctionId),
+            response.data
+          );
+        }
+        if (targetProductId) {
+          queryClient.setQueryData(
+            queryKeys.auctions.byProduct(targetProductId),
+            (
+              prev?:
+                | { data?: AuctionDetailResponse[] }
+                | AuctionDetailResponse[]
+            ) => {
+              const list = Array.isArray(prev) ? prev : prev?.data ?? [];
+              const next = list.map((item) =>
+                item.id === targetAuctionId || item.auctionId === targetAuctionId
+                  ? { ...item, ...response.data }
+                  : item
+              );
+              return Array.isArray(prev) ? next : { ...prev, data: next };
+            }
+          );
+        }
         await queryClient.invalidateQueries({
           queryKey: queryKeys.auctions.lists(),
+          refetchType: "none",
         });
         if (targetProductId) {
           await queryClient.invalidateQueries({
-            queryKey: queryKeys.auctions.byProduct(targetProductId),
-          });
-          await queryClient.invalidateQueries({
             queryKey: queryKeys.products.detail(targetProductId),
+            refetchType: "none",
           });
         }
         alert("경매가 성공적으로 수정되었습니다.");
@@ -300,17 +323,38 @@ const AuctionRegistration: React.FC = () => {
             createdAuctionId
           );
         }
-        await queryClient.invalidateQueries({
-          queryKey: queryKeys.auctions.detail(createdAuctionId),
-        });
+        if (createdAuctionId) {
+          queryClient.setQueryData(
+            queryKeys.auctions.detail(createdAuctionId),
+            response.data
+          );
+          queryClient.setQueryData(
+            queryKeys.auctions.byProduct(selectedProduct.id),
+            (
+              prev?:
+                | { data?: AuctionDetailResponse[] }
+                | AuctionDetailResponse[]
+            ) => {
+              const list = Array.isArray(prev) ? prev : prev?.data ?? [];
+              const next = [response.data, ...list].filter(Boolean);
+              return Array.isArray(prev) ? next : { ...prev, data: next };
+            }
+          );
+          queryClient.setQueryData(
+            queryKeys.products.detail(selectedProduct.id),
+            (prev?: { latestAuctionId?: string | null }) => {
+              if (!prev) return prev;
+              return { ...prev, latestAuctionId: createdAuctionId };
+            }
+          );
+        }
         await queryClient.invalidateQueries({
           queryKey: queryKeys.auctions.lists(),
-        });
-        await queryClient.invalidateQueries({
-          queryKey: queryKeys.auctions.byProduct(selectedProduct.id),
+          refetchType: "none",
         });
         await queryClient.invalidateQueries({
           queryKey: queryKeys.products.detail(selectedProduct.id),
+          refetchType: "none",
         });
         const targetAuctionId =
           createdAuctionId || response.data.auctionId || response.data.id;

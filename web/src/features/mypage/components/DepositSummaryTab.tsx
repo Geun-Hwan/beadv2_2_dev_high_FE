@@ -50,7 +50,7 @@ export const DepositSummaryTab: React.FC = () => {
           localStorage.setItem("depositBalance", String(res.data.balance));
         }
         await queryClient.invalidateQueries({
-          queryKey: queryKeys.deposit.history(),
+          queryKey: queryKeys.deposit.historyAll(),
         });
       }
     } catch (err: any) {

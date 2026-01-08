@@ -78,12 +78,9 @@ export const AppHeader: React.FC = () => {
   });
 
   const notificationsQuery = useQuery({
-    queryKey: queryKeys.notifications.headerList(user?.userId),
+    queryKey: queryKeys.notifications.headerList(user?.userId, "unread"),
     queryFn: () =>
-      notificationApi.getNotifications({
-        page: 0,
-        size: 50,
-      }),
+      notificationApi.getUnreadNotifications({ page: 0, size: 50 }),
     enabled: isAuthenticated && !!user?.userId && isNotificationOpen,
     staleTime: 30_000,
     gcTime: 5 * 60_000,
@@ -99,6 +96,8 @@ export const AppHeader: React.FC = () => {
         return bTime - aTime;
       });
   }, [notificationsQuery.data?.content]);
+
+  const visibleNotifications = unreadNotifications;
 
   const depositQuery = useQuery({
     queryKey: queryKeys.deposit.balance(),
@@ -128,18 +127,6 @@ export const AppHeader: React.FC = () => {
       notificationApi.getNotifi(notificationId),
     onSuccess: (_, notificationId) => {
       queryClient.setQueryData(
-        queryKeys.notifications.headerList(user?.userId),
-        (oldData: any) => {
-          if (!oldData?.content) return oldData;
-          return {
-            ...oldData,
-            content: oldData.content.map((n: NotificationInfo) =>
-              n.id === notificationId ? { ...n, readYn: true } : n
-            ),
-          };
-        }
-      );
-      queryClient.setQueryData(
         queryKeys.notifications.list(user?.userId),
         (oldData: any) => {
           if (!oldData?.pages) return oldData;
@@ -151,6 +138,18 @@ export const AppHeader: React.FC = () => {
                 n.id === notificationId ? { ...n, readYn: true } : n
               ),
             })),
+          };
+        }
+      );
+      queryClient.setQueriesData(
+        { queryKey: queryKeys.notifications.headerListBase(user?.userId) },
+        (oldData: any) => {
+          if (!oldData?.content) return oldData;
+          return {
+            ...oldData,
+            content: oldData.content.map((n: NotificationInfo) =>
+              n.id === notificationId ? { ...n, readYn: true } : n
+            ),
           };
         }
       );
@@ -203,9 +202,14 @@ export const AppHeader: React.FC = () => {
   const safeText = (value?: unknown) =>
     typeof value === "string" ? value : "";
 
-  const handleMarkAllRead = () => {
-    queryClient.setQueryData(
-      queryKeys.notifications.headerList(user?.userId),
+  const handleMarkAllRead = async () => {
+    try {
+      await notificationApi.readAll();
+    } catch (error) {
+      console.error("알림 전체 읽음 처리 실패:", error);
+    }
+    queryClient.setQueriesData(
+      { queryKey: queryKeys.notifications.headerListBase(user?.userId) },
       (oldData: any) => {
         if (!oldData?.content) return oldData;
         return {
@@ -316,6 +320,8 @@ export const AppHeader: React.FC = () => {
                   ? formatWon(depositQuery.data)
                   : depositQuery.isLoading
                   ? "불러오는 중"
+                  : depositQuery.isError
+                  ? "조회 실패"
                   : "-"}
               </Typography>
             )}
@@ -388,7 +394,14 @@ export const AppHeader: React.FC = () => {
                   </IconButton>
                 </Tooltip>
                 <Tooltip title="로그아웃">
-                  <IconButton color="inherit" onClick={logout}>
+                  <IconButton
+                    color="inherit"
+                    onClick={() => {
+                      if (window.confirm("로그아웃하시겠습니까?")) {
+                        logout();
+                      }
+                    }}
+                  >
                     <LogoutIcon />
                   </IconButton>
                 </Tooltip>
@@ -445,14 +458,14 @@ export const AppHeader: React.FC = () => {
               </Box>
             ))}
           {!notificationsQuery.isLoading &&
-            unreadNotifications.length === 0 && (
+            visibleNotifications.length === 0 && (
               <Typography variant="body2" color="text.secondary">
                 새로운 알림이 없습니다.
               </Typography>
             )}
-          {!notificationsQuery.isLoading && unreadNotifications.length > 0 && (
+          {!notificationsQuery.isLoading && visibleNotifications.length > 0 && (
             <List disablePadding>
-              {unreadNotifications.map((notification) => (
+              {visibleNotifications.map((notification) => (
                 <ListItemButton
                   key={notification.id ?? notification.createdAt}
                   onClick={() => handleClickNotification(notification)}

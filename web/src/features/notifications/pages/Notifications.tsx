@@ -49,6 +49,7 @@ const Notifications: React.FC = () => {
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedNotification, setSelectedNotification] =
     useState<NotificationInfo | null>(null);
+  const [showUnreadOnly, setShowUnreadOnly] = useState(true);
   const queryClient = useQueryClient();
 
   const notificationsQuery = useInfiniteQuery<
@@ -77,6 +78,11 @@ const Notifications: React.FC = () => {
     return sortNotifications(merged);
   }, [notificationsQuery.data?.pages]);
 
+  const visibleNotifications = useMemo(() => {
+    if (!showUnreadOnly) return notifications;
+    return notifications.filter((item) => !item.readYn);
+  }, [notifications, showUnreadOnly]);
+
   const errorMessage = useMemo(() => {
     if (!notificationsQuery.isError) return null;
     return getErrorMessage(
@@ -104,11 +110,59 @@ const Notifications: React.FC = () => {
           };
         }
       );
+      queryClient.setQueriesData(
+        { queryKey: queryKeys.notifications.headerListBase(user?.userId) },
+        (oldData: any) => {
+          if (!oldData?.content) return oldData;
+          return {
+            ...oldData,
+            content: oldData.content.map((n: NotificationInfo) =>
+              n.id === notificationId ? { ...n, readYn: true } : n
+            ),
+          };
+        }
+      );
       queryClient.setQueryData(
         queryKeys.notifications.unreadCount(),
         (prev: number | undefined) =>
           Math.max((typeof prev === "number" ? prev : 0) - 1, 0)
       );
+    },
+  });
+
+  const markAllAsReadMutation = useMutation({
+    mutationFn: () => notificationApi.readAll(),
+    onSuccess: () => {
+      queryClient.setQueryData(
+        queryKeys.notifications.list(user?.userId),
+        (oldData: any) => {
+          if (!oldData?.pages) return oldData;
+          return {
+            ...oldData,
+            pages: oldData.pages.map((page: any) => ({
+              ...page,
+              content: (page.content ?? []).map((n: NotificationInfo) => ({
+                ...n,
+                readYn: true,
+              })),
+            })),
+          };
+        }
+      );
+      queryClient.setQueriesData(
+        { queryKey: queryKeys.notifications.headerListBase(user?.userId) },
+        (oldData: any) => {
+          if (!oldData?.content) return oldData;
+          return {
+            ...oldData,
+            content: oldData.content.map((n: NotificationInfo) => ({
+              ...n,
+              readYn: true,
+            })),
+          };
+        }
+      );
+      queryClient.setQueryData(queryKeys.notifications.unreadCount(), 0);
     },
   });
 
@@ -169,6 +223,54 @@ const Notifications: React.FC = () => {
               새로운 알림이 없습니다.
             </Alert>
           )}
+          {!showSkeleton &&
+            !errorMessage &&
+            notifications.length > 0 &&
+            showUnreadOnly &&
+            visibleNotifications.length === 0 && (
+              <Alert severity="info" sx={{ width: "100%", mb: 2 }}>
+                안 읽은 알림이 없습니다.
+              </Alert>
+            )}
+          {!showSkeleton && !errorMessage && notifications.length > 0 && (
+            <Box
+              sx={{
+                display: "flex",
+                gap: 1,
+                alignItems: "center",
+                justifyContent: "space-between",
+                mb: 2,
+              }}
+            >
+              <Box sx={{ display: "flex", gap: 1 }}>
+                <Button
+                  size="small"
+                  variant={showUnreadOnly ? "contained" : "outlined"}
+                  onClick={() => setShowUnreadOnly(true)}
+                >
+                  안 읽은 알림
+                </Button>
+                <Button
+                  size="small"
+                  variant={!showUnreadOnly ? "contained" : "outlined"}
+                  onClick={() => setShowUnreadOnly(false)}
+                >
+                  전체 보기
+                </Button>
+              </Box>
+              <Button
+                size="small"
+                variant="text"
+                onClick={() => markAllAsReadMutation.mutate()}
+                disabled={
+                  markAllAsReadMutation.isLoading ||
+                  notifications.every((n) => n.readYn)
+                }
+              >
+                모두 읽기
+              </Button>
+            </Box>
+          )}
           <Box sx={{ maxHeight: "60vh", overflowY: "auto" }}>
             {showSkeleton &&
               Array.from({ length: 6 }).map((_, idx) => (
@@ -188,7 +290,7 @@ const Notifications: React.FC = () => {
 
             {!showSkeleton &&
               !errorMessage &&
-              notifications.map((notification, index) => (
+              visibleNotifications.map((notification, index) => (
                 <Box
                   key={notification.id ?? index}
                   onClick={() => handleClickNotification(notification)}
@@ -242,7 +344,7 @@ const Notifications: React.FC = () => {
 
             {!showSkeleton &&
               !errorMessage &&
-              notifications.length > 0 &&
+              visibleNotifications.length > 0 &&
               notificationsQuery.hasNextPage && (
                 <Box sx={{ display: "flex", justifyContent: "center", py: 1 }}>
                   <Button

@@ -102,15 +102,24 @@ export const createApiClient = ({
           }
 
           if (!refreshPromise) {
-            refreshPromise = refreshToken(baseUrl).finally(() => {
-              refreshPromise = null;
-            });
+            refreshPromise = refreshToken(baseUrl)
+              .then((newToken) => {
+                if (!newToken) {
+                  refreshFailed = true;
+                  onUpdateToken(null);
+                } else {
+                  refreshFailed = false;
+                  onUpdateToken(newToken);
+                }
+                return newToken;
+              })
+              .finally(() => {
+                refreshPromise = null;
+              });
           }
           const newToken = await refreshPromise;
 
           if (newToken) {
-            refreshFailed = false;
-            onUpdateToken(newToken);
             originalRequest.headers = originalRequest.headers ?? {};
             (
               originalRequest.headers as Record<string, string>
@@ -118,8 +127,6 @@ export const createApiClient = ({
             return client(originalRequest);
           }
 
-          refreshFailed = true;
-          onUpdateToken(null);
           throw new Error("토큰 재발급 실패");
         } catch (err) {
           return Promise.reject(err);

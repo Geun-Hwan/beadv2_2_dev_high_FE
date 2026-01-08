@@ -2,6 +2,7 @@ import {
   AuctionStatus,
   type AuctionDetailResponse,
   type FileGroup,
+  type Product,
 } from "@moreauction/types";
 import {
   formatWon,
@@ -62,6 +63,7 @@ const ProductDetail: React.FC = () => {
   );
   const [fileGroup, setFileGroup] = useState<FileGroup | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [isDeleted, setIsDeleted] = useState(false);
 
   const deletableAuctionStatuses: AuctionStatus[] = [
     AuctionStatus.READY,
@@ -77,7 +79,7 @@ const ProductDetail: React.FC = () => {
       const productResponse = await productApi.getProductById(productId);
       return productResponse.data;
     },
-    enabled: !!productId,
+    enabled: !!productId && !isDeleted,
     staleTime: 30_000,
   });
 
@@ -86,14 +88,17 @@ const ProductDetail: React.FC = () => {
   const fileGroupQuery = useQuery({
     queryKey: queryKeys.files.group(productFileGroupId),
     queryFn: () => fileApi.getFiles(String(productFileGroupId)),
-    enabled: !!productFileGroupId,
+    enabled: !!productFileGroupId && !isDeleted,
     staleTime: 30_000,
   });
+  const isFileLoading =
+    !!productFileGroupId &&
+    (fileGroupQuery.isLoading || fileGroupQuery.isFetching);
 
   const auctionsQuery = useQuery({
     queryKey: queryKeys.auctions.byProduct(productId),
     queryFn: () => auctionApi.getAuctionsByProductId(productId as string),
-    enabled: !!productId,
+    enabled: !!productId && !isDeleted,
     staleTime: 30_000,
   });
 
@@ -101,8 +106,13 @@ const ProductDetail: React.FC = () => {
 
   const latestAuctionQuery = useQuery({
     queryKey: queryKeys.auctions.detail(latestAuctionId),
-    queryFn: () => auctionApi.getAuctionDetail(latestAuctionId as string),
-    enabled: !!latestAuctionId,
+    queryFn: async () => {
+      const response = await auctionApi.getAuctionDetail(
+        latestAuctionId as string
+      );
+      return response.data;
+    },
+    enabled: !!latestAuctionId && !isDeleted,
     staleTime: 30_000,
   });
 
@@ -143,6 +153,9 @@ const ProductDetail: React.FC = () => {
   }
 
   const galleryItems = useMemo<GalleryItem[]>(() => {
+    if (isFileLoading) {
+      return [];
+    }
     if (fileGroupQuery.isError) {
       return [
         {
@@ -187,7 +200,7 @@ const ProductDetail: React.FC = () => {
         isPlaceholder: true,
       },
     ];
-  }, [fileGroup, fileGroupQuery.isError]);
+  }, [fileGroup, fileGroupQuery.isError, isFileLoading]);
 
   const auctionErrorMessage = useMemo(() => {
     if (!productId) {
@@ -210,7 +223,7 @@ const ProductDetail: React.FC = () => {
     setActiveImageIndex(0);
   }, [product?.id]);
 
-  const latestAuction = latestAuctionQuery.data?.data ?? null;
+  const latestAuction = latestAuctionQuery.data ?? null;
   const activeAuction = useMemo(
     () =>
       latestAuction ??
@@ -309,16 +322,37 @@ const ProductDetail: React.FC = () => {
     try {
       setDeleteLoading(true);
       await productApi.deleteProduct(product.id);
+      setIsDeleted(true);
+      queryClient.removeQueries({
+        queryKey: queryKeys.products.detail(product.id),
+      });
+      queryClient.removeQueries({
+        queryKey: queryKeys.auctions.byProduct(product.id),
+      });
+      if (product.latestAuctionId) {
+        queryClient.removeQueries({
+          queryKey: queryKeys.auctions.detail(product.latestAuctionId),
+        });
+      }
+      if (user?.userId) {
+        queryClient.setQueryData(
+          queryKeys.products.mine(user.userId),
+          (prev?: Product[]) =>
+            prev ? prev.filter((item) => item.id !== product.id) : prev
+        );
+      }
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.products.lists() }),
         queryClient.invalidateQueries({
-          queryKey: queryKeys.products.detail(product.id),
+          queryKey: queryKeys.products.lists(),
+          refetchType: "none",
         }),
         queryClient.invalidateQueries({
           queryKey: queryKeys.products.mine(user?.userId),
+          refetchType: "none",
         }),
         queryClient.invalidateQueries({
-          queryKey: queryKeys.auctions.byProduct(product.id),
+          queryKey: queryKeys.auctions.lists(),
+          refetchType: "none",
         }),
       ]);
       deleted = true;
@@ -369,17 +403,22 @@ const ProductDetail: React.FC = () => {
       if (product?.latestAuctionId === auctionKey) {
         await productApi.updateLatestAuctionId(product.id, null);
       }
-      await queryClient.invalidateQueries({
-        queryKey: queryKeys.auctions.byProduct(productId),
-      });
-      await queryClient.invalidateQueries({
+      queryClient.removeQueries({
         queryKey: queryKeys.auctions.detail(auctionKey),
       });
+      if (product?.id) {
+        queryClient.setQueryData(
+          queryKeys.products.detail(product.id),
+          (prev?: Product | null) => {
+            if (!prev) return prev;
+            if (prev.latestAuctionId !== auctionKey) return prev;
+            return { ...prev, latestAuctionId: null };
+          }
+        );
+      }
       await queryClient.invalidateQueries({
         queryKey: queryKeys.auctions.lists(),
-      });
-      await queryClient.invalidateQueries({
-        queryKey: queryKeys.products.detail(product?.id),
+        refetchType: "none",
       });
       alert("경매가 삭제되었습니다.");
     } catch (err: any) {
@@ -518,19 +557,42 @@ const ProductDetail: React.FC = () => {
                     이미지 로드에 실패했습니다.
                   </Alert>
                 )}
-                <CardMedia
-                  component="img"
-                  height="260"
-                  image={heroImage}
-                  alt={product?.name}
-                  sx={{
-                    objectFit: "contain",
-                    backgroundColor: "grey.50",
-                    borderBottom: "1px solid",
-                    borderColor: "divider",
-                  }}
-                />
-                {galleryItems.length > 1 && (
+                {isFileLoading ? (
+                  <Skeleton variant="rectangular" height={260} />
+                ) : (
+                  <CardMedia
+                    component="img"
+                    height="260"
+                    image={heroImage}
+                    alt={product?.name}
+                    sx={{
+                      objectFit: "contain",
+                      backgroundColor: "grey.50",
+                      borderBottom: "1px solid",
+                      borderColor: "divider",
+                    }}
+                  />
+                )}
+                {isFileLoading ? (
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    flexWrap="wrap"
+                    useFlexGap
+                    sx={{ px: 2, py: 1 }}
+                  >
+                    {Array.from({ length: 4 }).map((_, idx) => (
+                      <Skeleton
+                        key={`gallery-skeleton-${idx}`}
+                        variant="rectangular"
+                        width={64}
+                        height={64}
+                        sx={{ borderRadius: 1 }}
+                      />
+                    ))}
+                  </Stack>
+                ) : (
+                  galleryItems.length > 1 && (
                   <Stack
                     direction="row"
                     spacing={1}
@@ -570,7 +632,7 @@ const ProductDetail: React.FC = () => {
                       );
                     })}
                   </Stack>
-                )}
+                ))}
 
                 <CardContent>
                   <Box

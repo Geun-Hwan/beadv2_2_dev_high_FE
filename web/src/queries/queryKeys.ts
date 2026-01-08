@@ -73,19 +73,44 @@ export const queryKeys = {
     unreadCount: () => [...queryKeys.notifications.all, "unreadCount"] as const,
     list: (userId?: string | null) =>
       [...queryKeys.notifications.all, "list", userId ?? "anonymous"] as const,
-    headerList: (userId?: string | null) =>
+    headerListBase: (userId?: string | null) =>
       [
         ...queryKeys.notifications.all,
         "list",
         "header",
         userId ?? "anonymous",
       ] as const,
+    headerList: (
+      userId?: string | null,
+      scope: "unread" | "all" = "unread"
+    ) =>
+      [
+        ...queryKeys.notifications.all,
+        "list",
+        "header",
+        userId ?? "anonymous",
+        scope,
+      ] as const,
   },
   deposit: {
     all: ["deposit"] as const,
     balance: () => [...queryKeys.deposit.all, "balance"] as const,
     account: () => [...queryKeys.deposit.all, "account"] as const,
-    history: () => [...queryKeys.deposit.all, "history"] as const,
+    historyAll: () => [...queryKeys.deposit.all, "history"] as const,
+    history: (type?: string | null) =>
+      [
+        ...queryKeys.deposit.all,
+        "history",
+        type ?? "all",
+      ] as const,
+    payments: () => [...queryKeys.deposit.all, "payments"] as const,
+    paymentFailures: () => [...queryKeys.deposit.all, "paymentFailures"] as const,
+    paymentFailuresByOrder: (orderId?: string | null) =>
+      [
+        ...queryKeys.deposit.all,
+        "paymentFailures",
+        orderId ?? "unknown",
+      ] as const,
   },
   orders: {
     all: ["orders"] as const,
@@ -112,6 +137,10 @@ export const queryKeys = {
   user: {
     all: ["user"] as const,
     me: () => [...queryKeys.user.all, "me"] as const,
+    detail: (userId?: string | null) =>
+      [...queryKeys.user.all, "detail", userId ?? "unknown"] as const,
+    many: (userIds?: Array<string | null | undefined>) =>
+      [...queryKeys.user.all, "many", toStableIdList(userIds)] as const,
   },
   seller: {
     all: ["seller"] as const,
