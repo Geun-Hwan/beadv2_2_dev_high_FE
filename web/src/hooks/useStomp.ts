@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState, useCallback } from "react";
 import { Client, type IMessage, type StompSubscription } from "@stomp/stompjs";
+import { useCallback, useEffect, useRef, useState } from "react";
 import SockJS from "sockjs-client";
-import { API_BASE_URL } from "@/apis/client";
 
 interface UseStompProps {
   topic: string; // 구독할 토픽 (auctionId 포함된 완전한 형태)
