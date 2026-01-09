@@ -44,7 +44,7 @@ file as the project-specific guide for changes, commands, and conventions.
 - Domain-first structure: `web/src/features/<domain>/*`
 - Route screens: `web/src/features/<domain>/pages/*`
 - Domain UI: `web/src/features/<domain>/components/*`
-- Web-shared: `web/src/shared/components/*`, `web/src/shared/utils/*`
+- Web-shared: `web/src/shared/*` (e.g., `components/`, `utils/`, `apis/`, `constants/`, `providers/`, `queryKeys/` as needed)
 - Shared hooks (cross-domain): `web/src/hooks/*`
 
 ### Admin (`admin/`)
@@ -53,7 +53,7 @@ file as the project-specific guide for changes, commands, and conventions.
 - Route screens: `admin/src/features/<domain>/pages/*`
 - Domain UI: `admin/src/features/<domain>/components/*`
 - Domain hooks (queries/mutations/data logic): `admin/src/features/<domain>/hooks/*`
-- Admin-shared: `admin/src/shared/components/*`, `admin/src/shared/utils/*`
+- Admin-shared: `admin/src/shared/*` (e.g., `components/`, `utils/`, `apis/`, `constants/`, `providers/`, `queryKeys/` as needed)
 - Shared hooks (cross-domain): `admin/src/hooks/*`
 
 ### Component structure (project-wide)
@@ -82,3 +82,10 @@ file as the project-specific guide for changes, commands, and conventions.
 - Navigation/Loading:
   - Back/forward should show correct data (render from cache first; refetch in background if needed).
   - Prefer skeleton loading states (small, component-level) over full-page spinners.
+
+## Refactoring rules
+
+- Refactors must not change behavior/routing/API contracts unless explicitly requested.
+- Prefer small, incremental changes (one domain/page at a time) and keep builds green (`pnpm lint:*`, `pnpm build:*`).
+- Extract components/hooks first, then move files; use temporary re-exports (bridge files) to minimize import churn.
+- Preserve type safety and UX states (loading/skeleton/empty/error) during refactors.
