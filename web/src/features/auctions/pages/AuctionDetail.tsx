@@ -20,11 +20,11 @@ import {
 import type { IMessage } from "@stomp/stompjs";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { auctionApi } from "@/apis/auctionApi";
-import { depositApi } from "@/apis/depositApi";
-import { fileApi } from "@/apis/fileApi";
-import { productApi } from "@/apis/productApi";
-import { userApi } from "@/apis/userApi";
+import { auctionApi } from "@/shared/apis/auctionApi";
+import { depositApi } from "@/shared/apis/depositApi";
+import { fileApi } from "@/shared/apis/fileApi";
+import { productApi } from "@/shared/apis/productApi";
+import { userApi } from "@/shared/apis/userApi";
 import {
   type InfiniteData,
   useInfiniteQuery,
@@ -41,8 +41,8 @@ import BidHistory from "@/features/auctions/components/BidHistory";
 import ProductInfo from "@/features/auctions/components/ProductInfo";
 import { DepositChargeDialog } from "@/features/mypage/components/DepositChargeDialog";
 import { requestTossPayment } from "@/shared/utils/requestTossPayment";
-import { useAuth } from "@/contexts/AuthContext";
-import { useStomp } from "@/hooks/useStomp";
+import { useAuth } from "@/shared/contexts/AuthContext";
+import { useStomp } from "@/features/auctions/hooks/useStomp";
 import { formatWon } from "@moreauction/utils";
 import {
   type AuctionBidMessage,
@@ -53,8 +53,8 @@ import {
   type User,
 } from "@moreauction/types";
 import { DepositType } from "@moreauction/types";
-import { queryKeys } from "@/queries/queryKeys";
-import { getErrorMessage } from "@/utils/getErrorMessage";
+import { queryKeys } from "@/shared/queries/queryKeys";
+import { getErrorMessage } from "@/shared/utils/getErrorMessage";
 
 const AuctionDetail: React.FC = () => {
   const { id: auctionId } = useParams<{ id: string }>();
@@ -240,7 +240,6 @@ const AuctionDetail: React.FC = () => {
     return merged;
   }, [bidHistoryQuery.data?.pages]);
 
-
   const refreshBidHistoryFirstPage = useCallback(async () => {
     await queryClient.invalidateQueries({
       queryKey: queryKeys.auctions.bidHistory(auctionId),
@@ -279,7 +278,8 @@ const AuctionDetail: React.FC = () => {
   const shouldBlockDetail = !!errorMessage && !auctionDetail;
   const isBidHistoryLoading =
     bidHistoryQuery.isLoading && bidHistory.length === 0;
-  const isParticipationLoading = participationQuery.isLoading && isAuthenticated;
+  const isParticipationLoading =
+    participationQuery.isLoading && isAuthenticated;
   const isParticipationUnavailable =
     isAuthenticated && !!participationErrorMessage;
 
@@ -307,9 +307,7 @@ const AuctionDetail: React.FC = () => {
   const cachedUsers = useMemo(() => {
     const map = new Map<string, User>();
     bidderUserIds.forEach((id) => {
-      const cached = queryClient.getQueryData<User>(
-        queryKeys.user.detail(id)
-      );
+      const cached = queryClient.getQueryData<User>(queryKeys.user.detail(id));
       if (cached) {
         map.set(id, cached);
       }
@@ -382,8 +380,7 @@ const AuctionDetail: React.FC = () => {
     [userLabelMap]
   );
 
-  const isUserInfoLoading =
-    missingUserIds.length > 0 && usersQuery.isLoading;
+  const isUserInfoLoading = missingUserIds.length > 0 && usersQuery.isLoading;
 
   const resolvedHighestBidderId =
     auctionDetail?.highestUserId ?? highestBidderInfo?.id;
@@ -902,24 +899,24 @@ const AuctionDetail: React.FC = () => {
                 )}
                 <Divider />
                 {canRenderDetail ? (
-                    <AuctionBidForm
-                      isAuctionInReady={isAuctionInReday}
-                      isAuctionInProgress={isAuctionInProgress}
-                      currentBidPrice={currentBidPrice}
-                      minBidPrice={minBidPrice}
-                      hasAnyBid={hasAnyBid}
-                      newBidAmount={newBidAmount}
-                      setNewBidAmount={setNewBidAmount}
-                      handleBidSubmit={handleBidSubmit}
-                      bidLoading={bidLoading}
-                      isConnected={isConnected}
-                      showConnectionStatus={shouldConnect}
-                      isRetrying={isRetrying}
-                      isWithdrawn={participationStatus.isWithdrawn}
-                      isAuthenticated={isAuthenticated}
-                      isParticipationUnavailable={isParticipationUnavailable}
-                      isSeller={isSeller}
-                    />
+                  <AuctionBidForm
+                    isAuctionInReady={isAuctionInReday}
+                    isAuctionInProgress={isAuctionInProgress}
+                    currentBidPrice={currentBidPrice}
+                    minBidPrice={minBidPrice}
+                    hasAnyBid={hasAnyBid}
+                    newBidAmount={newBidAmount}
+                    setNewBidAmount={setNewBidAmount}
+                    handleBidSubmit={handleBidSubmit}
+                    bidLoading={bidLoading}
+                    isConnected={isConnected}
+                    showConnectionStatus={shouldConnect}
+                    isRetrying={isRetrying}
+                    isWithdrawn={participationStatus.isWithdrawn}
+                    isAuthenticated={isAuthenticated}
+                    isParticipationUnavailable={isParticipationUnavailable}
+                    isSeller={isSeller}
+                  />
                 ) : (
                   <Alert severity="info">
                     경매 정보를 불러오면 입찰할 수 있습니다.
@@ -950,7 +947,7 @@ const AuctionDetail: React.FC = () => {
               비슷한 경매
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              AI 추천 기반 유사 경매가 여기에 표시됩니다.
+              이 경매와 비슷한 항목을 추천해 드려요.
             </Typography>
           </Box>
           <Button size="small" disabled>
@@ -1138,9 +1135,7 @@ const AuctionDetail: React.FC = () => {
           ) : (
             <>
               {fileGroupQuery.isError && (
-                <Alert severity="warning">
-                  이미지 로드에 실패했습니다.
-                </Alert>
+                <Alert severity="warning">이미지 로드에 실패했습니다.</Alert>
               )}
               <ProductInfo
                 imageUrls={productImageUrls}

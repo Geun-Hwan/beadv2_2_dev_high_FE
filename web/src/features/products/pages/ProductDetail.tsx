@@ -29,14 +29,14 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
-import { auctionApi } from "@/apis/auctionApi";
-import { fileApi } from "@/apis/fileApi";
-import { productApi } from "@/apis/productApi";
-import { wishlistApi } from "@/apis/wishlistApi";
+import { auctionApi } from "@/shared/apis/auctionApi";
+import { fileApi } from "@/shared/apis/fileApi";
+import { productApi } from "@/shared/apis/productApi";
+import { wishlistApi } from "@/shared/apis/wishlistApi";
 import RemainingTime from "@/shared/components/RemainingTime";
-import { useAuth } from "@/contexts/AuthContext";
-import { queryKeys } from "@/queries/queryKeys";
-import { getErrorMessage } from "@/utils/getErrorMessage";
+import { useAuth } from "@/shared/contexts/AuthContext";
+import { queryKeys } from "@/shared/queries/queryKeys";
+import { getErrorMessage } from "@/shared/utils/getErrorMessage";
 
 const ProductDetail: React.FC = () => {
   const formatDateTime = (value?: string | null) => {
@@ -131,10 +131,7 @@ const ProductDetail: React.FC = () => {
     }
     if (productQuery.isError) {
       setError(
-        getErrorMessage(
-          productQuery.error,
-          "상품 정보를 불러오지 못했습니다."
-        )
+        getErrorMessage(productQuery.error, "상품 정보를 불러오지 못했습니다.")
       );
     } else {
       setError(null);
@@ -224,8 +221,7 @@ const ProductDetail: React.FC = () => {
     () =>
       latestAuction ??
       (auctions.find((a) => a.status === AuctionStatus.IN_PROGRESS) ||
-        auctions.find((a) => a.status === AuctionStatus.READY) ||
-        auctions.find((a) => a.status === AuctionStatus.COMPLETED)),
+        auctions.find((a) => a.status === AuctionStatus.READY)),
     [auctions, latestAuction]
   );
 
@@ -255,13 +251,6 @@ const ProductDetail: React.FC = () => {
     auctions.some((auction) => auction.status === AuctionStatus.IN_PROGRESS) ||
     activeAuction?.status === AuctionStatus.IN_PROGRESS;
 
-  const canEditProduct =
-    isOwner && (!activeAuction || activeAuction.status === AuctionStatus.READY);
-
-  const canReregisterAuction =
-    ((!activeAuction && auctions.length > 0) || auctions.length === 0) &&
-    isOwner;
-
   const hasBlockingAuction =
     auctions.some(
       (auction) =>
@@ -270,6 +259,15 @@ const ProductDetail: React.FC = () => {
     ) ||
     activeAuction?.status === AuctionStatus.IN_PROGRESS ||
     activeAuction?.status === AuctionStatus.READY;
+
+  const canEditProduct =
+    isOwner && (!activeAuction || activeAuction.status === AuctionStatus.READY);
+
+  const canReregisterAuction =
+    ((!activeAuction && auctions.length > 0) || auctions.length === 0) &&
+    isOwner;
+  const canRegisterAuction =
+    isOwner && !!product?.id && !latestAuctionId && !hasBlockingAuction;
 
   const canDeleteProduct = !!(isOwner && product && !hasBlockingAuction);
   const showAuctionActions =
@@ -589,46 +587,47 @@ const ProductDetail: React.FC = () => {
                   </Stack>
                 ) : (
                   galleryItems.length > 1 && (
-                  <Stack
-                    direction="row"
-                    spacing={1}
-                    flexWrap="wrap"
-                    useFlexGap
-                    sx={{ px: 2, py: 1 }}
-                  >
-                    {galleryItems.map((item, idx) => {
-                      const isActive = idx === activeImageIndex;
-                      return (
-                        <ButtonBase
-                          key={item.key}
-                          onClick={() => setActiveImageIndex(idx)}
-                          sx={{
-                            width: 64,
-                            height: 64,
-                            borderRadius: 1,
-                            overflow: "hidden",
-                            border: "2px solid",
-                            borderColor: isActive
-                              ? "primary.main"
-                              : "transparent",
-                            boxShadow: isActive ? 2 : 0,
-                          }}
-                        >
-                          <Box
-                            component="img"
-                            src={item.url}
-                            alt={item.label}
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      flexWrap="wrap"
+                      useFlexGap
+                      sx={{ px: 2, py: 1 }}
+                    >
+                      {galleryItems.map((item, idx) => {
+                        const isActive = idx === activeImageIndex;
+                        return (
+                          <ButtonBase
+                            key={item.key}
+                            onClick={() => setActiveImageIndex(idx)}
                             sx={{
-                              width: "100%",
-                              height: "100%",
-                              objectFit: "cover",
+                              width: 64,
+                              height: 64,
+                              borderRadius: 1,
+                              overflow: "hidden",
+                              border: "2px solid",
+                              borderColor: isActive
+                                ? "primary.main"
+                                : "transparent",
+                              boxShadow: isActive ? 2 : 0,
                             }}
-                          />
-                        </ButtonBase>
-                      );
-                    })}
-                  </Stack>
-                ))}
+                          >
+                            <Box
+                              component="img"
+                              src={item.url}
+                              alt={item.label}
+                              sx={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                              }}
+                            />
+                          </ButtonBase>
+                        );
+                      })}
+                    </Stack>
+                  )
+                )}
 
                 <CardContent>
                   <Box
@@ -896,14 +895,13 @@ const ProductDetail: React.FC = () => {
                         이 상품에 진행 중인 경매가 없습니다.
                       </Typography>
                       {showAuctionActions &&
-                        canReregisterAuction &&
-                        product?.id && (
+                        (canRegisterAuction || canReregisterAuction) && (
                           <Box sx={{ mt: 2, textAlign: "right" }}>
                             <Button
                               variant="contained"
                               color="primary"
                               component={RouterLink}
-                              to={`/auctions/new/${product.id}`}
+                              to={`/auctions/new/${product?.id}`}
                             >
                               {auctions.length === 0
                                 ? "경매 등록"

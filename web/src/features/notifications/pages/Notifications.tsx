@@ -18,14 +18,14 @@ import {
   useQueryClient,
   type QueryKey,
 } from "@tanstack/react-query";
-import { useAuth } from "@/contexts/AuthContext";
-import { notificationApi } from "@/apis/notificationApi";
+import { useAuth } from "@/shared/contexts/AuthContext";
+import { notificationApi } from "@/shared/apis/notificationApi";
 import type {
   NotificationInfo,
   PagedNotificationResponse,
 } from "@moreauction/types";
-import { queryKeys } from "@/queries/queryKeys";
-import { getErrorMessage } from "@/utils/getErrorMessage";
+import { queryKeys } from "@/shared/queries/queryKeys";
+import { getErrorMessage } from "@/shared/utils/getErrorMessage";
 
 const sortNotifications = (items: NotificationInfo[]) => {
   return [...items].sort((a, b) => {

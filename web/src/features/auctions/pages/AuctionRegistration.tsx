@@ -19,10 +19,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
-import { auctionApi } from "@/apis/auctionApi";
-import { productApi } from "@/apis/productApi";
-import { useAuth } from "@/contexts/AuthContext";
-import { queryKeys } from "@/queries/queryKeys";
+import { auctionApi } from "@/shared/apis/auctionApi";
+import { productApi } from "@/shared/apis/productApi";
+import { useAuth } from "@/shared/contexts/AuthContext";
+import { queryKeys } from "@/shared/queries/queryKeys";
 
 import { hasRole, UserRole } from "@moreauction/types";
 import {
@@ -63,8 +63,9 @@ const AuctionRegistration: React.FC = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isCheckingAuction, setIsCheckingAuction] = useState(false);
-  const [registrationBlockedMessage, setRegistrationBlockedMessage] =
-    useState<string | null>(null);
+  const [registrationBlockedMessage, setRegistrationBlockedMessage] = useState<
+    string | null
+  >(null);
 
   const auctionDetailQuery = useQuery({
     queryKey: queryKeys.auctions.detail(auctionId),
@@ -288,7 +289,8 @@ const AuctionRegistration: React.FC = () => {
             ) => {
               const list = Array.isArray(prev) ? prev : prev?.data ?? [];
               const next = list.map((item) =>
-                item.id === targetAuctionId || item.auctionId === targetAuctionId
+                item.id === targetAuctionId ||
+                item.auctionId === targetAuctionId
                   ? { ...item, ...response.data }
                   : item
               );

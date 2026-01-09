@@ -15,13 +15,14 @@ import React, {
   useRef,
   type ReactNode,
 } from "react";
-import { userApi } from "@/apis/userApi";
+import { userApi } from "@/shared/apis/userApi";
 
 export interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
   login: (res: LoginResponse) => void;
   logout: () => void;
+  updateUser: (nextUser: User) => void;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(
@@ -82,6 +83,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(normalizedUser);
   };
 
+  const updateUser = useCallback(
+    (nextUser: User) => {
+      const normalizedUser = normalizeUser(nextUser);
+      localStorage.setItem("user", JSON.stringify(normalizedUser));
+      setUser(normalizedUser);
+    },
+    [normalizeUser]
+  );
+
   const logout = useCallback(() => {
     if (isLoggingOutRef.current) {
       finalizeLogout();
@@ -91,7 +101,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     finalizeLogout();
     userApi
       .logout()
-      .catch((error) => {
+      .catch((error: any) => {
         console.warn("로그아웃 API 실패:", error);
       })
       .finally(() => {
@@ -99,13 +109,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
   }, [finalizeLogout]);
 
-  const updateAccessToken = useCallback((newToken: string | null) => {
-    if (!newToken) {
-      logout();
-      return;
-    }
-    localStorage.setItem("accessToken", newToken);
-  }, [logout]);
+  const updateAccessToken = useCallback(
+    (newToken: string | null) => {
+      if (!newToken) {
+        logout();
+        return;
+      }
+      localStorage.setItem("accessToken", newToken);
+    },
+    [logout]
+  );
 
   useEffect(() => {
     updateAccessTokenExternal = updateAccessToken;
@@ -155,6 +168,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         user,
         login,
         logout,
+        updateUser,
       }}
     >
       {children}

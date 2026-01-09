@@ -16,16 +16,16 @@ import {
 import { format } from "date-fns";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
-import { depositApi } from "@/apis/depositApi";
-import { orderApi } from "@/apis/orderApi";
+import { depositApi } from "@/shared/apis/depositApi";
+import { orderApi } from "@/shared/apis/orderApi";
 import { DepositChargeDialog } from "@/features/mypage/components/DepositChargeDialog";
 import { requestTossPayment } from "@/shared/utils/requestTossPayment";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/shared/contexts/AuthContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { OrderStatus, type OrderResponse } from "@moreauction/types";
 import { formatWon } from "@moreauction/utils";
-import { queryKeys } from "@/queries/queryKeys";
-import { getErrorMessage } from "@/utils/getErrorMessage";
+import { queryKeys } from "@/shared/queries/queryKeys";
+import { getErrorMessage } from "@/shared/utils/getErrorMessage";
 
 const PendingOrders: React.FC = () => {
   const location = useLocation();

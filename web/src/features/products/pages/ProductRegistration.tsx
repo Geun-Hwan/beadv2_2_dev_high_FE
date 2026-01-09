@@ -51,12 +51,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
-import { categoryApi } from "@/apis/categoryApi";
-import { fileApi } from "@/apis/fileApi";
-import { productApi } from "@/apis/productApi";
-import { useAuth } from "@/contexts/AuthContext";
-import { queryKeys } from "@/queries/queryKeys";
-import { getErrorMessage } from "@/utils/getErrorMessage";
+import { categoryApi } from "@/shared/apis/categoryApi";
+import { fileApi } from "@/shared/apis/fileApi";
+import { productApi } from "@/shared/apis/productApi";
+import { useAuth } from "@/shared/contexts/AuthContext";
+import { queryKeys } from "@/shared/queries/queryKeys";
+import { getErrorMessage } from "@/shared/utils/getErrorMessage";
 
 import { getProductImageUrls } from "@moreauction/utils";
 
@@ -228,10 +228,7 @@ const ProductRegistration: React.FC = () => {
   const dataError = useMemo(() => {
     const err: any = categoriesQuery.error ?? productDetailQuery.error;
     if (!err) return null;
-    return getErrorMessage(
-      err,
-      "데이터를 불러오는 데 실패했습니다."
-    );
+    return getErrorMessage(err, "데이터를 불러오는 데 실패했습니다.");
   }, [categoriesQuery.error, productDetailQuery.error]);
   const pageError = dataError ?? error;
   const formLoading = loading || productDetailQuery.isLoading;
@@ -450,8 +447,7 @@ const ProductRegistration: React.FC = () => {
           if (user?.userId) {
             queryClient.setQueryData(
               queryKeys.products.mine(user.userId),
-              (prev?: Product[]) =>
-                prev ? [createdProduct, ...prev] : prev
+              (prev?: Product[]) => (prev ? [createdProduct, ...prev] : prev)
             );
           }
         }

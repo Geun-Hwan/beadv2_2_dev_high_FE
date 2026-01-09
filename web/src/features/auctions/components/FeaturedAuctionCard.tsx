@@ -12,7 +12,7 @@ import {
 import React, { useMemo } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { auctionApi } from "@/apis/auctionApi";
+import { auctionApi } from "@/shared/apis/auctionApi";
 import {
   AuctionStatus,
   type AuctionDetailResponse,
@@ -21,9 +21,9 @@ import {
 import { getAuctionStatusText } from "@moreauction/utils";
 import RemainingTime from "@/shared/components/RemainingTime";
 import { formatWon } from "@moreauction/utils";
-import { queryKeys } from "@/queries/queryKeys";
+import { queryKeys } from "@/shared/queries/queryKeys";
 import { ImageWithFallback } from "@/shared/components/common/ImageWithFallback";
-import { getErrorMessage } from "@/utils/getErrorMessage";
+import { getErrorMessage } from "@/shared/utils/getErrorMessage";
 
 /**
  * 홈 히어로에 들어갈 "오늘의 인기 경매" 카드

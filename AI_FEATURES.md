@@ -4,36 +4,58 @@ This document tracks AI-related UI/UX placeholders already added and the
 planned capabilities to be implemented later. The goal is to keep this
 list actionable for both frontend and backend work.
 
-## Currently placed (UI only)
-- Home: "AI 맞춤 추천" section (login-only, skeleton cards).
-- Auction detail: "비슷한 경매" section (skeleton cards).
-- Auction registration: "AI 시작가 추천" card (skeleton + apply button placeholder).
-- Wishlist: "찜 기반 추천" section (skeleton cards).
+## 1) Placed UI placeholders (UI only)
 
-## Next MVP candidates
-- Personalized auction recommendations (login users).
-- Similar auctions based on category/price/keywords.
-- Start bid suggestion on auction registration.
+- Home: "맞춤 추천" section (login-only, skeleton cards).
+- Auction detail: "비슷한 경매" section (skeleton cards).
+- Wishlist: "찜 기반 추천" section (skeleton cards).
+- Auction registration: "AI 시작가 추천" card (skeleton + apply button placeholder).
+- Product registration: "AI 상세설명 초안 생성" entry (TBD: button/section).
+- In-app chatbot: "More Assistant" entry (TBD: launcher UI).
+
+## 2) MVP v1 (rules-first recommendations + AI assist)
+
+### Recommendations (rules/stat-based)
+
+- Home personalized recommendations (login users).
+- Similar auctions (category/price/keywords).
 - Wishlist-based recommendations (use wishlist product ids).
 
-## Additional ideas to consider
+### AI Assist (AI keyword OK)
+
+- AI start bid suggestion on auction registration.
+- AI product description draft generation.
+- In-app chatbot (FAQ + contextual guidance, RAG-first).
+
+## 3) Additional ideas (post-MVP)
+
 - Search: query correction and keyword expansion.
 - Notifications: priority scoring (important first).
 - MyPage: bidding habit summary and deposit guidance.
-- Product registration: auto category suggestion + description summary.
 - Price trend badges: "최근 낙찰 평균가" vs current bid.
 
-## Data requirements (minimum)
-- User behavior events: view, bid, wishlist, search.
-- Auction/product metadata: category, price, status, end time.
-- Auction results: final bid price, winnerId.
+## 4) Data requirements (minimum)
 
-## Suggested API endpoints (draft)
+- User behavior events: view, bid, wishlist, search.
+- Auction/product metadata: category, price, status, end time, keywords.
+- Auction results: final bid price, winnerId.
+- (Chatbot) Knowledge base docs + versioning.
+
+## 5) Suggested API endpoints (draft)
+
+### Recommendations
+
 - GET /api/v1/recommendations/me
 - GET /api/v1/auctions/{auctionId}/similar
-- POST /api/v1/auctions/price-suggestion
 - GET /api/v1/recommendations/wishlist
 
+### AI Assist
+
+- POST /api/v1/auctions/price-suggestion
+- POST /api/v1/products/description-draft
+- POST /api/v1/chat
+
 ## Notes
-- MVP can start with rules (category/price/recency) and upgrade later.
+
+- Recommendations MVP can start with rules (category/price/recency) and upgrade later (embeddings/ML).
 - Keep responses small and cacheable on the client.

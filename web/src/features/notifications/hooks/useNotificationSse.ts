@@ -4,9 +4,9 @@ import type {
   NotificationInfo,
   PagedNotificationResponse,
 } from "@moreauction/types";
-import { API_BASE_URL } from "@/apis/client";
-import { queryKeys } from "@/queries/queryKeys";
-import { useAuth } from "@/contexts/AuthContext";
+import { API_BASE_URL } from "@/shared/apis/client";
+import { queryKeys } from "@/shared/queries/queryKeys";
+import { useAuth } from "@/shared/contexts/AuthContext";
 
 type SseEvent = {
   event?: string;

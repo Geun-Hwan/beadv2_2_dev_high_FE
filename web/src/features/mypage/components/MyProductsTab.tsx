@@ -14,10 +14,10 @@ import React, { useMemo } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import type { Product } from "@moreauction/types";
-import { productApi } from "@/apis/productApi";
-import { useAuth } from "@/contexts/AuthContext";
-import { queryKeys } from "@/queries/queryKeys";
-import { getErrorMessage } from "@/utils/getErrorMessage";
+import { productApi } from "@/shared/apis/productApi";
+import { useAuth } from "@/shared/contexts/AuthContext";
+import { queryKeys } from "@/shared/queries/queryKeys";
+import { getErrorMessage } from "@/shared/utils/getErrorMessage";
 
 export const MyProductsTab: React.FC = () => {
   const { user } = useAuth();

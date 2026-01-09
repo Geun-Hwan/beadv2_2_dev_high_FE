@@ -10,12 +10,12 @@ import {
   Typography,
 } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
-import { auctionApi } from "@/apis/auctionApi";
-import { useAuth } from "@/contexts/AuthContext";
-import { queryKeys } from "@/queries/queryKeys";
+import { auctionApi } from "@/shared/apis/auctionApi";
+import { useAuth } from "@/shared/contexts/AuthContext";
+import { queryKeys } from "@/shared/queries/queryKeys";
 import { formatWon } from "@moreauction/utils";
 import type { AuctionParticipationResponse } from "@moreauction/types";
-import { getErrorMessage } from "@/utils/getErrorMessage";
+import { getErrorMessage } from "@/shared/utils/getErrorMessage";
 import { Link as RouterLink } from "react-router-dom";
 
 const formatDateTime = (value?: string) => {

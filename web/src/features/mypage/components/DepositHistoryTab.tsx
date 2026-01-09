@@ -24,12 +24,12 @@ import {
   type PagedDepositHistoryResponse,
 } from "@moreauction/types";
 import { formatNumber } from "@moreauction/utils";
-import { depositApi } from "@/apis/depositApi";
+import { depositApi } from "@/shared/apis/depositApi";
 import { DepositChargeDialog } from "@/features/mypage/components/DepositChargeDialog";
 import { requestTossPayment } from "@/shared/utils/requestTossPayment";
-import { useAuth } from "@/contexts/AuthContext";
-import { queryKeys } from "@/queries/queryKeys";
-import { getErrorMessage } from "@/utils/getErrorMessage";
+import { useAuth } from "@/shared/contexts/AuthContext";
+import { queryKeys } from "@/shared/queries/queryKeys";
+import { getErrorMessage } from "@/shared/utils/getErrorMessage";
 
 type HistoryFilter = "ALL" | DepositType;
 
@@ -106,8 +106,7 @@ export const DepositHistoryTab: React.FC = () => {
       )
     : null;
   const filtered = history;
-  const filterLabel =
-    filter === "ALL" ? "예치금" : getHistoryTypeText(filter);
+  const filterLabel = filter === "ALL" ? "예치금" : getHistoryTypeText(filter);
 
   useEffect(() => {
     sessionStorage.setItem("depositHistoryFilter", filter);
@@ -211,8 +210,8 @@ export const DepositHistoryTab: React.FC = () => {
                 예치금 계좌 정보를 불러오지 못했습니다.
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                잠시 후 다시 시도해 주세요. 문제가 반복되면 고객센터로
-                문의해 주세요.
+                잠시 후 다시 시도해 주세요. 문제가 반복되면 고객센터로 문의해
+                주세요.
               </Typography>
             </Alert>
           ) : (

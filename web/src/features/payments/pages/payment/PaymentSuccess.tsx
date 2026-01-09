@@ -11,10 +11,10 @@ import {
   Typography,
 } from "@mui/material";
 import { useQueryClient } from "@tanstack/react-query";
-import { auctionApi } from "@/apis/auctionApi";
-import { depositApi } from "@/apis/depositApi";
-import { useAuth } from "@/contexts/AuthContext";
-import { queryKeys } from "@/queries/queryKeys";
+import { auctionApi } from "@/shared/apis/auctionApi";
+import { depositApi } from "@/shared/apis/depositApi";
+import { useAuth } from "@/shared/contexts/AuthContext";
+import { queryKeys } from "@/shared/queries/queryKeys";
 
 export default function PaymentSuccess() {
   const navigate = useNavigate();
@@ -32,34 +32,43 @@ export default function PaymentSuccess() {
   });
   const queryClient = useQueryClient();
 
-  const setDepositBalanceCache = useCallback((next: number) => {
-    queryClient.setQueryData(queryKeys.deposit.balance(), next);
-    localStorage.setItem("depositBalance", String(next));
-  }, [queryClient]);
+  const setDepositBalanceCache = useCallback(
+    (next: number) => {
+      queryClient.setQueryData(queryKeys.deposit.balance(), next);
+      localStorage.setItem("depositBalance", String(next));
+    },
+    [queryClient]
+  );
 
-  const incrementDepositBalance = useCallback((amount: number) => {
-    queryClient.setQueryData(
-      queryKeys.deposit.balance(),
-      (prev: number | undefined) => {
-        const base = typeof prev === "number" ? prev : 0;
-        const next = Math.max(base + amount, 0);
-        localStorage.setItem("depositBalance", String(next));
-        return next;
-      }
-    );
-  }, [queryClient]);
+  const incrementDepositBalance = useCallback(
+    (amount: number) => {
+      queryClient.setQueryData(
+        queryKeys.deposit.balance(),
+        (prev: number | undefined) => {
+          const base = typeof prev === "number" ? prev : 0;
+          const next = Math.max(base + amount, 0);
+          localStorage.setItem("depositBalance", String(next));
+          return next;
+        }
+      );
+    },
+    [queryClient]
+  );
 
-  const decrementDepositBalance = useCallback((amount: number) => {
-    queryClient.setQueryData(
-      queryKeys.deposit.balance(),
-      (prev: number | undefined) => {
-        const base = typeof prev === "number" ? prev : 0;
-        const next = Math.max(base - amount, 0);
-        localStorage.setItem("depositBalance", String(next));
-        return next;
-      }
-    );
-  }, [queryClient]);
+  const decrementDepositBalance = useCallback(
+    (amount: number) => {
+      queryClient.setQueryData(
+        queryKeys.deposit.balance(),
+        (prev: number | undefined) => {
+          const base = typeof prev === "number" ? prev : 0;
+          const next = Math.max(base - amount, 0);
+          localStorage.setItem("depositBalance", String(next));
+          return next;
+        }
+      );
+    },
+    [queryClient]
+  );
 
   useEffect(() => {
     const approvePayment = async () => {
@@ -87,7 +96,7 @@ export default function PaymentSuccess() {
             queryKey: queryKeys.deposit.account(),
           }),
           queryClient.invalidateQueries({
-                  queryKey: queryKeys.deposit.historyAll(),
+            queryKey: queryKeys.deposit.historyAll(),
           }),
         ]);
 
@@ -135,7 +144,7 @@ export default function PaymentSuccess() {
                     queryKey: queryKeys.deposit.account(),
                   }),
                   queryClient.invalidateQueries({
-                  queryKey: queryKeys.deposit.historyAll(),
+                    queryKey: queryKeys.deposit.historyAll(),
                   }),
                 ]);
                 redirectPath = "/orders";
@@ -198,7 +207,9 @@ export default function PaymentSuccess() {
                     );
                   } catch (bidErr) {
                     console.error("자동 입찰 처리 실패:", bidErr);
-                    setTitle("충전과 보증금 결제는 완료됐지만 입찰은 실패했어요");
+                    setTitle(
+                      "충전과 보증금 결제는 완료됐지만 입찰은 실패했어요"
+                    );
                     setDescription(
                       "예치금 충전과 보증금 결제는 완료됐지만 입찰 접수에 실패했습니다. 경매 상세에서 다시 입찰해 주세요."
                     );

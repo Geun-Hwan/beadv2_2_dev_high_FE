@@ -9,7 +9,7 @@ import { AuctionParticipationTab } from "@/features/mypage/components/AuctionPar
 import { MyProductsTab } from "@/features/mypage/components/MyProductsTab";
 import { OrdersTab } from "@/features/mypage/components/OrdersTab";
 import { SettlementTab } from "@/features/mypage/components/SettlementTab";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/shared/contexts/AuthContext";
 
 const MyPage: React.FC = () => {
   const { user } = useAuth();
@@ -62,12 +62,8 @@ const MyPage: React.FC = () => {
         </Tabs>
       </Box>
       <Box sx={{ mt: 3 }}>
-        {safeTabValue === 0 && (
-          <DepositHistoryTab />
-        )}
-        {safeTabValue === 1 && (
-          <DepositPaymentHistoryTab />
-        )}
+        {safeTabValue === 0 && <DepositHistoryTab />}
+        {safeTabValue === 1 && <DepositPaymentHistoryTab />}
         {safeTabValue === 2 && (
           <OrdersTab
             title="구매 내역"
@@ -84,13 +80,9 @@ const MyPage: React.FC = () => {
             emptyText="판매한 주문이 없습니다."
           />
         )}
-        {safeTabValue === 5 && isSeller && (
-          <DepositSummaryTab />
-        )}
+        {safeTabValue === 5 && isSeller && <DepositSummaryTab />}
         {safeTabValue === 6 && isSeller && <SettlementTab />}
-        {safeTabValue === 7 && isSeller && (
-          <MyProductsTab />
-        )}
+        {safeTabValue === 7 && isSeller && <MyProductsTab />}
       </Box>
     </Container>
   );

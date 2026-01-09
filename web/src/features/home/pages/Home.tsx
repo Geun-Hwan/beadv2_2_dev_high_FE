@@ -13,8 +13,8 @@ import { Gavel as GavelIcon } from "@mui/icons-material";
 import { Link as RouterLink } from "react-router-dom";
 import AuctionList from "@/features/auctions/components/AuctionList";
 import { hasRole, UserRole, AuctionStatus } from "@moreauction/types";
-import { useAuth } from "@/contexts/AuthContext";
-import { productApi } from "@/apis/productApi";
+import { useAuth } from "@/shared/contexts/AuthContext";
+import { productApi } from "@/shared/apis/productApi";
 
 // 홈: 상단 히어로 섹션 + 상품 목록
 const Home: React.FC = () => {
@@ -184,7 +184,7 @@ const Home: React.FC = () => {
           >
             <Box>
               <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
-                AI 맞춤 추천
+                관심사 기반 추천
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 관심 상품과 활동을 바탕으로 추천 경매를 보여줄 예정입니다.

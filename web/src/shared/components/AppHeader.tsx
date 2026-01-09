@@ -32,18 +32,18 @@ import {
   Close as CloseIcon,
 } from "@mui/icons-material";
 import { Link as RouterLink } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
-import { useThemeContext } from "@/contexts/ThemeProvider";
+import { useAuth } from "@/shared/contexts/AuthContext";
+import { useThemeContext } from "@/shared/contexts/ThemeProvider";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { notificationApi } from "@/apis/notificationApi";
-import { orderApi } from "@/apis/orderApi";
-import { depositApi } from "@/apis/depositApi";
-import { userApi } from "@/apis/userApi";
+import { notificationApi } from "@/shared/apis/notificationApi";
+import { orderApi } from "@/shared/apis/orderApi";
+import { depositApi } from "@/shared/apis/depositApi";
+import { userApi } from "@/shared/apis/userApi";
 import { OrderStatus, type NotificationInfo } from "@moreauction/types";
 import { formatWon } from "@moreauction/utils";
 import { useNavigate } from "react-router-dom";
-import { queryKeys } from "@/queries/queryKeys";
+import { queryKeys } from "@/shared/queries/queryKeys";
 import { useNotificationSse } from "@/features/notifications/hooks/useNotificationSse";
 
 export const AppHeader: React.FC = () => {
@@ -701,14 +701,14 @@ export const AppHeader: React.FC = () => {
                     <Typography variant="subtitle2" fontWeight={700} noWrap>
                       {safeText(toastNotification?.title) || "새 알림"}
                     </Typography>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                noWrap
-                sx={{ overflow: "hidden", textOverflow: "ellipsis" }}
-              >
-                {safeText(toastNotification?.content)}
-              </Typography>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      noWrap
+                      sx={{ overflow: "hidden", textOverflow: "ellipsis" }}
+                    >
+                      {safeText(toastNotification?.content)}
+                    </Typography>
                     {!!toastNotification?.createdAt && (
                       <Typography variant="caption" color="text.secondary">
                         {formatRelativeTime(toastNotification.createdAt)}

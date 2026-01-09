@@ -22,10 +22,10 @@ import type {
   PagedDepositPaymentResponse,
 } from "@moreauction/types";
 import { formatNumber } from "@moreauction/utils";
-import { depositApi } from "@/apis/depositApi";
-import { useAuth } from "@/contexts/AuthContext";
-import { queryKeys } from "@/queries/queryKeys";
-import { getErrorMessage } from "@/utils/getErrorMessage";
+import { depositApi } from "@/shared/apis/depositApi";
+import { useAuth } from "@/shared/contexts/AuthContext";
+import { queryKeys } from "@/shared/queries/queryKeys";
+import { getErrorMessage } from "@/shared/utils/getErrorMessage";
 
 const statusMap: Record<string, string> = {
   READY: "준비",
@@ -167,21 +167,21 @@ export const DepositPaymentList: React.FC = () => {
                       mt: 0.5,
                     }}
                   >
-                  <Chip
-                    label={statusMap[item.status] ?? item.status}
-                    size="small"
-                    color={statusColorMap[item.status] ?? "default"}
-                    variant="outlined"
-                    onClick={
-                      item.status === "FAILED"
-                        ? () => handleOpenFailureDetail(item.orderId)
-                        : undefined
-                    }
-                    clickable={item.status === "FAILED"}
-                  />
-                  <Typography variant="caption" color="text.secondary">
-                    주문번호: {item.orderId}
-                  </Typography>
+                    <Chip
+                      label={statusMap[item.status] ?? item.status}
+                      size="small"
+                      color={statusColorMap[item.status] ?? "default"}
+                      variant="outlined"
+                      onClick={
+                        item.status === "FAILED"
+                          ? () => handleOpenFailureDetail(item.orderId)
+                          : undefined
+                      }
+                      clickable={item.status === "FAILED"}
+                    />
+                    <Typography variant="caption" color="text.secondary">
+                      주문번호: {item.orderId}
+                    </Typography>
                     <Typography variant="caption" color="text.secondary">
                       요청: {formatDateTime(item.requestedAt)} · 승인:{" "}
                       {formatDateTime(item.approvedAt)}

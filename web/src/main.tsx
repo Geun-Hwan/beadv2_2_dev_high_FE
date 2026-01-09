@@ -1,10 +1,10 @@
+import { router } from "@/app";
+import { AuthProvider } from "@/shared/contexts/AuthContext";
+import { CustomThemeProvider } from "@/shared/contexts/ThemeProvider"; // Import CustomThemeProvider
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import ReactDOM from "react-dom/client";
 import { RouterProvider } from "react-router-dom";
-import { CustomThemeProvider } from "@/contexts/ThemeProvider"; // Import CustomThemeProvider
 import "./index.css";
-import { router } from "@/routes";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const queryClient = new QueryClient({
   defaultOptions: {

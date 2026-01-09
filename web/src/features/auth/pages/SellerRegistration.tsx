@@ -2,7 +2,7 @@ import { Button, Grid, TextField, Typography } from "@mui/material";
 import React, { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
-import { userApi } from "@/apis/userApi"; // RegisterSellerParams import
+import { userApi } from "@/shared/apis/userApi"; // RegisterSellerParams import
 import FormContainer from "@/shared/components/FormContainer";
 import type { RegisterSellerParams } from "@moreauction/types";
 

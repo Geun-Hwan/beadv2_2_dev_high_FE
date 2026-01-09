@@ -18,11 +18,11 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useMemo, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
-import { productApi } from "@/apis/productApi";
-import { wishlistApi, type WishlistEntry } from "@/apis/wishlistApi";
-import { useAuth } from "@/contexts/AuthContext";
-import { queryKeys } from "@/queries/queryKeys";
-import { getErrorMessage } from "@/utils/getErrorMessage";
+import { productApi } from "@/shared/apis/productApi";
+import { wishlistApi, type WishlistEntry } from "@/shared/apis/wishlistApi";
+import { useAuth } from "@/shared/contexts/AuthContext";
+import { queryKeys } from "@/shared/queries/queryKeys";
+import { getErrorMessage } from "@/shared/utils/getErrorMessage";
 
 const Wishlist: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
@@ -139,7 +139,9 @@ const Wishlist: React.FC = () => {
             entries: prev.entries.filter(
               (entry) => entry.productId !== productId
             ),
-            products: prev.products.filter((product) => product.id !== productId),
+            products: prev.products.filter(
+              (product) => product.id !== productId
+            ),
           };
         }
       );
@@ -207,7 +209,11 @@ const Wishlist: React.FC = () => {
             {Array.from({ length: 2 }).map((_, idx) => (
               <Card
                 key={`wishlist-reco-${idx}`}
-                sx={{ height: "100%", display: "flex", flexDirection: "column" }}
+                sx={{
+                  height: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                }}
               >
                 <Skeleton variant="rectangular" height={180} />
                 <CardContent

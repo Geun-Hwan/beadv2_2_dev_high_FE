@@ -16,11 +16,11 @@ import {
 } from "@mui/material";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import React, { useEffect, useMemo, useState } from "react";
-import { settlementApi } from "@/apis/settlementApi";
+import { settlementApi } from "@/shared/apis/settlementApi";
 import type { SettlementResponse, SettlementSummary } from "@moreauction/types";
 import { formatNumber, formatWon } from "@moreauction/utils";
-import { queryKeys } from "@/queries/queryKeys";
-import { getErrorMessage } from "@/utils/getErrorMessage";
+import { queryKeys } from "@/shared/queries/queryKeys";
+import { getErrorMessage } from "@/shared/utils/getErrorMessage";
 
 type SettlementView = "SUMMARY" | "HISTORY";
 

@@ -11,7 +11,7 @@ import React, { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
-import { userApi } from "@/apis/userApi";
+import { userApi } from "@/shared/apis/userApi";
 import FormContainer from "@/shared/components/FormContainer";
 import type { SignupParams } from "@moreauction/types";
 
@@ -340,8 +340,9 @@ const SignUp: React.FC = () => {
                 // 영문, 숫자, 특수문자 조합 검증
                 const hasLetter = /[a-zA-Z]/.test(value);
                 const hasNumber = /\d/.test(value);
-                const hasSpecial =
-                  /[!@#$%^&*()_+=\\[\\]{};':"|,.<>\/?-]/.test(value);
+                const hasSpecial = /[!@#$%^&*()_+=\\[\\]{};':"|,.<>\/?-]/.test(
+                  value
+                );
 
                 if (!hasLetter || !hasNumber || !hasSpecial) {
                   return "비밀번호는 영문, 숫자, 특수문자를 모두 포함해야 합니다.";
@@ -566,7 +567,6 @@ const SignUp: React.FC = () => {
           />
         </Box>
 
-
         {/* 회원가입 버튼 */}
         <Button
           type="submit"
@@ -584,7 +584,6 @@ const SignUp: React.FC = () => {
             이미 계정이 있으신가요? 로그인
           </MuiLink>
         </Box>
-
       </Box>
     </FormContainer>
   );

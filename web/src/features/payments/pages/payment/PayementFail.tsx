@@ -12,8 +12,8 @@ import { useMutation } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { depositApi } from "@/apis/depositApi";
-import { useAuth } from "@/contexts/AuthContext";
+import { depositApi } from "@/shared/apis/depositApi";
+import { useAuth } from "@/shared/contexts/AuthContext";
 
 export default function PaymentFail() {
   const navigate = useNavigate();

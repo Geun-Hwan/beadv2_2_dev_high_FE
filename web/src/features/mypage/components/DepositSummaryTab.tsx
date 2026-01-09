@@ -12,11 +12,11 @@ import {
 } from "@mui/material";
 import { hasRole, UserRole } from "@moreauction/types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { depositApi } from "@/apis/depositApi";
-import { userApi } from "@/apis/userApi";
-import { useAuth } from "@/contexts/AuthContext";
-import { queryKeys } from "@/queries/queryKeys";
-import { getErrorMessage } from "@/utils/getErrorMessage";
+import { depositApi } from "@/shared/apis/depositApi";
+import { userApi } from "@/shared/apis/userApi";
+import { useAuth } from "@/shared/contexts/AuthContext";
+import { queryKeys } from "@/shared/queries/queryKeys";
+import { getErrorMessage } from "@/shared/utils/getErrorMessage";
 
 export const DepositSummaryTab: React.FC = () => {
   const { user } = useAuth();

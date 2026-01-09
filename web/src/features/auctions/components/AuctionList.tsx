@@ -10,18 +10,22 @@ import {
 import React, { useMemo } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { auctionApi } from "@/apis/auctionApi";
-import { fileApi } from "@/apis/fileApi";
-import { productApi } from "@/apis/productApi";
-import { type PagedAuctionResponse, type Product, AuctionStatus } from "@moreauction/types";
+import { auctionApi } from "@/shared/apis/auctionApi";
+import { fileApi } from "@/shared/apis/fileApi";
+import { productApi } from "@/shared/apis/productApi";
+import {
+  type PagedAuctionResponse,
+  type Product,
+  AuctionStatus,
+} from "@moreauction/types";
 import type { ApiResponseDto, FileGroup } from "@moreauction/types";
 import { formatWon } from "@moreauction/utils";
 import { getAuctionStatusText } from "@moreauction/utils";
 import RemainingTime from "@/shared/components/RemainingTime";
-import { queryKeys } from "@/queries/queryKeys";
-import { seedFileGroupCache } from "@/queries/seedFileGroupCache";
+import { queryKeys } from "@/shared/queries/queryKeys";
+import { seedFileGroupCache } from "@/shared/queries/seedFileGroupCache";
 import { ImageWithFallback } from "@/shared/components/common/ImageWithFallback";
-import { getErrorMessage } from "@/utils/getErrorMessage";
+import { getErrorMessage } from "@/shared/utils/getErrorMessage";
 
 interface AuctionListProps {
   status: AuctionStatus[];
