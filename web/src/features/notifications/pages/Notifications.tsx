@@ -18,8 +18,8 @@ import {
   useQueryClient,
   type QueryKey,
 } from "@tanstack/react-query";
-import { useAuth } from "@/shared/contexts/AuthContext";
-import { notificationApi } from "@/shared/apis/notificationApi";
+import { useAuth } from "@moreauction/auth";
+import { notificationApi } from "@/apis/notificationApi";
 import type {
   NotificationInfo,
   PagedNotificationResponse,

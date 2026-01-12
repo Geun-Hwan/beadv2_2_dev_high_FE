@@ -15,8 +15,8 @@ import { getOrderStatusLabel, type OrderResponse } from "@moreauction/types";
 import { Link as RouterLink } from "react-router-dom";
 import { formatWon } from "@moreauction/utils";
 import { useQuery } from "@tanstack/react-query";
-import { orderApi } from "@/shared/apis/orderApi";
-import { useAuth } from "@/shared/contexts/AuthContext";
+import { orderApi } from "@/apis/orderApi";
+import { useAuth } from "@moreauction/auth";
 import { queryKeys } from "@/shared/queries/queryKeys";
 import { getErrorMessage } from "@/shared/utils/getErrorMessage";
 

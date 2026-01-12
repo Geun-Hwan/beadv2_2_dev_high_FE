@@ -17,15 +17,15 @@ import { Search as SearchIcon } from "@mui/icons-material";
 import React, { useEffect, useMemo, useState } from "react";
 import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { auctionApi } from "@/shared/apis/auctionApi";
-import { fileApi } from "@/shared/apis/fileApi";
+import { auctionApi } from "@/apis/auctionApi";
+import { fileApi } from "@/apis/fileApi";
 import type {
   ApiResponseDto,
   AuctionDocument,
   FileGroup,
   ProductCategory,
 } from "@moreauction/types";
-import { categoryApi } from "@/shared/apis/categoryApi";
+import { categoryApi } from "@/apis/categoryApi";
 import { getAuctionStatusText } from "@moreauction/utils";
 import { AuctionStatus } from "@moreauction/types";
 import { formatWon } from "@moreauction/utils";

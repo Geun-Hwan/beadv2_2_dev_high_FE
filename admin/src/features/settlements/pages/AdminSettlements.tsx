@@ -28,7 +28,7 @@ import { formatWon } from "@moreauction/utils";
 import {
   adminSettlementApi,
   type SettlementAdminSearchFilter,
-} from "@/shared/apis/adminSettlementApi";
+} from "@/apis/adminSettlementApi";
 
 const PAGE_SIZE = 10;
 

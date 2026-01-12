@@ -10,8 +10,8 @@ import {
   Typography,
 } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
-import { auctionApi } from "@/shared/apis/auctionApi";
-import { useAuth } from "@/shared/contexts/AuthContext";
+import { auctionApi } from "@/apis/auctionApi";
+import { useAuth } from "@moreauction/auth";
 import { queryKeys } from "@/shared/queries/queryKeys";
 import { formatWon } from "@moreauction/utils";
 import type { AuctionParticipationResponse } from "@moreauction/types";

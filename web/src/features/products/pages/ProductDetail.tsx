@@ -29,12 +29,12 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
-import { auctionApi } from "@/shared/apis/auctionApi";
-import { fileApi } from "@/shared/apis/fileApi";
-import { productApi } from "@/shared/apis/productApi";
-import { wishlistApi } from "@/shared/apis/wishlistApi";
+import { auctionApi } from "@/apis/auctionApi";
+import { fileApi } from "@/apis/fileApi";
+import { productApi } from "@/apis/productApi";
+import { wishlistApi } from "@/apis/wishlistApi";
 import RemainingTime from "@/shared/components/RemainingTime";
-import { useAuth } from "@/shared/contexts/AuthContext";
+import { useAuth } from "@moreauction/auth";
 import { queryKeys } from "@/shared/queries/queryKeys";
 import { getErrorMessage } from "@/shared/utils/getErrorMessage";
 

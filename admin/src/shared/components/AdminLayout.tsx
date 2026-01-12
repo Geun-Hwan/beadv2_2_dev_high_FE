@@ -20,7 +20,7 @@ import {
 } from "@mui/icons-material";
 import React, { useMemo, useState } from "react";
 import { Link as RouterLink, Outlet, useLocation } from "react-router-dom";
-import { useAuth } from "@/shared/contexts/AuthContext";
+import { useAuth } from "@moreauction/auth";
 import AdminHeader from "./AdminHeader";
 
 const drawerWidth = 240;

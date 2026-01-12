@@ -32,14 +32,14 @@ import {
   Close as CloseIcon,
 } from "@mui/icons-material";
 import { Link as RouterLink } from "react-router-dom";
-import { useAuth } from "@/shared/contexts/AuthContext";
-import { useThemeContext } from "@/shared/contexts/ThemeProvider";
+import { useAuth } from "@moreauction/auth";
+import { useThemeContext } from "@moreauction/ui";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { notificationApi } from "@/shared/apis/notificationApi";
-import { orderApi } from "@/shared/apis/orderApi";
-import { depositApi } from "@/shared/apis/depositApi";
-import { userApi } from "@/shared/apis/userApi";
+import { notificationApi } from "@/apis/notificationApi";
+import { orderApi } from "@/apis/orderApi";
+import { depositApi } from "@/apis/depositApi";
+import { userApi } from "@/apis/userApi";
 import { OrderStatus, type NotificationInfo } from "@moreauction/types";
 import { formatWon } from "@moreauction/utils";
 import { useNavigate } from "react-router-dom";

@@ -1,8 +1,8 @@
 import { Box, CircularProgress, Typography } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { userApi } from "@/shared/apis/userApi";
-import { useAuth } from "@/shared/contexts/AuthContext";
+import { userApi } from "@/apis/userApi";
+import { useAuth } from "@moreauction/auth";
 import type { SocialProvider } from "@moreauction/types";
 
 const OAuthRedirect: React.FC<{ provider: SocialProvider }> = ({

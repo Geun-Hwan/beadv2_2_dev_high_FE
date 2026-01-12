@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { chatApi } from "@/shared/apis/chatApi";
+import { chatApi } from "@/apis/chatApi";
 
 export type ChatRole = "user" | "assistant";
 

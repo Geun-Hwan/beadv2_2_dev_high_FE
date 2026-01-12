@@ -9,7 +9,7 @@ import { AuctionParticipationTab } from "@/features/mypage/components/AuctionPar
 import { MyProductsTab } from "@/features/mypage/components/MyProductsTab";
 import { OrdersTab } from "@/features/mypage/components/OrdersTab";
 import { SettlementTab } from "@/features/mypage/components/SettlementTab";
-import { useAuth } from "@/shared/contexts/AuthContext";
+import { useAuth } from "@moreauction/auth";
 
 const MyPage: React.FC = () => {
   const { user } = useAuth();

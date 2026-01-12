@@ -12,7 +12,7 @@ import {
 import React, { useMemo } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { auctionApi } from "@/shared/apis/auctionApi";
+import { auctionApi } from "@/apis/auctionApi";
 import {
   AuctionStatus,
   type AuctionDetailResponse,

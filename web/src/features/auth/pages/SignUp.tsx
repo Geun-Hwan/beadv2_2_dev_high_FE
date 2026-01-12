@@ -11,8 +11,8 @@ import React, { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
-import { userApi } from "@/shared/apis/userApi";
-import FormContainer from "@/shared/components/FormContainer";
+import { userApi } from "@/apis/userApi";
+import { FormContainer } from "@moreauction/ui";
 import type { SignupParams } from "@moreauction/types";
 
 // 회원가입 폼에 필요한 모든 필드 타입을 정의

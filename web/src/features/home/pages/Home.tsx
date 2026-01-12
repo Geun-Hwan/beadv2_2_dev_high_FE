@@ -13,8 +13,8 @@ import { Gavel as GavelIcon } from "@mui/icons-material";
 import { Link as RouterLink } from "react-router-dom";
 import AuctionList from "@/features/auctions/components/AuctionList";
 import { hasRole, UserRole, AuctionStatus } from "@moreauction/types";
-import { useAuth } from "@/shared/contexts/AuthContext";
-import { productApi } from "@/shared/apis/productApi";
+import { useAuth } from "@moreauction/auth";
+import { productApi } from "@/apis/productApi";
 
 // 홈: 상단 히어로 섹션 + 상품 목록
 const Home: React.FC = () => {

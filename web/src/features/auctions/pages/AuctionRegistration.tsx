@@ -19,9 +19,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
-import { auctionApi } from "@/shared/apis/auctionApi";
-import { productApi } from "@/shared/apis/productApi";
-import { useAuth } from "@/shared/contexts/AuthContext";
+import { auctionApi } from "@/apis/auctionApi";
+import { productApi } from "@/apis/productApi";
+import { useAuth } from "@moreauction/auth";
 import { queryKeys } from "@/shared/queries/queryKeys";
 
 import { hasRole, UserRole } from "@moreauction/types";

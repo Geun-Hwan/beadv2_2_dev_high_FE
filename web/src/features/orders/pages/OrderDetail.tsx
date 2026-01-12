@@ -12,7 +12,7 @@ import {
 import React, { useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { orderApi } from "@/shared/apis/orderApi";
+import { orderApi } from "@/apis/orderApi";
 import { getOrderStatusLabel, type OrderResponse } from "@moreauction/types";
 import { formatWon } from "@moreauction/utils";
 import { queryKeys } from "@/shared/queries/queryKeys";

@@ -20,7 +20,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { AuctionStatus, type AuctionDetailResponse } from "@moreauction/types";
 import { formatWon } from "@moreauction/utils";
-import { adminAuctionApi } from "@/shared/apis/adminAuctionApi";
+import { adminAuctionApi } from "@/apis/adminAuctionApi";
 
 const PAGE_SIZE = 10;
 

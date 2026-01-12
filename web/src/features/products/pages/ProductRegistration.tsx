@@ -51,10 +51,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
-import { categoryApi } from "@/shared/apis/categoryApi";
-import { fileApi } from "@/shared/apis/fileApi";
-import { productApi } from "@/shared/apis/productApi";
-import { useAuth } from "@/shared/contexts/AuthContext";
+import { categoryApi } from "@/apis/categoryApi";
+import { fileApi } from "@/apis/fileApi";
+import { productApi } from "@/apis/productApi";
+import { useAuth } from "@moreauction/auth";
 import { queryKeys } from "@/shared/queries/queryKeys";
 import { getErrorMessage } from "@/shared/utils/getErrorMessage";
 

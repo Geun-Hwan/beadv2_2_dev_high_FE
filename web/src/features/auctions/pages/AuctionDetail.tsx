@@ -20,11 +20,11 @@ import {
 import type { IMessage } from "@stomp/stompjs";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { auctionApi } from "@/shared/apis/auctionApi";
-import { depositApi } from "@/shared/apis/depositApi";
-import { fileApi } from "@/shared/apis/fileApi";
-import { productApi } from "@/shared/apis/productApi";
-import { userApi } from "@/shared/apis/userApi";
+import { auctionApi } from "@/apis/auctionApi";
+import { depositApi } from "@/apis/depositApi";
+import { fileApi } from "@/apis/fileApi";
+import { productApi } from "@/apis/productApi";
+import { userApi } from "@/apis/userApi";
 import {
   type InfiniteData,
   useInfiniteQuery,
@@ -32,7 +32,7 @@ import {
   useQueryClient,
   type QueryKey,
 } from "@tanstack/react-query";
-import AuctionParticipationStatus from "@/features/auctions/components/AuctiobParticipationStatus";
+import AuctionParticipationStatus from "@/features/auctions/components/AuctionParticipationStatus";
 import AuctionBiddingPanel from "@/features/auctions/components/AuctionBiddingPanel";
 import AuctionBidForm from "@/features/auctions/components/AuctionBidForm";
 import AuctionDialogs from "@/features/auctions/components/AuctionDialogs";
@@ -41,7 +41,7 @@ import BidHistory from "@/features/auctions/components/BidHistory";
 import ProductInfo from "@/features/auctions/components/ProductInfo";
 import { DepositChargeDialog } from "@/features/mypage/components/DepositChargeDialog";
 import { requestTossPayment } from "@/shared/utils/requestTossPayment";
-import { useAuth } from "@/shared/contexts/AuthContext";
+import { useAuth } from "@moreauction/auth";
 import { useStomp } from "@/features/auctions/hooks/useStomp";
 import { formatWon } from "@moreauction/utils";
 import {

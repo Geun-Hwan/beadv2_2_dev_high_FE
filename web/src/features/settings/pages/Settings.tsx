@@ -16,9 +16,9 @@ import {
 } from "@mui/material";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useEffect, useMemo, useState } from "react";
-import { userApi } from "@/shared/apis/userApi";
+import { userApi } from "@/apis/userApi";
 import { ProfileTab } from "@/features/mypage/components/ProfileTab";
-import { useAuth } from "@/shared/contexts/AuthContext";
+import { useAuth } from "@moreauction/auth";
 import { queryKeys } from "@/shared/queries/queryKeys";
 
 const Settings: React.FC = () => {

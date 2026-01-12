@@ -16,7 +16,7 @@ import {
 } from "@mui/material";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import React, { useEffect, useMemo, useState } from "react";
-import { settlementApi } from "@/shared/apis/settlementApi";
+import { settlementApi } from "@/apis/settlementApi";
 import type { SettlementResponse, SettlementSummary } from "@moreauction/types";
 import { formatNumber, formatWon } from "@moreauction/utils";
 import { queryKeys } from "@/shared/queries/queryKeys";

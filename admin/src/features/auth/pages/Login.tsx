@@ -3,10 +3,10 @@ import React, { useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
-import { userApi } from "@/shared/apis/userApi";
-import FormContainer from "@/shared/components/FormContainer";
+import { userApi } from "@/apis/userApi";
+import { FormContainer } from "@moreauction/ui";
 import AdminShell from "@/shared/components/AdminShell";
-import { useAuth } from "@/shared/contexts/AuthContext";
+import { useAuth } from "@moreauction/auth";
 import {
   hasRole,
   UserRole,

@@ -32,7 +32,7 @@ import { formatWon } from "@moreauction/utils";
 import {
   adminOrderApi,
   type OrderAdminSearchFilter,
-} from "@/shared/apis/adminOrderApi";
+} from "@/apis/adminOrderApi";
 
 const PAGE_SIZE = 10;
 

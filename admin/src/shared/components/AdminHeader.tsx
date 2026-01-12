@@ -11,7 +11,7 @@ import {
   Menu as MenuIcon,
 } from "@mui/icons-material";
 import React from "react";
-import { useThemeContext } from "@/shared/contexts/ThemeProvider";
+import { useThemeContext } from "@moreauction/ui";
 
 interface AdminHeaderProps {
   title?: string;

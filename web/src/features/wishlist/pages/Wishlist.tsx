@@ -18,9 +18,9 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useMemo, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
-import { productApi } from "@/shared/apis/productApi";
-import { wishlistApi, type WishlistEntry } from "@/shared/apis/wishlistApi";
-import { useAuth } from "@/shared/contexts/AuthContext";
+import { productApi } from "@/apis/productApi";
+import { wishlistApi, type WishlistEntry } from "@/apis/wishlistApi";
+import { useAuth } from "@moreauction/auth";
 import { queryKeys } from "@/shared/queries/queryKeys";
 import { getErrorMessage } from "@/shared/utils/getErrorMessage";
 

@@ -14,8 +14,8 @@ import React, { useMemo } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import type { Product } from "@moreauction/types";
-import { productApi } from "@/shared/apis/productApi";
-import { useAuth } from "@/shared/contexts/AuthContext";
+import { productApi } from "@/apis/productApi";
+import { useAuth } from "@moreauction/auth";
 import { queryKeys } from "@/shared/queries/queryKeys";
 import { getErrorMessage } from "@/shared/utils/getErrorMessage";
 

@@ -18,7 +18,7 @@ import { alpha } from "@mui/material/styles";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import React, { useMemo, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
-import { productApi } from "@/shared/apis/productApi";
+import { productApi } from "@/apis/productApi";
 import { queryKeys } from "@/shared/queries/queryKeys";
 import { getErrorMessage } from "@/shared/utils/getErrorMessage";
 

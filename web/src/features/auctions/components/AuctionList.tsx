@@ -10,9 +10,9 @@ import {
 import React, { useMemo } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { auctionApi } from "@/shared/apis/auctionApi";
-import { fileApi } from "@/shared/apis/fileApi";
-import { productApi } from "@/shared/apis/productApi";
+import { auctionApi } from "@/apis/auctionApi";
+import { fileApi } from "@/apis/fileApi";
+import { productApi } from "@/apis/productApi";
 import {
   type PagedAuctionResponse,
   type Product,

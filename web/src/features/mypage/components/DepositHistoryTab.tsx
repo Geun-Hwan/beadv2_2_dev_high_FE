@@ -24,10 +24,10 @@ import {
   type PagedDepositHistoryResponse,
 } from "@moreauction/types";
 import { formatNumber } from "@moreauction/utils";
-import { depositApi } from "@/shared/apis/depositApi";
+import { depositApi } from "@/apis/depositApi";
 import { DepositChargeDialog } from "@/features/mypage/components/DepositChargeDialog";
 import { requestTossPayment } from "@/shared/utils/requestTossPayment";
-import { useAuth } from "@/shared/contexts/AuthContext";
+import { useAuth } from "@moreauction/auth";
 import { queryKeys } from "@/shared/queries/queryKeys";
 import { getErrorMessage } from "@/shared/utils/getErrorMessage";
 

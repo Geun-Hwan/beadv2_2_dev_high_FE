@@ -13,9 +13,9 @@ import React, { useEffect, useRef } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
-import { userApi } from "@/shared/apis/userApi"; // LoginParams import
-import FormContainer from "@/shared/components/FormContainer";
-import { useAuth } from "@/shared/contexts/AuthContext";
+import { userApi } from "@/apis/userApi"; // LoginParams import
+import { FormContainer } from "@moreauction/ui";
+import { useAuth } from "@moreauction/auth";
 import type { LoginParams, LoginResponse } from "@moreauction/types";
 
 const Login: React.FC = () => {

@@ -22,8 +22,8 @@ import type {
   PagedDepositPaymentResponse,
 } from "@moreauction/types";
 import { formatNumber } from "@moreauction/utils";
-import { depositApi } from "@/shared/apis/depositApi";
-import { useAuth } from "@/shared/contexts/AuthContext";
+import { depositApi } from "@/apis/depositApi";
+import { useAuth } from "@moreauction/auth";
 import { queryKeys } from "@/shared/queries/queryKeys";
 import { getErrorMessage } from "@/shared/utils/getErrorMessage";
 

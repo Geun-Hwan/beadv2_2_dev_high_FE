@@ -12,9 +12,9 @@ import {
 } from "@mui/material";
 import { hasRole, UserRole } from "@moreauction/types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { depositApi } from "@/shared/apis/depositApi";
-import { userApi } from "@/shared/apis/userApi";
-import { useAuth } from "@/shared/contexts/AuthContext";
+import { depositApi } from "@/apis/depositApi";
+import { userApi } from "@/apis/userApi";
+import { useAuth } from "@moreauction/auth";
 import { queryKeys } from "@/shared/queries/queryKeys";
 import { getErrorMessage } from "@/shared/utils/getErrorMessage";
 
