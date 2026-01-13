@@ -226,7 +226,8 @@ const AuctionList: React.FC<AuctionListProps> = ({
             <Card
               key={i}
               sx={{
-                height: "100%",
+                minHeight: 320,
+                overflow: "hidden",
                 display: "flex",
                 flexDirection: "column",
                 borderRadius: 3,
@@ -326,9 +327,26 @@ const AuctionList: React.FC<AuctionListProps> = ({
                       sx={{
                         position: "absolute",
                         top: 12,
-                        left: 12,
-                        bgcolor: "rgba(255, 255, 255, 0.92)",
+                        right: 12,
                         fontWeight: 700,
+                        border: "1px solid",
+                        borderColor: (theme) =>
+                          theme.palette.mode === "light"
+                            ? "rgba(15, 23, 42, 0.12)"
+                            : "rgba(148, 163, 184, 0.35)",
+                        bgcolor: (theme) =>
+                          theme.palette.mode === "light"
+                            ? "rgba(255, 255, 255, 0.92)"
+                            : "rgba(15, 23, 42, 0.8)",
+                        color: (theme) =>
+                          theme.palette.mode === "light"
+                            ? "text.primary"
+                            : "rgba(248, 250, 252, 0.95)",
+                        backdropFilter: "blur(6px)",
+                        boxShadow: (theme) =>
+                          theme.palette.mode === "light"
+                            ? "0 6px 16px rgba(15, 23, 42, 0.12)"
+                            : "0 6px 16px rgba(0, 0, 0, 0.35)",
                       }}
                     />
                   </Box>

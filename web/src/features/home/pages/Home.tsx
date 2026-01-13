@@ -254,8 +254,8 @@ const Home: React.FC = () => {
           py: { xs: 5, md: 6 },
           background: (t) =>
             t.palette.mode === "light"
-              ? "radial-gradient(circle at 0% 0%, #dbeafe 0, #eff6ff 45%, #f9fafb 100%)"
-              : "radial-gradient(circle at 0% 0%, #0f172a 0, #020617 55%, #000 100%)",
+              ? "radial-gradient(circle at 12% 12%, rgba(59, 130, 246, 0.32) 0, rgba(147, 197, 253, 0.55) 28%, rgba(224, 231, 255, 0.85) 55%, rgba(248, 250, 252, 0.98) 100%)"
+              : "radial-gradient(circle at 12% 12%, rgba(51, 65, 85, 0.95) 0, rgba(15, 23, 42, 0.98) 45%, rgba(2, 6, 23, 1) 100%)",
           borderBottom: "1px solid",
           borderColor:
             theme.palette.mode === "light"
@@ -293,7 +293,7 @@ const Home: React.FC = () => {
                   color="primary"
                   size="large"
                   component={RouterLink}
-                  to="/search"
+                  to="/search?page=0&size=20"
                   startIcon={<GavelIcon />}
                 >
                   상품 둘러보기
@@ -375,7 +375,7 @@ const Home: React.FC = () => {
                   </Stack>
                   {topAuctionsQuery.isLoading ? (
                     <Stack spacing={1.5}>
-                      <Skeleton variant="rounded" height={140} />
+                      <Skeleton variant="rounded" height={effectiveSlideHeight} />
                     </Stack>
                   ) : loopedAuctions.length > 0 ? (
                     <Box
@@ -465,8 +465,8 @@ const Home: React.FC = () => {
                                   : "none",
                                 background:
                                   theme.palette.mode === "light"
-                                    ? "rgba(255, 255, 255, 0.96)"
-                                    : "rgba(15, 23, 42, 0.85)",
+                                    ? "rgba(255, 255, 255, 0.98)"
+                                    : "rgba(2, 6, 23, 0.98)",
                                 transform: `translate3d(0px, ${yOffset}px, ${depth}px) scale(${scale})`,
                                 opacity,
                                 zIndex,
@@ -669,7 +669,7 @@ const Home: React.FC = () => {
                     flexDirection: "column",
                   }}
                 >
-                  <Skeleton variant="rectangular" height={200} />
+                  <Skeleton variant="rectangular" height={220} />
                   <Box sx={{ p: 2 }}>
                     <Skeleton variant="text" width="80%" />
                     <Skeleton variant="text" width="60%" />
@@ -729,7 +729,7 @@ const Home: React.FC = () => {
             </Box>
             <Button
               component={RouterLink}
-              to="/search?status=IN_PROGRESS"
+              to="/search?status=IN_PROGRESS&page=0&size=20"
               size="small"
             >
               더 찾아보기
@@ -762,7 +762,7 @@ const Home: React.FC = () => {
             </Box>
             <Button
               component={RouterLink}
-              to="/search?status=READY"
+              to="/search?status=READY&page=0&size=20"
               size="small"
             >
               더 찾아보기

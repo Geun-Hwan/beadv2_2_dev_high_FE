@@ -843,7 +843,7 @@ const AuctionDetail: React.FC = () => {
               <Stack spacing={2}>
                 <Skeleton variant="text" width="70%" />
                 <Skeleton variant="text" width="60%" />
-                <Skeleton variant="rectangular" height={160} />
+                <Skeleton variant="rectangular" height={420} />
               </Stack>
             </CardContent>
           </Card>
