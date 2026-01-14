@@ -279,7 +279,10 @@ const PendingOrders: React.FC = () => {
                             <Typography variant="subtitle1" fontWeight={700}>
                               {order.productName ?? "주문"}
                             </Typography>
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
                               주문일시 · {createdAt}
                             </Typography>
                           </Box>
@@ -295,7 +298,10 @@ const PendingOrders: React.FC = () => {
                           }}
                         >
                           <Box>
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
                               낙찰가
                             </Typography>
                             <Typography variant="body2" fontWeight={600}>
@@ -303,15 +309,21 @@ const PendingOrders: React.FC = () => {
                             </Typography>
                           </Box>
                           <Box>
-                            <Typography variant="caption" color="text.secondary">
-                              예치금 차감
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              보증금 납부
                             </Typography>
                             <Typography variant="body2" fontWeight={600}>
                               {formatWon(order.depositAmount ?? 0)}
                             </Typography>
                           </Box>
                           <Box>
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
                               추가 결제금액
                             </Typography>
                             <Typography variant="body2" fontWeight={700}>

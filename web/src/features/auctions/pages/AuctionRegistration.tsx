@@ -282,8 +282,8 @@ const AuctionRegistration: React.FC = () => {
   const recommendation = (recommendationQuery.data ??
     null) as AuctionRecommendationResponse | null;
   const startBidRecommendationValue =
-    recommendation?.recommendedStartBid ??
     recommendation?.aiResult?.price ??
+    recommendation?.recommendedStartBid ??
     null;
   const canApplyStartBid = !!startBidRecommendationValue;
 
@@ -565,7 +565,8 @@ const AuctionRegistration: React.FC = () => {
                           justifyContent="space-between"
                         >
                           <Typography variant="body2" color="text.secondary">
-                            유사 경매 데이터를 기반으로 적정 시작가를 안내합니다.
+                            유사 경매 데이터를 기반으로 적정 시작가를
+                            안내합니다.
                           </Typography>
                           <Button
                             size="small"
@@ -573,10 +574,14 @@ const AuctionRegistration: React.FC = () => {
                             disabled={!canApplyStartBid}
                             onClick={() => {
                               if (!startBidRecommendationValue) return;
-                              setValue("startBid", startBidRecommendationValue, {
-                                shouldDirty: true,
-                                shouldValidate: true,
-                              });
+                              setValue(
+                                "startBid",
+                                startBidRecommendationValue,
+                                {
+                                  shouldDirty: true,
+                                  shouldValidate: true,
+                                }
+                              );
                             }}
                           >
                             추천가 적용
@@ -597,7 +602,8 @@ const AuctionRegistration: React.FC = () => {
                             {recommendation?.available === false &&
                               !recommendation?.message && (
                                 <Alert severity="info">
-                                  데이터가 부족해 추천 정보가 제한될 수 있습니다.
+                                  데이터가 부족해 추천 정보가 제한될 수
+                                  있습니다.
                                 </Alert>
                               )}
                             {!recommendation?.available &&
@@ -632,7 +638,10 @@ const AuctionRegistration: React.FC = () => {
                                 >
                                   추천 시작가
                                 </Typography>
-                                <Typography variant="subtitle1" fontWeight={700}>
+                                <Typography
+                                  variant="subtitle1"
+                                  fontWeight={700}
+                                >
                                   {formatAmount(startBidRecommendationValue)}
                                 </Typography>
                               </Box>
@@ -650,7 +659,7 @@ const AuctionRegistration: React.FC = () => {
                                   variant="caption"
                                   color="text.secondary"
                                 >
-                                  가격 범위
+                                  추천 범위
                                 </Typography>
                                 <Typography variant="body2">
                                   {recommendation?.priceRangeMin == null &&
@@ -677,7 +686,7 @@ const AuctionRegistration: React.FC = () => {
                                   variant="caption"
                                   color="text.secondary"
                                 >
-                                  기준 시세
+                                  낙찰기준가
                                 </Typography>
                                 <Typography variant="body2">
                                   {recommendation?.referencePrice == null
@@ -688,10 +697,13 @@ const AuctionRegistration: React.FC = () => {
                                 </Typography>
                               </Box>
                             </Box>
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
                               유사 상품{" "}
-                              {formatCount(recommendation?.similarProductCount)}건
-                              · 경매{" "}
+                              {formatCount(recommendation?.similarProductCount)}
+                              건 · 경매{" "}
                               {formatCount(recommendation?.auctionCount)}건 ·
                               낙찰{" "}
                               {formatCount(recommendation?.winningOrderCount)}건

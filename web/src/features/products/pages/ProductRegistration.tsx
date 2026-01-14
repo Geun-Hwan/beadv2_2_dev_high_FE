@@ -493,11 +493,13 @@ const ProductRegistration: React.FC = () => {
       : isClearingImages
       ? null
       : undefined;
+    let uploadedFirstFileUrl: string | undefined;
 
     try {
       if (!canReuseExistingImages && localFiles.length > 0) {
         const fileUploadResponse = await fileApi.uploadFiles(localFiles);
         finalFileGroupId = fileUploadResponse.data.fileGroupId;
+        uploadedFirstFileUrl = fileUploadResponse.data.files?.[0]?.filePath;
 
         if (!finalFileGroupId) {
           throw new Error("파일 그룹 ID를 받아오지 못했습니다.");
@@ -511,6 +513,7 @@ const ProductRegistration: React.FC = () => {
           description: data.description,
           fileGrpId:
             finalFileGroupId === undefined ? undefined : finalFileGroupId,
+          fileURL: uploadedFirstFileUrl,
           categoryIds: selectedCategoryIds,
         };
         const productResponse = await productApi.updateProduct(
@@ -552,6 +555,7 @@ const ProductRegistration: React.FC = () => {
           name: data.name,
           description: data.description,
           fileGrpId: finalFileGroupId ?? undefined,
+          fileURL: uploadedFirstFileUrl,
           categoryIds: selectedCategoryIds,
         };
 

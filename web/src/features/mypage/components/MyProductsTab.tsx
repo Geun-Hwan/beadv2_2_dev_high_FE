@@ -33,7 +33,9 @@ export const MyProductsTab: React.FC = () => {
     queryKey: queryKeys.products.mine(user?.userId),
     queryFn: async () => {
       if (!user?.userId) return [];
-      const response = await productApi.getMyProducts(user.userId);
+      const response = await productApi.getMyProducts(user.userId, {
+        sort: ["createdAt,DESC"],
+      });
       return response.data as Product[];
     },
     staleTime: 30_000,
@@ -98,6 +100,7 @@ export const MyProductsTab: React.FC = () => {
                         variant: "subtitle1",
                         fontWeight: 600,
                       }}
+                      secondaryTypographyProps={{ component: "div" }}
                       secondary={
                         <Box sx={{ display: "flex", flexDirection: "column" }}>
                           <Typography

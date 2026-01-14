@@ -12,11 +12,7 @@ import {
 import { Gavel as GavelIcon } from "@mui/icons-material";
 import { Link as RouterLink } from "react-router-dom";
 import AuctionList from "@/features/auctions/components/AuctionList";
-import {
-  hasRole,
-  UserRole,
-  AuctionStatus,
-} from "@moreauction/types";
+import { hasRole, UserRole, AuctionStatus } from "@moreauction/types";
 import { useAuth } from "@moreauction/auth";
 import TopAuctionsCarousel from "@/features/home/components/TopAuctionsCarousel";
 
@@ -184,7 +180,7 @@ const Home: React.FC = () => {
                 로그인하고 맞춤 추천을 확인하세요
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                로그인하면 관심 경매와 유사한 상품을 더 빠르게 찾을 수 있어요.
+                로그인하면 나에게 맞는 경매 상품을 더 쉽게 찾을 수 있어요.
               </Typography>
               <Button
                 component={RouterLink}

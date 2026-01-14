@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import type { AuctionRankingResponse, Product } from "@moreauction/types";
 import { auctionApi } from "@/apis/auctionApi";
 import { productApi } from "@/apis/productApi";
@@ -6,8 +7,9 @@ import { queryKeys } from "@/shared/queries/queryKeys";
 
 export const useTopAuctions = (limit = 3) => {
   const queryClient = useQueryClient();
+  const [disableRefetch, setDisableRefetch] = useState(false);
 
-  return useQuery({
+  const query = useQuery({
     queryKey: queryKeys.auctions.topToday(limit),
     queryFn: async () => {
       const res = await auctionApi.getTopAuctions(limit);
@@ -63,12 +65,16 @@ export const useTopAuctions = (limit = 3) => {
       });
     },
     staleTime: 10_000,
-    refetchInterval: () =>
-      typeof document !== "undefined" &&
-      document.visibilityState === "visible"
-        ? 10_000
-        : false,
+    refetchInterval: disableRefetch ? false : 10_000,
     refetchIntervalInBackground: false,
     placeholderData: (previous) => previous,
   });
+
+  useEffect(() => {
+    if (query.isError) {
+      setDisableRefetch(true);
+    }
+  }, [query.isError]);
+
+  return query;
 };
