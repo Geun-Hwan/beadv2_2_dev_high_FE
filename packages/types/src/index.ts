@@ -1,6 +1,7 @@
 export * from "./auction";
 export * from "./common";
 export * from "./deposit";
+export * from "./dashboard";
 export * from "./notification";
 export * from "./order";
 export * from "./product";

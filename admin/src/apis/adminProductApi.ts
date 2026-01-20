@@ -39,7 +39,7 @@ export const adminProductApi = {
   getProducts: async (
     params: ProductAdminListParams
   ): Promise<PagedApiResponse<Product>> => {
-    const response = await client.get("/admin/products", {
+    const response = await client.get("/products", {
       params: {
         page: params.page,
         size: params.size,
@@ -50,24 +50,24 @@ export const adminProductApi = {
     return extractData<PagedApiResponse<Product>>(response.data);
   },
   getProduct: async (productId: string): Promise<ApiResponseDto<Product>> => {
-    const response = await client.get(`/admin/products/${productId}`);
+    const response = await client.get(`/products/${productId}`);
     return response.data;
   },
   createProduct: async (
     payload: ProductAdminRequest
   ): Promise<ApiResponseDto<Product>> => {
-    const response = await client.post("/admin/products", payload);
+    const response = await client.post("/products", payload);
     return response.data;
   },
   updateProduct: async (
     productId: string,
     payload: ProductAdminRequest
   ): Promise<ApiResponseDto<Product>> => {
-    const response = await client.put(`/admin/products/${productId}`, payload);
+    const response = await client.put(`/products/${productId}`, payload);
     return response.data;
   },
   deleteProduct: async (productId: string): Promise<ApiResponseDto<null>> => {
-    const response = await client.delete(`/admin/products/${productId}`);
+    const response = await client.delete(`/products/${productId}`);
     return response.data;
   },
 };

@@ -6,12 +6,12 @@ list actionable for both frontend and backend work.
 
 ## 1) Placed UI placeholders (UI only)
 
-- Home: "맞춤 추천" section (login-only, skeleton cards).
-- Auction detail: "비슷한 경매" section (skeleton cards).
-- Wishlist: "찜 기반 추천" section (skeleton cards).
+- Home: "맞춤 추천" section (login-only, Done).
+- Auction detail: "비슷한 경매" section (Done).
+- Wishlist: "찜 기반 추천" section (Done).
 - Auction registration: "AI 시작가 추천" card (Done).
 - Product registration: "AI 상세설명 초안 생성" entry (Done).
-- In-app chatbot: "More Assistant" entry (TBD: launcher UI).
+- In-app chatbot: "More Assistant" entry (Done).
 
 ## 2) MVP v1 (rules-first recommendations + AI assist)
 
@@ -19,7 +19,7 @@ list actionable for both frontend and backend work.
 
 - Home personalized recommendations (login users).
 - Similar auctions (category/price/keywords).
-- Wishlist-based recommendations (use wishlist product ids).
+- Wishlist-based recommendations (use wishlist product ids). (Done)
 
 ### AI Assist (AI keyword OK)
 

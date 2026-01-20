@@ -293,6 +293,11 @@ const SearchPage: React.FC = () => {
 
     const trimmed = inputKeyword.trim();
 
+    if (trimmed.length === 1) {
+      alert("검색어는 2자 이상 입력해 주세요.");
+      return;
+    }
+
     setKeyword(trimmed);
     setStatus(pendingStatus);
     setSelectedCategoryNames(pendingCategoryNames);
@@ -550,15 +555,17 @@ const SearchPage: React.FC = () => {
                 label={cat.categoryName}
                 clickable
                 color={
-                  pendingCategoryNames.includes(cat.categoryName)
+                  pendingCategoryNames.includes(cat.categoryName || cat.name)
                     ? "secondary"
                     : "default"
                 }
                 disabled={
                   isCategorySelectionFull &&
-                  !pendingCategoryNames.includes(cat.categoryName)
+                  !pendingCategoryNames.includes(cat.categoryName || cat.name)
                 }
-                onClick={() => handlePendingCategoryClick(cat.categoryName)}
+                onClick={() =>
+                  handlePendingCategoryClick(cat.categoryName || cat.name)
+                }
                 sx={{ mb: 0.5 }}
               />
             ))}
@@ -699,34 +706,34 @@ const SearchPage: React.FC = () => {
                           pointerEvents: "none",
                         }}
                       />
-                    <Chip
-                      label={getAuctionStatusText(doc.status)}
-                      size="small"
-                      sx={{
-                        position: "absolute",
-                        top: 12,
-                        right: 12,
-                        fontWeight: 700,
-                        border: "1px solid",
-                        borderColor: (theme) =>
-                          theme.palette.mode === "light"
-                            ? "rgba(15, 23, 42, 0.12)"
-                            : "rgba(148, 163, 184, 0.35)",
-                        bgcolor: (theme) =>
-                          theme.palette.mode === "light"
-                            ? "rgba(255, 255, 255, 0.92)"
-                            : "rgba(15, 23, 42, 0.8)",
-                        color: (theme) =>
-                          theme.palette.mode === "light"
-                            ? "text.primary"
-                            : "rgba(248, 250, 252, 0.95)",
-                        backdropFilter: "blur(6px)",
-                        boxShadow: (theme) =>
-                          theme.palette.mode === "light"
-                            ? "0 6px 16px rgba(15, 23, 42, 0.12)"
-                            : "0 6px 16px rgba(0, 0, 0, 0.35)",
-                      }}
-                    />
+                      <Chip
+                        label={getAuctionStatusText(doc.status)}
+                        size="small"
+                        sx={{
+                          position: "absolute",
+                          top: 12,
+                          right: 12,
+                          fontWeight: 700,
+                          border: "1px solid",
+                          borderColor: (theme) =>
+                            theme.palette.mode === "light"
+                              ? "rgba(15, 23, 42, 0.12)"
+                              : "rgba(148, 163, 184, 0.35)",
+                          bgcolor: (theme) =>
+                            theme.palette.mode === "light"
+                              ? "rgba(255, 255, 255, 0.92)"
+                              : "rgba(15, 23, 42, 0.8)",
+                          color: (theme) =>
+                            theme.palette.mode === "light"
+                              ? "text.primary"
+                              : "rgba(248, 250, 252, 0.95)",
+                          backdropFilter: "blur(6px)",
+                          boxShadow: (theme) =>
+                            theme.palette.mode === "light"
+                              ? "0 6px 16px rgba(15, 23, 42, 0.12)"
+                              : "0 6px 16px rgba(0, 0, 0, 0.35)",
+                        }}
+                      />
                     </Box>
                     <CardContent
                       sx={{
@@ -751,96 +758,96 @@ const SearchPage: React.FC = () => {
                         {doc.productName}
                       </Typography>
 
-                    <Box sx={{ minHeight: 36 }}>
-                      {(doc.categories?.length ?? 0) > 0 ? (
-                        <Stack
-                          direction="row"
-                          spacing={0.75}
-                          sx={{ mb: 0.75, flexWrap: "wrap" }}
-                        >
-                          {doc.categories!.slice(0, 2).map((c, idx) => (
-                            <Chip
-                              key={`${c}-${idx}`}
-                              label={c}
-                              size="small"
-                              variant="outlined"
-                              sx={{ mb: 0.5 }}
-                            />
-                          ))}
-                          {doc.categories!.length > 2 && (
-                            <Chip
-                              label={`+${doc.categories!.length - 2}`}
-                              size="small"
-                              variant="outlined"
-                              sx={{ mb: 0.5 }}
-                            />
-                          )}
-                        </Stack>
-                      ) : (
-                        <Chip
-                          label="카테고리 없음"
-                          size="small"
-                          variant="outlined"
-                          sx={{
-                            mb: 0.5,
-                            color: "text.secondary",
-                            borderStyle: "dashed",
-                          }}
-                        />
-                      )}
-                    </Box>
+                      <Box sx={{ minHeight: 36 }}>
+                        {(doc.categories?.length ?? 0) > 0 ? (
+                          <Stack
+                            direction="row"
+                            spacing={0.75}
+                            sx={{ mb: 0.75, flexWrap: "wrap" }}
+                          >
+                            {doc.categories!.slice(0, 2).map((c, idx) => (
+                              <Chip
+                                key={`${c}-${idx}`}
+                                label={c}
+                                size="small"
+                                variant="outlined"
+                                sx={{ mb: 0.5 }}
+                              />
+                            ))}
+                            {doc.categories!.length > 2 && (
+                              <Chip
+                                label={`+${doc.categories!.length - 2}`}
+                                size="small"
+                                variant="outlined"
+                                sx={{ mb: 0.5 }}
+                              />
+                            )}
+                          </Stack>
+                        ) : (
+                          <Chip
+                            label="카테고리 없음"
+                            size="small"
+                            variant="outlined"
+                            sx={{
+                              mb: 0.5,
+                              color: "text.secondary",
+                              borderStyle: "dashed",
+                            }}
+                          />
+                        )}
+                      </Box>
 
-                    <Stack direction="row" spacing={1}>
-                      <Box
-                        sx={{
-                          flex: 1,
-                          borderRadius: 2,
-                          bgcolor: "rgba(15, 23, 42, 0.04)",
-                          px: 1,
-                          py: 0.75,
-                        }}
+                      <Stack direction="row" spacing={1}>
+                        <Box
+                          sx={{
+                            flex: 1,
+                            borderRadius: 2,
+                            bgcolor: "rgba(15, 23, 42, 0.04)",
+                            px: 1,
+                            py: 0.75,
+                          }}
+                        >
+                          <Typography variant="caption" color="text.secondary">
+                            시작가
+                          </Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                            {doc.startPrice != null
+                              ? formatWon(doc.startPrice)
+                              : "-"}
+                          </Typography>
+                        </Box>
+                        <Box
+                          sx={{
+                            flex: 1,
+                            borderRadius: 2,
+                            bgcolor: "rgba(15, 23, 42, 0.04)",
+                            px: 1,
+                            py: 0.75,
+                          }}
+                        >
+                          <Typography variant="caption" color="text.secondary">
+                            보증금
+                          </Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                            {doc.depositAmount != null
+                              ? formatWon(doc.depositAmount)
+                              : "-"}
+                          </Typography>
+                        </Box>
+                      </Stack>
+                      <Divider sx={{ my: 0.5 }} />
+                      <Stack
+                        direction="row"
+                        alignItems="center"
+                        justifyContent="space-between"
+                        sx={{ mt: "auto" }}
                       >
                         <Typography variant="caption" color="text.secondary">
-                          시작가
+                          {doc.status === AuctionStatus.READY
+                            ? `시작 ${formatDateTime(doc.auctionStartAt)}`
+                            : `종료 ${formatDateTime(doc.auctionEndAt)}`}
                         </Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          {doc.startPrice != null
-                            ? formatWon(doc.startPrice)
-                            : "-"}
-                        </Typography>
-                      </Box>
-                      <Box
-                        sx={{
-                          flex: 1,
-                          borderRadius: 2,
-                          bgcolor: "rgba(15, 23, 42, 0.04)",
-                          px: 1,
-                          py: 0.75,
-                        }}
-                      >
-                        <Typography variant="caption" color="text.secondary">
-                          보증금
-                        </Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          {doc.depositAmount != null
-                            ? formatWon(doc.depositAmount)
-                            : "-"}
-                        </Typography>
-                      </Box>
-                    </Stack>
-                    <Divider sx={{ my: 0.5 }} />
-                    <Stack
-                      direction="row"
-                      alignItems="center"
-                      justifyContent="space-between"
-                      sx={{ mt: "auto" }}
-                    >
-                      <Typography variant="caption" color="text.secondary">
-                        {doc.status === AuctionStatus.READY
-                          ? `시작 ${formatDateTime(doc.auctionStartAt)}`
-                          : `종료 ${formatDateTime(doc.auctionEndAt)}`}
-                      </Typography>
-                    </Stack>
+                      </Stack>
                     </CardContent>
                   </CardActionArea>
                 </Card>

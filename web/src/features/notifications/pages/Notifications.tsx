@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Container,
   Typography,
@@ -10,7 +10,7 @@ import {
   Button,
   CircularProgress,
 } from "@mui/material";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   type InfiniteData,
   useInfiniteQuery,
@@ -42,9 +42,38 @@ const sortNotifications = (items: NotificationInfo[]) => {
 const Notifications: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const [showUnreadOnly, setShowUnreadOnly] = useState(true);
+  const initialShowUnreadOnly = searchParams.get("tab") !== "all";
+  const [showUnreadOnly, setShowUnreadOnly] = useState(initialShowUnreadOnly);
   const queryClient = useQueryClient();
+
+  const tabParam = searchParams.get("tab");
+
+  const handleShowUnreadOnly = () => {
+    setShowUnreadOnly(true);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("tab", "unread");
+      return next;
+    }, { replace: true });
+  };
+
+  const handleShowAll = () => {
+    setShowUnreadOnly(false);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("tab", "all");
+      return next;
+    }, { replace: true });
+  };
+
+  useEffect(() => {
+    const nextShowUnreadOnly = tabParam !== "all";
+    if (showUnreadOnly !== nextShowUnreadOnly) {
+      setShowUnreadOnly(nextShowUnreadOnly);
+    }
+  }, [showUnreadOnly, tabParam]);
 
   const unreadCountQuery = useQuery({
     queryKey: queryKeys.notifications.unreadCount(),
@@ -242,14 +271,14 @@ const Notifications: React.FC = () => {
                 <Button
                   size="small"
                   variant={showUnreadOnly ? "contained" : "outlined"}
-                  onClick={() => setShowUnreadOnly(true)}
+                  onClick={handleShowUnreadOnly}
                 >
                   안 읽은 알림
                 </Button>
                 <Button
                   size="small"
                   variant={!showUnreadOnly ? "contained" : "outlined"}
-                  onClick={() => setShowUnreadOnly(false)}
+                  onClick={handleShowAll}
                 >
                   전체 보기
                 </Button>

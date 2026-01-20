@@ -34,8 +34,9 @@ import { useMemo, useState } from "react";
 import AuctionCreateDialog from "../dialog/AuctionCreateDialog";
 import AuctionDeleteDialog from "../dialog/AuctionDeleteDialog";
 import ProductInfoDialog from "../dialog/ProductInfoDialog";
-
-const PAGE_SIZE = 10;
+import AuctionDetailDialog from "../dialog/AuctionDetailDialog";
+import AuctionEditDialog from "../dialog/AuctionEditDialog";
+import { PAGE_SIZE } from "@/shared/constant/const";
 
 const statusOptions = [
   { value: "all", label: "전체" },
@@ -84,9 +85,19 @@ const AdminAuctions = () => {
   });
   const [deleteTarget, setDeleteTarget] =
     useState<AuctionDetailResponse | null>(null);
-  const [productDetailOpen, setProductDetailOpen] = useState<string | null>(
-    null
-  );
+  const [productDetail, setProductDetail] = useState<{
+    id?: string;
+    name?: string;
+    sellerId?: string;
+    fileGroupId?: string | number | null;
+  } | null>(null);
+  const [productDetailOpen, setProductDetailOpen] = useState(false);
+  const [detailTarget, setDetailTarget] =
+    useState<AuctionDetailResponse | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [editTarget, setEditTarget] =
+    useState<AuctionDetailResponse | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
 
   const auctionsQuery = useQuery({
     queryKey: [
@@ -230,6 +241,14 @@ const AdminAuctions = () => {
     const currentBid = auction.currentBid ?? 0;
     if (currentBid > 0) return currentBid;
     return auction.startBid ?? 0;
+  };
+
+  const handleEditOpen = (auction: AuctionDetailResponse) => {
+    setEditTarget(auction);
+    setEditOpen(true);
+  };
+  const handleEditClose = () => {
+    setEditOpen(false);
   };
 
   return (
@@ -439,18 +458,28 @@ const AdminAuctions = () => {
             <TableRow>
               <TableCell align="center">경매 ID</TableCell>
               <TableCell align="center">상품명</TableCell>
-              <TableCell align="center">판매자 ID</TableCell>
               <TableCell align="center">상태</TableCell>
-              <TableCell align="center">시작가</TableCell>
               <TableCell align="center">현재가</TableCell>
-              <TableCell align="center">최고 입찰자</TableCell>
-              <TableCell align="center">시작일</TableCell>
-              <TableCell align="center">종료일</TableCell>
+              <TableCell align="center">종료시간</TableCell>
               <TableCell align="center">삭제 상태</TableCell>
               <TableCell align="center">작업</TableCell>
             </TableRow>
           </TableHead>
-          <TableBody>
+          <TableBody
+            sx={{
+              "& tr:last-child td, & tr:last-child th": { borderBottom: 0 },
+            }}
+          >
+            {auctionsQuery.isLoading && (
+              <TableRow>
+                <TableCell colSpan={11}>
+                  <Typography color="text.secondary">
+                    경매 목록을 불러오는 중...
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            )}
+
             {errorMessage && (
               <TableRow>
                 <TableCell colSpan={11}>
@@ -459,29 +488,43 @@ const AdminAuctions = () => {
               </TableRow>
             )}
             {auctions.map((auction: AuctionDetailResponse) => (
-              <TableRow key={auction.id} hover sx={{ height: 56 }}>
+              <TableRow
+                key={auction.id}
+                hover
+                sx={{ height: 56, cursor: "pointer" }}
+                onClick={() => {
+                  setDetailTarget(auction);
+                  setDetailOpen(true);
+                }}
+              >
                 <TableCell align="center">{auction.id}</TableCell>
                 <TableCell align="center">
-                  {auction.productName ?? "-"}
+                  <Button
+                    size="small"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      const fileGroupId =
+                        auction.productFileGroupId ?? auction.fileGroupId ?? null;
+                      setProductDetail({
+                        id: auction.productId,
+                        name: auction.productName ?? "-",
+                        sellerId: auction.sellerId ?? "-",
+                        fileGroupId,
+                      });
+                      setProductDetailOpen(true);
+                    }}
+                  >
+                    {auction.productName ?? "-"}
+                  </Button>
                 </TableCell>
-                <TableCell align="center">{auction.sellerId}</TableCell>
                 <TableCell align="center">
                   <Chip size="small" label={auction.status} />
-                </TableCell>
-                <TableCell align="center">
-                  {formatWon(auction.startBid)}
                 </TableCell>
                 <TableCell align="center">
                   {formatWon(getDisplayBid(auction))}
                 </TableCell>
                 <TableCell align="center">
-                  {auction.highestUserId ?? "-"}
-                </TableCell>
-                <TableCell align="center">
-                  {formatDate(auction.auctionStartAt)}
-                </TableCell>
-                <TableCell align="center">
-                  {formatDate(auction.auctionEndAt)}
+                  <Chip size="small" label={formatDate(auction.auctionEndAt)} />
                 </TableCell>
                 <TableCell align="center">
                   {(() => {
@@ -508,7 +551,8 @@ const AdminAuctions = () => {
                       size="small"
                       variant="outlined"
                       disabled={!canStartNow(auction)}
-                      onClick={() => {
+                      onClick={(event) => {
+                        event.stopPropagation();
                         if (!window.confirm("경매를 즉시 시작할까요?")) return;
                         startNowMutation.mutate(auction.id);
                       }}
@@ -521,7 +565,8 @@ const AdminAuctions = () => {
                       variant="contained"
                       color="error"
                       disabled={!canEndNow(auction)}
-                      onClick={() => {
+                      onClick={(event) => {
+                        event.stopPropagation();
                         if (!window.confirm("경매를 즉시 종료할까요?")) return;
                         endNowMutation.mutate(auction.id);
                       }}
@@ -533,6 +578,10 @@ const AdminAuctions = () => {
                       size="small"
                       color="info"
                       disabled={!canStartNow(auction)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleEditOpen(auction);
+                      }}
                     >
                       수정
                     </Button>
@@ -541,7 +590,10 @@ const AdminAuctions = () => {
                       size="small"
                       color="error"
                       disabled={!canDelete(auction)}
-                      onClick={() => setDeleteTarget(auction)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setDeleteTarget(auction);
+                      }}
                     >
                       삭제
                     </Button>
@@ -578,8 +630,22 @@ const AdminAuctions = () => {
       />
 
       <ProductInfoDialog
-        productDetailOpen={productDetailOpen}
-        setProductDetailOpen={setProductDetailOpen}
+        open={productDetailOpen}
+        product={productDetail}
+        onClose={() => setProductDetailOpen(false)}
+        onExited={() => setProductDetail(null)}
+      />
+      <AuctionDetailDialog
+        open={detailOpen}
+        auction={detailTarget}
+        onClose={() => setDetailOpen(false)}
+        onExited={() => setDetailTarget(null)}
+      />
+      <AuctionEditDialog
+        open={editOpen}
+        auction={editTarget}
+        onClose={handleEditClose}
+        onExited={() => setEditTarget(null)}
       />
       <AuctionCreateDialog
         createAuctionOpen={createAuctionOpen}

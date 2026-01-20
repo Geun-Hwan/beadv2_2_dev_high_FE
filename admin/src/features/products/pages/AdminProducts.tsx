@@ -3,7 +3,6 @@ import {
   type ProductAdminSearchFilter,
 } from "@/apis/adminProductApi";
 import { type Product } from "@moreauction/types";
-import { formatDate } from "@moreauction/utils";
 import {
   Alert,
   Box,
@@ -33,8 +32,9 @@ import { useMemo, useState } from "react";
 import AuctionInfoDialog from "../dialog/AuctionInfoDialog";
 import ProductDeleteDialog from "../dialog/ProductDeleteDialog";
 import ProductCreateDialog from "../dialog/ProductCreateDialog";
-
-const PAGE_SIZE = 10;
+import ProductEditDialog from "../dialog/ProductEditDialog";
+import ProductInfoDialog from "@/features/auctions/dialog/ProductInfoDialog";
+import { PAGE_SIZE } from "@/shared/constant/const";
 
 const deletedOptions = [
   { value: "all", label: "삭제 여부 전체" },
@@ -55,6 +55,18 @@ const AdminProducts = () => {
 
   const [auctionListOpen, setAuctionListOpen] = useState<string | null>(null);
   const [openCreateDialog, setOpenCreateDialog] = useState<boolean>(false);
+  const [editProductId, setEditProductId] = useState<string | null>(null);
+  const [productDetail, setProductDetail] = useState<{
+    id?: string;
+    name?: string;
+    sellerId?: string;
+    description?: string;
+    createdAt?: string;
+    updatedAt?: string;
+    fileGroupId?: string | number | null;
+    categories?: Array<{ id?: string; name?: string }> | string[];
+  } | null>(null);
+  const [productDetailOpen, setProductDetailOpen] = useState(false);
   const productsQuery = useQuery({
     queryKey: ["admin", "products", page, deletedFilter, filters],
     queryFn: () =>
@@ -106,6 +118,12 @@ const AdminProducts = () => {
   };
   const handleCreateOpen = () => {
     setOpenCreateDialog(true);
+  };
+  const handleEditOpen = (productId: string) => {
+    setEditProductId(productId);
+  };
+  const handleEditClose = () => {
+    setEditProductId(null);
   };
   const showEmpty =
     !productsQuery.isLoading && !productsQuery.isError && products.length === 0;
@@ -211,26 +229,53 @@ const AdminProducts = () => {
             <TableRow>
               <TableCell align="center">상품 ID</TableCell>
               <TableCell align="center">상품명</TableCell>
-              <TableCell align="center">판매자</TableCell>
               <TableCell align="center">상태</TableCell>
-              <TableCell align="center">생성일</TableCell>
               <TableCell align="center">경매 보기</TableCell>
               <TableCell align="center">작업</TableCell>
             </TableRow>
           </TableHead>
-          <TableBody>
+          <TableBody
+            sx={{
+              "& tr:last-child td, & tr:last-child th": { borderBottom: 0 },
+            }}
+          >
+            {productsQuery.isLoading && (
+              <TableRow>
+                <TableCell colSpan={5}>
+                  <Typography color="text.secondary">
+                    상품 목록을 불러오는 중...
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            )}
             {errorMessage && (
               <TableRow>
-                <TableCell colSpan={7}>
+                <TableCell colSpan={5}>
                   <Alert severity="error">{errorMessage}</Alert>
                 </TableCell>
               </TableRow>
             )}
             {products.map((product) => (
-              <TableRow key={product.id} hover sx={{ height: 56 }}>
+              <TableRow
+                key={product.id}
+                hover
+                sx={{ height: 56, cursor: "pointer" }}
+                onClick={() => {
+                  setProductDetail({
+                    id: product.id,
+                    name: product.name,
+                    sellerId: product.sellerId ?? "-",
+                    description: product.description,
+                    createdAt: product.createdAt,
+                    updatedAt: product.updatedAt,
+                    fileGroupId: product.fileGroupId ?? null,
+                    categories: product.categories ?? [],
+                  });
+                  setProductDetailOpen(true);
+                }}
+              >
                 <TableCell align="center">{product.id}</TableCell>
                 <TableCell align="center">{product.name}</TableCell>
-                <TableCell align="center">{product.sellerId ?? "-"}</TableCell>
                 <TableCell align="center">
                   <Chip
                     size="small"
@@ -240,13 +285,13 @@ const AdminProducts = () => {
                   />
                 </TableCell>
                 <TableCell align="center">
-                  {formatDate(product.createdAt)}
-                </TableCell>
-                <TableCell align="center">
                   <Button
                     size="small"
                     variant="outlined"
-                    onClick={() => setAuctionListOpen(product.id)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setAuctionListOpen(product.id);
+                    }}
                   >
                     경매 보기
                   </Button>
@@ -258,7 +303,14 @@ const AdminProducts = () => {
                     alignItems="center"
                     justifyContent="center"
                   >
-                    <Button size="small" color="info">
+                    <Button
+                      size="small"
+                      color="info"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleEditOpen(product.id);
+                      }}
+                    >
                       수정
                     </Button>
                     <Divider orientation="vertical" flexItem />
@@ -266,7 +318,10 @@ const AdminProducts = () => {
                     <Button
                       size="small"
                       color="error"
-                      onClick={() => setDeleteTarget(product)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setDeleteTarget(product);
+                      }}
                       disabled={
                         deleteMutation.isPending ||
                         !!product.latestAuctionId ||
@@ -281,7 +336,7 @@ const AdminProducts = () => {
             ))}
             {showEmpty && (
               <TableRow>
-                <TableCell colSpan={11}>
+                <TableCell colSpan={5}>
                   <Typography color="text.secondary">
                     조건에 해당하는 경매가 없습니다.
                   </Typography>
@@ -308,10 +363,22 @@ const AdminProducts = () => {
         setDeleteTarget={setDeleteTarget}
         deleteMutation={deleteMutation}
       />
+      <ProductEditDialog
+        open={editProductId !== null}
+        productId={editProductId}
+        onClose={handleEditClose}
+        onExited={handleEditClose}
+      />
 
       <AuctionInfoDialog
         auctionListOpen={auctionListOpen}
         setAuctionListOpen={setAuctionListOpen}
+      />
+      <ProductInfoDialog
+        open={productDetailOpen}
+        product={productDetail}
+        onClose={() => setProductDetailOpen(false)}
+        onExited={() => setProductDetail(null)}
       />
     </Box>
   );

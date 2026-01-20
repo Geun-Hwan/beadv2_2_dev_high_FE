@@ -37,6 +37,7 @@ import RemainingTime from "@/shared/components/RemainingTime";
 import { useAuth } from "@moreauction/auth";
 import { queryKeys } from "@/shared/queries/queryKeys";
 import { getErrorMessage } from "@/shared/utils/getErrorMessage";
+import { activityStorage } from "@/shared/utils/activityStorage";
 
 const ProductDetail: React.FC = () => {
   const formatDateTime = (value?: string | null) => {
@@ -111,6 +112,10 @@ const ProductDetail: React.FC = () => {
     enabled: !!latestAuctionId && !isDeleted,
     staleTime: 30_000,
   });
+
+  useEffect(() => {
+    activityStorage.recordViewedProduct(productId);
+  }, [productId]);
 
   useEffect(() => {
     const group = fileGroupQuery.data?.data ?? null;
@@ -772,6 +777,11 @@ const ProductDetail: React.FC = () => {
                         wishDesiredRef.current = nextDesired;
                         setIsWish(nextDesired);
                         updateWishlistCaches(nextDesired);
+                        if (nextDesired) {
+                          activityStorage.recordWishlistedProduct(product.id);
+                        } else {
+                          activityStorage.removeWishlistedProduct(product.id);
+                        }
 
                         if (wishInFlightRef.current) return;
                         wishInFlightRef.current = true;

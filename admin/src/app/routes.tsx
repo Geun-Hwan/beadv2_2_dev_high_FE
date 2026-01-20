@@ -8,6 +8,7 @@ import AdminSettlements from "@/features/settlements/pages/AdminSettlements";
 import AdminProducts from "@/features/products/pages/AdminProducts";
 import AdminPlaceholder from "@/shared/components/AdminPlaceholder";
 import ProtectedRoute from "./ProtectedRoute";
+import AdminUsers from "@/features/users/pages/AdminUsers";
 
 /**
  * React Router v6.4+의 createBrowserRouter를 사용한 라우터 설정입니다.
@@ -29,12 +30,7 @@ export const router = createBrowserRouter([
           { index: true, element: <AdminDashboard /> },
           {
             path: "users",
-            element: (
-              <AdminPlaceholder
-                title="회원 관리"
-                description="회원 목록, 차단, 권한 관리 기능을 준비 중입니다."
-              />
-            ),
+            element: <AdminUsers />,
           },
           {
             path: "auctions",

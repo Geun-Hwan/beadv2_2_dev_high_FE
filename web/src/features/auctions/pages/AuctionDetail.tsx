@@ -48,7 +48,7 @@ import AuctionDialogs from "@/features/auctions/components/AuctionDialogs";
 import AuctionInfoPanel from "@/features/auctions/components/AuctionInfoPanel";
 import BidHistory from "@/features/auctions/components/BidHistory";
 import ProductInfo from "@/features/auctions/components/ProductInfo";
-import { SimilarAuctionsSection } from "@/features/auctions/components/SimilarAuctionsSection";
+import SimilarAuctionsFloating from "@/features/auctions/components/SimilarAuctionsFloating";
 import { DepositChargeDialog } from "@/features/mypage/components/DepositChargeDialog";
 import { requestTossPayment } from "@/shared/utils/requestTossPayment";
 import { useAuth } from "@moreauction/auth";
@@ -67,13 +67,13 @@ import {
 import { DepositType } from "@moreauction/types";
 import { queryKeys } from "@/shared/queries/queryKeys";
 import { getErrorMessage } from "@/shared/utils/getErrorMessage";
+import { activityStorage } from "@/shared/utils/activityStorage";
 
 const AuctionDetail: React.FC = () => {
   const { id: auctionId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
   const [productDrawerOpen, setProductDrawerOpen] = useState(false);
-  const [similarDrawerOpen, setSimilarDrawerOpen] = useState(false);
 
   const [highestBidderInfo, setHighestBidderInfo] = useState<{
     id?: string;
@@ -123,6 +123,11 @@ const AuctionDetail: React.FC = () => {
     isAuthenticated,
     userId: user?.userId,
   });
+
+  useEffect(() => {
+    if (!auctionId || !productId) return;
+    activityStorage.recordViewedAuction({ auctionId, productId });
+  }, [auctionId, productId]);
 
   const { isWish, wishLoading, handleToggleWish } = useWishlistToggle({
     user,
@@ -402,13 +407,17 @@ const AuctionDetail: React.FC = () => {
     const startValue = auctionDetail?.auctionStartAt;
     const endValue = auctionDetail?.auctionEndAt;
     if (!startValue || !endValue) {
-      setSocketWindowActive(auctionDetail?.status === AuctionStatus.IN_PROGRESS);
+      setSocketWindowActive(
+        auctionDetail?.status === AuctionStatus.IN_PROGRESS
+      );
       return;
     }
     const startAt = new Date(startValue).getTime();
     const endAt = new Date(endValue).getTime();
     if (Number.isNaN(startAt) || Number.isNaN(endAt)) {
-      setSocketWindowActive(auctionDetail?.status === AuctionStatus.IN_PROGRESS);
+      setSocketWindowActive(
+        auctionDetail?.status === AuctionStatus.IN_PROGRESS
+      );
       return;
     }
 
@@ -425,10 +434,7 @@ const AuctionDetail: React.FC = () => {
           Math.max(0, windowStart - now)
         );
       } else if (now < windowEnd) {
-        timerId = window.setTimeout(
-          updateWindow,
-          Math.max(0, windowEnd - now)
-        );
+        timerId = window.setTimeout(updateWindow, Math.max(0, windowEnd - now));
       }
     };
 
@@ -438,7 +444,11 @@ const AuctionDetail: React.FC = () => {
         window.clearTimeout(timerId);
       }
     };
-  }, [auctionDetail?.auctionEndAt, auctionDetail?.auctionStartAt, auctionDetail?.status]);
+  }, [
+    auctionDetail?.auctionEndAt,
+    auctionDetail?.auctionStartAt,
+    auctionDetail?.status,
+  ]);
 
   const handleNewMessage = useCallback(
     (message: IMessage) => {
@@ -511,8 +521,7 @@ const AuctionDetail: React.FC = () => {
     [auctionId, queryClient]
   );
 
-  const shouldConnect =
-    socketWindowActive && !!auctionId;
+  const shouldConnect = socketWindowActive && !!auctionId;
   const { isConnected, isRetrying, connectionState } = useStomp({
     topic: shouldConnect ? `/topic/auction.${auctionId}` : "",
     onMessage: handleNewMessage,
@@ -588,6 +597,10 @@ const AuctionDetail: React.FC = () => {
       setBidLoading(true);
       await auctionApi.placeBid(auctionId!, bid);
       setNewBidAmount("");
+      activityStorage.recordParticipatedAuction({
+        auctionId,
+        productId,
+      });
 
       queryClient.setQueryData(
         queryKeys.auctions.participation(auctionId),
@@ -697,6 +710,10 @@ const AuctionDetail: React.FC = () => {
         queryKeys.auctions.participation(auctionId),
         res.data
       );
+      activityStorage.recordParticipatedAuction({
+        auctionId,
+        productId,
+      });
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: queryKeys.deposit.account(),
@@ -903,23 +920,14 @@ const AuctionDetail: React.FC = () => {
             <CardHeader
               title="실시간 현황"
               action={
-                <Stack direction="row" spacing={1}>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    onClick={() => setSimilarDrawerOpen(true)}
-                  >
-                    비슷한 경매
-                  </Button>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    onClick={() => setProductDrawerOpen(true)}
-                    disabled={!canRenderDetail}
-                  >
-                    상품 정보
-                  </Button>
-                </Stack>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={() => setProductDrawerOpen(true)}
+                  disabled={!canRenderDetail}
+                >
+                  상품 정보
+                </Button>
               }
             />
             <CardContent>
@@ -1036,7 +1044,8 @@ const AuctionDetail: React.FC = () => {
         <DialogContent sx={{ pt: 1.5 }}>
           <Stack spacing={2}>
             <Typography variant="body2" color="text.secondary">
-              보증금 결제를 위해 충전이 필요합니다. 부족한 금액으로 자동 계산해둘게요.
+              보증금 결제를 위해 충전이 필요합니다. 부족한 금액으로 자동
+              계산해둘게요.
             </Typography>
             <Paper
               variant="outlined"
@@ -1088,7 +1097,9 @@ const AuctionDetail: React.FC = () => {
                 1000,
                 Math.ceil(shortage / 100) * 100
               );
-              setChargeAmount(shortage > 0 ? String(recommendedCharge) : "1000");
+              setChargeAmount(
+                shortage > 0 ? String(recommendedCharge) : "1000"
+              );
               setChargeError(null);
               setAutoPayAfterCharge(true);
               setInsufficientDepositOpen(false);
@@ -1124,7 +1135,9 @@ const AuctionDetail: React.FC = () => {
           setChargeLoading(true);
           setChargeError(null);
           try {
-            const depositOrder = await depositApi.createDepositOrder(amount);
+            const depositOrder = await depositApi.createDepositOrder({
+              amount,
+            });
             if (depositOrder?.data?.id && auctionId) {
               const depositAmount = Number(auctionDetail?.depositAmount ?? 0);
               const bidPrice = Number(newBidAmount);
@@ -1240,47 +1253,12 @@ const AuctionDetail: React.FC = () => {
         </Stack>
       </Drawer>
 
-      <Drawer
-        anchor="top"
-        open={similarDrawerOpen}
-        onClose={() => setSimilarDrawerOpen(false)}
-        PaperProps={{
-          sx: {
-            borderBottomLeftRadius: 16,
-            borderBottomRightRadius: 16,
-            backgroundColor: "background.paper",
-          },
-        }}
-      >
-        <Box
-          sx={{
-            p: { xs: 2, md: 3 },
-            maxHeight: { xs: "85vh", md: "70vh" },
-            overflow: "auto",
-          }}
-        >
-          <Stack
-            direction="row"
-            justifyContent="space-between"
-            alignItems="center"
-            sx={{ mb: 2 }}
-          >
-            <Typography variant="subtitle1" fontWeight={700}>
-              비슷한 경매
-            </Typography>
-            <Button size="small" onClick={() => setSimilarDrawerOpen(false)}>
-              닫기
-            </Button>
-          </Stack>
-          <SimilarAuctionsSection
-            items={similarProducts}
-            loading={similarLoading}
-            auctionsById={similarAuctionsById}
-            productsById={similarProductsById}
-            showHeader={false}
-          />
-        </Box>
-      </Drawer>
+      <SimilarAuctionsFloating
+        items={similarProducts}
+        loading={similarLoading}
+        auctionsById={similarAuctionsById}
+        productsById={similarProductsById}
+      />
     </>
   );
 };

@@ -1,4 +1,8 @@
-import type { ApiResponseDto, PagedApiResponse } from "@moreauction/types";
+import type {
+  ApiResponseDto,
+  PagedApiResponse,
+  ProductRecommendSummaryResponse,
+} from "@moreauction/types";
 import { client } from "@/apis/client";
 
 // 백엔드 Wishlist 엔티티 (id, userId, productId만 포함된다고 가정)
@@ -40,6 +44,14 @@ export const wishlistApi = {
     productId: string
   ): Promise<ApiResponseDto<WishlistDetail>> => {
     const res = await client.get(`/users/wishlist/${productId}`);
+    return res.data;
+  },
+  getWishlistRecommendations: async (
+    wishlistProductids: string[]
+  ): Promise<ApiResponseDto<ProductRecommendSummaryResponse>> => {
+    const res = await client.post("/search/recommendation/wishlist", {
+      wishlistProductids,
+    });
     return res.data;
   },
 };

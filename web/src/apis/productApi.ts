@@ -1,6 +1,7 @@
 import type {
   AiGeneratedProductDetail,
   ApiResponseDto,
+  ChatBotAnswer,
   PagedProductResponse,
   Product,
   ProductCreationRequest,
@@ -169,5 +170,11 @@ export const productApi = {
     );
 
     return res.data;
+  },
+  askChatbot: async (query: string): Promise<ApiResponseDto<ChatBotAnswer>> => {
+    const response = await client.get("/products/recommend/ask", {
+      params: { q: query },
+    });
+    return response.data;
   },
 };

@@ -625,14 +625,16 @@ export const SettlementTab: React.FC = () => {
   return (
     <Paper sx={{ p: 0, overflow: "hidden", borderRadius: 3 }}>
       <Box
-        sx={{
+        sx={(theme) => ({
           px: 2.5,
           py: 2,
           background:
-            "linear-gradient(135deg, rgba(255, 247, 237, 0.9), rgba(239, 246, 255, 0.9))",
+            theme.palette.mode === "dark"
+              ? "linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.92))"
+              : "linear-gradient(135deg, rgba(255, 247, 237, 0.9), rgba(239, 246, 255, 0.9))",
           borderBottom: "1px solid",
           borderColor: "divider",
-        }}
+        })}
       >
         <Stack
           direction={{ xs: "column", sm: "row" }}

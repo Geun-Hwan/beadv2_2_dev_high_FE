@@ -34,4 +34,13 @@ export const orderApi = {
 
     return res.data;
   },
+  updateAddress: async (
+    orderId: string,
+    addressId: string
+  ): Promise<ApiResponseDto<OrderResponse>> => {
+    const res = await client.patch(`/orders/${orderId}/address`, {
+      addressId,
+    });
+    return res.data;
+  },
 };

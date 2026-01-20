@@ -1,11 +1,12 @@
-import type { PagedApiResponse } from "./common";
+import type { FileGroup, PagedApiResponse } from "./common";
 
 /**
  * 상품 카테고리 인터페이스
  */
 export interface ProductCategory {
   id: string;
-  categoryName: string;
+  name: string;
+  categoryName?: string;
 }
 export interface ProductImage {
   id: string;
@@ -101,4 +102,21 @@ export interface AiCategoryAlternative {
 export interface AiProductCondition {
   overall: AiConditionOverall;
   details: string[];
+}
+
+export type ProdcutSearchInfo = {
+  productId: string;
+  name: string;
+  description: string;
+  sellerId: string;
+  fileGroupId: string | null;
+  categories: string[];
+  deletedYn: "Y" | "N";
+  fileGroup: FileGroup | null;
+};
+
+export interface ChatBotAnswer {
+  answer: string;
+  contexts: ProdcutSearchInfo[];
+  fileGroupResponse: FileGroup[];
 }

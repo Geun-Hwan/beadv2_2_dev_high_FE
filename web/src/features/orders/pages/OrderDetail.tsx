@@ -9,19 +9,15 @@ import {
   Stack,
   Typography,
   Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  TextField,
-  Switch,
-  FormControlLabel,
 } from "@mui/material";
 import React, { useMemo } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { orderApi } from "@/apis/orderApi";
 import { depositApi } from "@/apis/depositApi";
+import { userApi } from "@/apis/userApi";
+import { useUserAddresses } from "@/hooks/useUserAddresses";
+import AddressFormDialog from "@/shared/components/AddressFormDialog";
 import { requestTossPayment } from "@/shared/utils/requestTossPayment";
 import { useAuth } from "@moreauction/auth";
 import {
@@ -29,10 +25,16 @@ import {
   getOrderStatusLabel,
   OrderStatus,
   type OrderResponse,
+  type UserAddress,
+  type UserAddressCreateRequest,
 } from "@moreauction/types";
-import { formatWon } from "@moreauction/utils";
 import { queryKeys } from "@/shared/queries/queryKeys";
 import { getErrorMessage } from "@/shared/utils/getErrorMessage";
+import OrderInfoCard from "@/features/orders/pages/OrderDetail/components/OrderInfoCard";
+import PaymentSummaryCard from "@/features/orders/pages/OrderDetail/components/PaymentSummaryCard";
+import ShippingInfoCard from "@/features/orders/pages/OrderDetail/components/ShippingInfoCard";
+import AddressManageDialog from "@/features/orders/pages/OrderDetail/components/AddressManageDialog";
+import PaymentDialog from "@/features/orders/pages/OrderDetail/components/PaymentDialog";
 
 const OrderDetail: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
@@ -49,6 +51,16 @@ const OrderDetail: React.FC = () => {
   const [useDepositEnabled, setUseDepositEnabled] = React.useState(true);
   const [useDepositAll, setUseDepositAll] = React.useState(true);
   const [useDepositAmount, setUseDepositAmount] = React.useState("");
+  const [addressDialogOpen, setAddressDialogOpen] = React.useState(false);
+  const [addressCreateOpen, setAddressCreateOpen] = React.useState(false);
+  const [addressManageOpen, setAddressManageOpen] = React.useState(false);
+  const [selectedOrderAddressId, setSelectedOrderAddressId] = React.useState<
+    string | null
+  >(null);
+  const [orderAddressUpdating, setOrderAddressUpdating] = React.useState(false);
+  const [addressError, setAddressError] = React.useState<string | null>(null);
+  const [pendingPaymentOpen, setPendingPaymentOpen] = React.useState(false);
+  const autoPayHandledRef = React.useRef(false);
   const orderQuery = useQuery({
     queryKey: queryKeys.orders.detail(orderId),
     queryFn: async () => {
@@ -65,6 +77,7 @@ const OrderDetail: React.FC = () => {
     enabled: Boolean(user?.userId),
     staleTime: 30_000,
   });
+  const addressQuery = useUserAddresses(Boolean(user?.userId));
 
   const errorMessage = useMemo(() => {
     if (!orderId) return "주문 ID가 올바르지 않습니다.";
@@ -98,16 +111,125 @@ const OrderDetail: React.FC = () => {
       ? Math.max(orderDisplay.winningAmount - orderDisplay.depositAmount, 0)
       : orderDisplay?.winningAmount ?? 0;
   const depositBalance = depositAccountQuery.data?.data?.balance ?? 0;
+  const addresses = addressQuery.data ?? [];
+  const maxAddressCount = 10;
+  const isAddressLimitReached = addresses.length >= maxAddressCount;
+  const defaultAddress = useMemo(
+    () => addresses.find((item) => item.isDefault) ?? null,
+    [addresses]
+  );
+  const hasDefaultAddress = Boolean(defaultAddress);
+  const orderAddressId = orderDisplay?.addressId ?? null;
+  const orderAddress = useMemo(() => {
+    if (!orderAddressId) return null;
+    return addresses.find((item) => item.id === orderAddressId) ?? null;
+  }, [addresses, orderAddressId]);
+  const selectedOrderAddress = useMemo(() => {
+    if (!selectedOrderAddressId) return null;
+    return addresses.find((item) => item.id === selectedOrderAddressId) ?? null;
+  }, [addresses, selectedOrderAddressId]);
+  const displayAddress = isUnpaid
+    ? orderAddress ?? selectedOrderAddress ?? defaultAddress
+    : orderAddress;
 
-  React.useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    if (params.get("pay") !== "1") return;
+  const addressMutation = useMutation({
+    mutationFn: (payload: UserAddressCreateRequest) =>
+      userApi.createAddress(payload),
+    onSuccess: (response) => {
+      if (response?.data) {
+        queryClient.setQueryData(
+          queryKeys.user.addresses(),
+          (prev: UserAddress[] | undefined) => {
+            const next = (prev ?? []).map((item) =>
+              response.data.isDefault ? { ...item, isDefault: false } : item
+            );
+            return [...next, response.data];
+          }
+        );
+      }
+      setAddressError(null);
+      setAddressDialogOpen(false);
+      setAddressCreateOpen(false);
+      if (pendingPaymentOpen) {
+        setPendingPaymentOpen(false);
+        setPaymentDialogOpen(true);
+        setUseDepositEnabled(depositBalance > 0);
+        setUseDepositAll(true);
+        setUseDepositAmount("");
+        setPaymentError(null);
+      }
+    },
+    onError: () => {
+      setAddressError("주소지 등록에 실패했습니다.");
+    },
+  });
+
+  const openPaymentDialog = React.useCallback(() => {
     setPaymentDialogOpen(true);
     setUseDepositEnabled(depositBalance > 0);
     setUseDepositAll(true);
     setUseDepositAmount("");
     setPaymentError(null);
-  }, [location.search, depositBalance]);
+  }, [depositBalance]);
+
+  const ensureDefaultAddress = React.useCallback(async () => {
+    if (defaultAddress) return true;
+    const refreshed = await addressQuery.refetch();
+    const list = refreshed.data ?? addresses;
+    if (list.some((item) => item.isDefault)) return true;
+    setAddressDialogOpen(true);
+    setPendingPaymentOpen(true);
+    return false;
+  }, [addressQuery, addresses, defaultAddress]);
+
+  const resolveDefaultAddress = React.useCallback(async () => {
+    if (defaultAddress) return defaultAddress;
+    const refreshed = await addressQuery.refetch();
+    const list = refreshed.data ?? addresses;
+    return list.find((item) => item.isDefault) ?? null;
+  }, [addressQuery, addresses, defaultAddress]);
+
+  const updateOrderAddress = React.useCallback(
+    async (addressId: string) => {
+      if (!order?.id) return;
+      const response = await orderApi.updateAddress(order.id, addressId);
+      if (response?.data) {
+        queryClient.setQueryData(
+          queryKeys.orders.detail(order.id),
+          response.data
+        );
+      }
+    },
+    [order?.id, queryClient]
+  );
+
+  React.useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("pay") !== "1") return;
+    if (autoPayHandledRef.current) return;
+    autoPayHandledRef.current = true;
+    params.delete("pay");
+    const nextSearch = params.toString();
+    navigate(
+      {
+        pathname: location.pathname,
+        search: nextSearch ? `?${nextSearch}` : "",
+      },
+      { replace: true }
+    );
+    const openAfterCheck = async () => {
+      const canProceed = await ensureDefaultAddress();
+      if (!canProceed) return;
+      openPaymentDialog();
+    };
+    void openAfterCheck();
+  }, [
+    ensureDefaultAddress,
+    location.pathname,
+    location.search,
+    navigate,
+    openPaymentDialog,
+  ]);
 
   const setDepositBalanceCache = (next: number) => {
     queryClient.setQueryData(queryKeys.deposit.balance(), next);
@@ -214,26 +336,34 @@ const OrderDetail: React.FC = () => {
       alert("결제 기한이 만료되었습니다.");
       return;
     }
+    const canProceed = await ensureDefaultAddress();
+    if (!canProceed) {
+      setPaymentDialogOpen(false);
+      return;
+    }
+    const addressToUse =
+      selectedOrderAddress ?? orderAddress ?? (await resolveDefaultAddress());
+    if (!addressToUse) {
+      setPaymentDialogOpen(false);
+      return;
+    }
     const depositUsage = getDepositUsageAmount();
     const pgAmount = Math.max(payableAmount - depositUsage, 0);
     setPaymentError(null);
     try {
+      if (!selectedOrderAddress && !orderAddressId) {
+        await updateOrderAddress(addressToUse.id);
+      }
       if (pgAmount <= 0) {
         await handlePayWithDeposit();
         setPaymentDialogOpen(false);
         return;
       }
       setActionLoading(true);
-      sessionStorage.setItem(
-        "autoPurchaseAfterCharge",
-        JSON.stringify({
-          orderId: order.id,
-          amount: payableAmount,
-          depositUsage,
-          createdAt: Date.now(),
-        })
-      );
-      const depositOrder = await depositApi.createDepositOrder(pgAmount);
+      const depositOrder = await depositApi.createDepositOrder({
+        amount: pgAmount,
+        depositUsage,
+      });
       if (depositOrder?.data?.id) {
         requestTossPayment(
           depositOrder.data.id,
@@ -253,12 +383,17 @@ const OrderDetail: React.FC = () => {
     }
   };
 
-  const handleOpenPaymentDialog = () => {
-    setPaymentDialogOpen(true);
-    setUseDepositEnabled(depositBalance > 0);
-    setUseDepositAll(true);
-    setUseDepositAmount("");
-    setPaymentError(null);
+  const handleOpenPaymentDialog = async () => {
+    const canProceed = await ensureDefaultAddress();
+    if (!canProceed) return;
+    if (!orderAddressId) {
+      const fallback = await resolveDefaultAddress();
+      if (fallback) {
+        await updateOrderAddress(fallback.id);
+        setSelectedOrderAddressId(fallback.id);
+      }
+    }
+    openPaymentDialog();
   };
 
   const handleClosePaymentDialog = () => {
@@ -266,34 +401,45 @@ const OrderDetail: React.FC = () => {
     setPaymentDialogOpen(false);
   };
 
+  const handleCloseAddressDialog = () => {
+    if (addressMutation.isPending) return;
+    setAddressDialogOpen(false);
+    setAddressCreateOpen(false);
+    setPendingPaymentOpen(false);
+    setAddressError(null);
+  };
+
+  const handleOpenAddressManage = () => {
+    if (!isUnpaid) return;
+    setSelectedOrderAddressId(orderAddressId ?? defaultAddress?.id ?? null);
+    setAddressManageOpen(true);
+  };
+
+  const handleCloseAddressManage = () => {
+    setAddressManageOpen(false);
+  };
+
+  const handleOpenAddressCreate = () => {
+    if (!isUnpaid) return;
+    if (isAddressLimitReached) return;
+    setAddressManageOpen(false);
+    setAddressCreateOpen(true);
+  };
+
+  const handleSelectOrderAddress = (address: UserAddress) => {
+    setOrderAddressUpdating(true);
+    setSelectedOrderAddressId(address.id);
+    updateOrderAddress(address.id)
+      .then(() => {
+        setAddressManageOpen(false);
+      })
+      .finally(() => {
+        setOrderAddressUpdating(false);
+      });
+  };
+
   const depositUsageAmount = getDepositUsageAmount();
   const pgAmount = Math.max(payableAmount - depositUsageAmount, 0);
-
-  const renderRow = (
-    label: string,
-    value?: React.ReactNode,
-    emphasis?: boolean
-  ) => (
-    <Box
-      sx={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: 2,
-        py: 0.75,
-      }}
-    >
-      <Typography variant="body2" color="text.secondary">
-        {label}
-      </Typography>
-      <Typography
-        variant={emphasis ? "subtitle1" : "body1"}
-        fontWeight={emphasis ? 700 : 600}
-      >
-        {value ?? "-"}
-      </Typography>
-    </Box>
-  );
 
   return (
     <Container maxWidth="md" sx={{ my: 4 }}>
@@ -359,94 +505,27 @@ const OrderDetail: React.FC = () => {
                   gap: 2,
                 }}
               >
-                <Paper
-                  variant="outlined"
-                  sx={{
-                    p: 2.5,
-                    borderRadius: 2,
-                    backgroundColor: "background.paper",
-                  }}
-                >
-                  <Typography variant="subtitle1" fontWeight={700}>
-                    주문 정보
-                  </Typography>
-                  <Divider sx={{ my: 1.5 }} />
-                  <Stack>
-                    {renderRow("주문 번호", orderDisplay.id)}
-                    {renderRow("상품명", orderDisplay.productName ?? "주문")}
-                    {renderRow("총 낙찰가", formatWon(orderDisplay.winningAmount))}
-                    {renderRow(
-                      "보증금(기납부)",
-                      typeof orderDisplay.depositAmount === "number"
-                        ? formatWon(orderDisplay.depositAmount)
-                        : "-"
-                    )}
-                    {renderRow(
-                      "주문일(낙찰확정)",
-                      orderDisplay.confirmDate
-                        ? new Date(orderDisplay.confirmDate).toLocaleString()
-                        : "미확인"
-                    )}
-                    {renderRow(
-                      "주문 생성일",
-                      new Date(orderDisplay.createdAt).toLocaleString()
-                    )}
-                    {renderRow(
-                      "최근 업데이트",
-                      new Date(orderDisplay.updatedAt).toLocaleString()
-                    )}
-                  </Stack>
-                </Paper>
-
-                <Paper
-                  variant="outlined"
-                  sx={{
-                    p: 2.5,
-                    borderRadius: 2,
-                    backgroundColor: "background.paper",
-                  }}
-                >
-                  <Typography variant="subtitle1" fontWeight={700}>
-                    결제 요약
-                  </Typography>
-                  <Divider sx={{ my: 1.5 }} />
-                  <Stack>
-                    {renderRow(
-                      "추가 결제금액",
-                      formatWon(payableAmount),
-                      true
-                    )}
-                    {renderRow(
-                      "결제 기한",
-                      orderDisplay.payLimitDate
-                        ? new Date(orderDisplay.payLimitDate).toLocaleString()
-                        : "-"
-                    )}
-                    {renderRow(
-                      "구매 완료일",
-                      orderDisplay.payCompleteDate
-                        ? new Date(orderDisplay.payCompleteDate).toLocaleString()
-                        : "구매 대기"
-                    )}
-                  </Stack>
-                  {isPayExpired && (
-                    <Alert severity="warning" sx={{ mt: 1.5 }}>
-                      결제 기한이 만료되어 구매를 진행할 수 없습니다.
-                    </Alert>
-                  )}
-                  {isUnpaid && (
-                    <Button
-                      variant="contained"
-                      fullWidth
-                      sx={{ mt: 2 }}
-                      onClick={handleOpenPaymentDialog}
-                      disabled={actionLoading || isPayExpired}
-                    >
-                      결제하기
-                    </Button>
-                  )}
-                </Paper>
+                <OrderInfoCard order={orderDisplay} />
+                <PaymentSummaryCard
+                  order={orderDisplay}
+                  payableAmount={payableAmount}
+                  isPayExpired={isPayExpired}
+                  isUnpaid={isUnpaid}
+                  actionLoading={actionLoading}
+                  onOpenPaymentDialog={handleOpenPaymentDialog}
+                />
               </Box>
+              <ShippingInfoCard
+                isUnpaid={isUnpaid}
+                onOpenAddressManage={handleOpenAddressManage}
+                addressLoading={addressQuery.isLoading}
+                displayAddress={displayAddress}
+                isDefaultAddress={
+                  Boolean(displayAddress?.id) &&
+                  displayAddress?.id === defaultAddress?.id
+                }
+                orderAddressId={orderAddressId}
+              />
             </Stack>
           </>
         ) : (
@@ -454,130 +533,75 @@ const OrderDetail: React.FC = () => {
         )}
       </Paper>
 
-      <Dialog
+      <AddressFormDialog
+        open={addressDialogOpen}
+        title="기본 배송지 등록"
+        submitLabel="등록하고 결제하기"
+        loading={addressMutation.isPending}
+        forceDefault
+        errorText={addressError}
+        onClose={handleCloseAddressDialog}
+        onSubmit={(values) => {
+          addressMutation.mutate({ ...values, isDefault: true });
+        }}
+      />
+      <AddressFormDialog
+        open={addressCreateOpen}
+        title="주소지 등록"
+        submitLabel="등록하기"
+        loading={addressMutation.isPending}
+        forceDefault={!hasDefaultAddress}
+        errorText={addressError}
+        onClose={handleCloseAddressDialog}
+        onSubmit={(values) => {
+          addressMutation.mutate({
+            ...values,
+            isDefault: values.isDefault || !hasDefaultAddress,
+          });
+        }}
+      />
+
+      <AddressManageDialog
+        open={addressManageOpen}
+        onClose={handleCloseAddressManage}
+        onAddAddress={handleOpenAddressCreate}
+        addresses={addresses}
+        isLoading={addressQuery.isLoading}
+        selectedAddressId={selectedOrderAddressId}
+        orderAddressUpdating={orderAddressUpdating}
+        onSelectAddress={handleSelectOrderAddress}
+        isAddressLimitReached={isAddressLimitReached}
+      />
+
+      <PaymentDialog
         open={paymentDialogOpen}
         onClose={handleClosePaymentDialog}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>결제하기</DialogTitle>
-        <DialogContent dividers>
-          <Stack spacing={2}>
-            <Paper
-              variant="outlined"
-              sx={{ p: 2, borderRadius: 2, backgroundColor: "rgba(15, 23, 42, 0.02)" }}
-            >
-              <Stack spacing={0.5}>
-                <Typography variant="caption" color="text.secondary">
-                  주문 금액
-                </Typography>
-                <Typography variant="h6" fontWeight={800}>
-                  {formatWon(payableAmount)}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  결제 기한 ·{" "}
-                  {orderDisplay?.payLimitDate
-                    ? new Date(orderDisplay.payLimitDate).toLocaleString()
-                    : "-"}
-                </Typography>
-              </Stack>
-            </Paper>
-
-            <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-              <Stack spacing={1}>
-                <Stack
-                  direction="row"
-                  alignItems="center"
-                  justifyContent="space-between"
-                >
-                  <Typography variant="subtitle2">예치금 사용</Typography>
-                  <Switch
-                    checked={useDepositEnabled}
-                    onChange={(event) => {
-                      const next = event.target.checked;
-                      setUseDepositEnabled(next);
-                      if (!next) {
-                        setUseDepositAll(false);
-                        setUseDepositAmount("");
-                      }
-                    }}
-                    disabled={depositBalance <= 0}
-                  />
-                </Stack>
-                <Typography variant="body2" color="text.secondary">
-                  사용 가능 잔액: {formatWon(depositBalance)}
-                </Typography>
-                {useDepositEnabled && (
-                  <Stack spacing={1}>
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={useDepositAll}
-                          onChange={(event) => {
-                            setUseDepositAll(event.target.checked);
-                            if (event.target.checked) {
-                              setUseDepositAmount("");
-                            }
-                          }}
-                        />
-                      }
-                      label="예치금 전액 사용"
-                    />
-                    {!useDepositAll && (
-                      <TextField
-                        label="예치금 사용 금액"
-                        size="small"
-                        value={useDepositAmount}
-                        onChange={(event) => {
-                          const next = event.target.value.replace(/[^\d]/g, "");
-                          setUseDepositAmount(next);
-                        }}
-                        helperText={`최대 ${formatWon(
-                          Math.min(depositBalance, payableAmount)
-                        )}`}
-                        fullWidth
-                      />
-                    )}
-                  </Stack>
-                )}
-              </Stack>
-            </Paper>
-
-            <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-              <Stack spacing={0.75}>
-                <Stack direction="row" justifyContent="space-between">
-                  <Typography variant="body2" color="text.secondary">
-                    예치금 사용액
-                  </Typography>
-                  <Typography variant="subtitle1" fontWeight={700}>
-                    {formatWon(depositUsageAmount)}
-                  </Typography>
-                </Stack>
-                <Stack direction="row" justifyContent="space-between">
-                  <Typography variant="body2" color="text.secondary">
-                    결제 모듈 결제금액
-                  </Typography>
-                  <Typography variant="subtitle1" fontWeight={700}>
-                    {formatWon(pgAmount)}
-                  </Typography>
-                </Stack>
-              </Stack>
-            </Paper>
-
-            {paymentError && <Alert severity="error">{paymentError}</Alert>}
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClosePaymentDialog}>닫기</Button>
-          <Button
-            variant="contained"
-            onClick={handleConfirmPayment}
-            disabled={actionLoading}
-          >
-            결제 진행
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onConfirm={handleConfirmPayment}
+        actionLoading={actionLoading}
+        paymentError={paymentError}
+        payableAmount={payableAmount}
+        payLimitDate={orderDisplay?.payLimitDate}
+        depositBalance={depositBalance}
+        useDepositEnabled={useDepositEnabled}
+        useDepositAll={useDepositAll}
+        useDepositAmount={useDepositAmount}
+        onToggleUseDepositEnabled={(next) => {
+          setUseDepositEnabled(next);
+          if (!next) {
+            setUseDepositAll(false);
+            setUseDepositAmount("");
+          }
+        }}
+        onToggleUseDepositAll={(next) => {
+          setUseDepositAll(next);
+          if (next) {
+            setUseDepositAmount("");
+          }
+        }}
+        onChangeDepositAmount={setUseDepositAmount}
+        depositUsageAmount={depositUsageAmount}
+        pgAmount={pgAmount}
+      />
     </Container>
   );
 };

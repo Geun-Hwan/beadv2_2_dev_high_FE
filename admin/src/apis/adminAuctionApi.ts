@@ -35,59 +35,57 @@ export const adminAuctionApi = {
   getAuctions: async (
     params: AdminAuctionListParams
   ): Promise<PagedApiResponse<AuctionDetailResponse>> => {
-    const response = await client.get("/admin/auctions", { params });
+    const response = await client.get("/auctions", { params });
     return extractData<PagedApiResponse<AuctionDetailResponse>>(response.data);
   },
   getAuctionsByProductId: async (
     productId: string
   ): Promise<ApiResponseDto<AuctionDetailResponse[]>> => {
-    const response = await client.get(
-      `/admin/auctions/by-product/${productId}`
-    );
+    const response = await client.get(`/auctions/by-product/${productId}`);
     return response.data;
   },
   getAuctionsCount: async (
     status?: AuctionStatus
   ): Promise<ApiResponseDto<number>> => {
-    const response = await client.get("/admin/auctions/count", {
+    const response = await client.get("/auctions/count", {
       params: { status },
     });
     return response.data;
   },
   getAuctionCountEndingSoon: async (): Promise<ApiResponseDto<number>> => {
-    const response = await client.get("/admin/auctions/count/ending-soon");
+    const response = await client.get("/auctions/count/ending-soon");
     return response.data;
   },
 
   startNow: async (
     auctionId: string
   ): Promise<ApiResponseDto<AuctionDetailResponse>> => {
-    const response = await client.put(`/admin/auctions/${auctionId}/start-now`);
+    const response = await client.put(`/auctions/${auctionId}/start-now`);
     return response.data;
   },
   endNow: async (
     auctionId: string
   ): Promise<ApiResponseDto<AuctionDetailResponse>> => {
-    const response = await client.put(`/admin/auctions/${auctionId}/end-now`);
+    const response = await client.put(`/auctions/${auctionId}/end-now`);
     return response.data;
   },
   deleteAuction: async (
     auctionId: string
   ): Promise<ApiResponseDto<AuctionDetailResponse>> => {
-    const response = await client.delete(`/admin/auctions/${auctionId}`);
+    const response = await client.delete(`/auctions/${auctionId}`);
     return response.data;
   },
   createAuction: async (
     payload: AuctionCreationRequest
   ): Promise<ApiResponseDto<AuctionDetailResponse>> => {
-    const response = await client.post("/admin/auctions", payload);
+    const response = await client.post("/auctions", payload);
     return response.data;
   },
   modifyAuction: async (
     auctionId: string,
     payload: AuctionUpdateRequest
   ): Promise<ApiResponseDto<AuctionDetailResponse>> => {
-    const response = await client.put(`/admin/auctions/${auctionId}`, payload);
+    const response = await client.put(`/auctions/${auctionId}`, payload);
     return response.data;
   },
 };

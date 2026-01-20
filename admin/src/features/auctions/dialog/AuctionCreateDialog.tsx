@@ -5,7 +5,7 @@ import type {
   AuctionFormData,
   Product,
 } from "@moreauction/types";
-import { formatDate, toISOString } from "@moreauction/utils";
+import { toISOString } from "@moreauction/utils";
 import {
   Button,
   Dialog,
@@ -13,7 +13,6 @@ import {
   DialogContent,
   DialogTitle,
   Stack,
-  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -21,6 +20,12 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import DialogTable from "@/shared/components/DialogTable";
+import {
+  dialogContentSx,
+  dialogPaperSx,
+  dialogTitleSx,
+} from "@/shared/components/dialogStyles";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { addDays, addHours, format, setMinutes, setSeconds } from "date-fns";
@@ -82,25 +87,29 @@ const AuctionCreateDialog = ({
   return (
     <Dialog
       open={createAuctionOpen}
-      onClose={() => {
-        setCreateAuctionOpen(false);
-        setCreateAuctionStep("select-product");
-        setSelectedProduct(null);
-        reset();
-      }}
+      onClose={() => setCreateAuctionOpen(false)}
       maxWidth={createAuctionStep === "select-product" ? "md" : "sm"}
       fullWidth
+      PaperProps={{ sx: dialogPaperSx }}
+      TransitionProps={{
+        onExited: () => {
+          setCreateAuctionStep("select-product");
+          setSelectedProduct(null);
+          reset();
+        },
+      }}
     >
-      <DialogTitle>
+      <DialogTitle sx={dialogTitleSx}>
         {createAuctionStep === "select-product" ? "상품 선택" : "경매 등록"}
       </DialogTitle>
-      <DialogContent>
+      <DialogContent dividers sx={dialogContentSx}>
         {createAuctionStep === "select-product" ? (
           // 상품 선택 단계
           <>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              경매를 등록할 상품을 선택하세요.
-            </Typography>
+            <Stack spacing={2}>
+              <Typography variant="body2" color="text.secondary">
+                경매를 등록할 상품을 선택하세요.
+              </Typography>
             {productsWithoutAuctionQuery.isLoading ? (
               <Typography>상품을 불러오는 중...</Typography>
             ) : productsWithoutAuctionQuery.isError ? (
@@ -108,23 +117,25 @@ const AuctionCreateDialog = ({
                 상품을 불러오는데 실패했습니다.
               </Typography>
             ) : productsWithoutAuctionQuery.data?.content?.length ? (
-              <Table size="small">
+              <DialogTable>
                 <TableHead>
                   <TableRow>
-                    <TableCell>ID</TableCell>
-                    <TableCell>상품명</TableCell>
-                    <TableCell>판매자</TableCell>
-                    <TableCell>선택</TableCell>
+                    <TableCell align="center">ID</TableCell>
+                    <TableCell align="center">상품명</TableCell>
+                    <TableCell align="center">판매자</TableCell>
+                    <TableCell align="center">선택</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {productsWithoutAuctionQuery.data.content.map(
                     (product: Product) => (
                       <TableRow key={product.id}>
-                        <TableCell>{product.id}</TableCell>
-                        <TableCell>{product.name}</TableCell>
-                        <TableCell>{product.sellerId || "-"}</TableCell>
-                        <TableCell>
+                        <TableCell align="center">{product.id}</TableCell>
+                        <TableCell align="center">{product.name}</TableCell>
+                        <TableCell align="center">
+                          {product.sellerId || "-"}
+                        </TableCell>
+                        <TableCell align="center">
                           <Button
                             size="small"
                             variant="outlined"
@@ -140,10 +151,11 @@ const AuctionCreateDialog = ({
                     )
                   )}
                 </TableBody>
-              </Table>
+              </DialogTable>
             ) : (
               <Typography>경매를 등록할 수 있는 상품이 없습니다.</Typography>
             )}
+            </Stack>
           </>
         ) : (
           // 경매 입력 단계
@@ -218,9 +230,6 @@ const AuctionCreateDialog = ({
               setSelectedProduct(null);
             } else {
               setCreateAuctionOpen(false);
-              setCreateAuctionStep("select-product");
-              setSelectedProduct(null);
-              reset();
             }
           }}
         >

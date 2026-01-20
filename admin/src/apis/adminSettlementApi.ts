@@ -36,7 +36,7 @@ export const adminSettlementApi = {
   getSettlements: async (
     params: SettlementListParams
   ): Promise<PagedSettlementSummary> => {
-    const response = await client.get("/admin/settles", {
+    const response = await client.get("/settles", {
       params: {
         page: params.page,
         size: params.size,
@@ -54,19 +54,19 @@ export const adminSettlementApi = {
       sort?: string | string[];
     }
   ): Promise<PagedSettlementResponse> => {
-    const response = await client.get(`/admin/settles/group/${groupId}/items`, {
+    const response = await client.get(`/settles/group/${groupId}/items`, {
       params,
     });
     return extractData<PagedSettlementResponse>(response.data);
   },
   createSettlement: async (orderId: string): Promise<ApiResponseDto<null>> => {
-    const response = await client.post(`/admin/settles/${orderId}`);
+    const response = await client.post(`/settles/${orderId}`);
     return response.data;
   },
   runSettlementBatch: async (
     status: SettlementStatus = SettlementStatus.WAITING
   ): Promise<ApiResponseDto<null>> => {
-    const response = await client.post("/admin/settles/run", null, {
+    const response = await client.post("/settles/run", null, {
       params: { status },
     });
     return response.data;
@@ -74,7 +74,7 @@ export const adminSettlementApi = {
   updateSettlement: async (
     payload: SettlementUpdateRequest
   ): Promise<ApiResponseDto<null>> => {
-    const response = await client.patch("/admin/settles", payload);
+    const response = await client.patch("/settles", payload);
     return response.data;
   },
 };

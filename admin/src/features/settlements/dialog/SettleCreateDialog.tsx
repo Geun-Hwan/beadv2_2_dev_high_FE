@@ -1,5 +1,6 @@
 import { adminOrderApi } from "@/apis/adminOrderApi";
 import { adminSettlementApi } from "@/apis/adminSettlementApi";
+import { ORDER_PAGE_SIZE } from "@/shared/constant/const";
 import { OrderStatus } from "@moreauction/types";
 import { formatDate, formatWon } from "@moreauction/utils";
 import {
@@ -9,8 +10,6 @@ import {
   Stack,
   Alert,
   TextField,
-  Paper,
-  Table,
   TableHead,
   TableRow,
   TableCell,
@@ -21,7 +20,14 @@ import {
   Box,
   Pagination,
   DialogActions,
+  Chip,
 } from "@mui/material";
+import DialogTable from "@/shared/components/DialogTable";
+import {
+  dialogContentSx,
+  dialogPaperSx,
+  dialogTitleSx,
+} from "@/shared/components/dialogStyles";
 import {
   keepPreviousData,
   useMutation,
@@ -29,7 +35,6 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import React, { useState } from "react";
-const ORDER_PAGE_SIZE = 8;
 
 const SettleCreateDialog = ({ isCreateOpen, setIsCreateOpen }: any) => {
   const queryClient = useQueryClient();
@@ -82,7 +87,6 @@ const SettleCreateDialog = ({ isCreateOpen, setIsCreateOpen }: any) => {
   };
   const handleCloseCreate = () => {
     setIsCreateOpen(false);
-    setCreateError(null);
   };
 
   return (
@@ -91,11 +95,34 @@ const SettleCreateDialog = ({ isCreateOpen, setIsCreateOpen }: any) => {
       onClose={handleCloseCreate}
       maxWidth="md"
       fullWidth
+      PaperProps={{ sx: dialogPaperSx }}
+      TransitionProps={{
+        onExited: () => {
+          setCreateError(null);
+          setOrderPage(1);
+          setOrderSearch("");
+        },
+      }}
     >
-      <DialogTitle>정산 등록</DialogTitle>
-      <DialogContent dividers>
+      <DialogTitle sx={dialogTitleSx}>정산 등록</DialogTitle>
+      <DialogContent dividers sx={dialogContentSx}>
         <Stack spacing={2}>
-          {createError && <Alert severity="error">{createError}</Alert>}
+          {createError && (
+            <Alert
+              severity="error"
+              variant="outlined"
+              sx={(theme) => ({
+                alignItems: "center",
+                borderColor: theme.palette.error.main,
+                backgroundColor:
+                  theme.palette.mode === "dark"
+                    ? "rgba(239, 68, 68, 0.12)"
+                    : "rgba(239, 68, 68, 0.08)",
+              })}
+            >
+              {createError}
+            </Alert>
+          )}
           <TextField
             label="주문 ID 검색"
             size="small"
@@ -106,73 +133,71 @@ const SettleCreateDialog = ({ isCreateOpen, setIsCreateOpen }: any) => {
             }}
             fullWidth
           />
-          <Paper variant="outlined">
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell align="center">주문 ID</TableCell>
-                  <TableCell align="center">판매자 ID</TableCell>
-                  <TableCell align="center">구매자 ID</TableCell>
-                  <TableCell align="center">낙찰 금액</TableCell>
-                  <TableCell align="center">구매확정일</TableCell>
-                  <TableCell align="center">작업</TableCell>
+          <DialogTable>
+            <TableHead>
+              <TableRow>
+                <TableCell align="center">주문 ID</TableCell>
+                <TableCell align="center">판매자 ID</TableCell>
+                <TableCell align="center">구매자 ID</TableCell>
+                <TableCell align="center">낙찰 금액</TableCell>
+                <TableCell align="center">구매확정일</TableCell>
+                <TableCell align="center">작업</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {orders.map((order) => (
+                <TableRow key={order.id} hover>
+                  <TableCell align="center">{order.id}</TableCell>
+                  <TableCell>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        maxWidth: 120,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {order.sellerId}
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="center">{order.buyerId}</TableCell>
+                  <TableCell align="center">
+                    {formatWon(order.winningAmount)}
+                  </TableCell>
+                  <TableCell align="center">
+                    <Chip size="small" label={formatDate(order.confirmDate)} />
+                  </TableCell>
+                  <TableCell align="center">
+                    <Button
+                      size="small"
+                      variant="contained"
+                      onClick={() => handleCreateSettlement(order.id)}
+                      disabled={createMutation.isPending}
+                    >
+                      정산 등록
+                    </Button>
+                  </TableCell>
                 </TableRow>
-              </TableHead>
-              <TableBody>
-                {orders.map((order) => (
-                  <TableRow key={order.id} hover sx={{ height: 56 }}>
-                    <TableCell align="center">{order.id}</TableCell>
-                    <TableCell>
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          maxWidth: 120,
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {order.sellerId}
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="center">{order.buyerId}</TableCell>
-                    <TableCell align="center">
-                      {formatWon(order.winningAmount)}
-                    </TableCell>
-                    <TableCell align="center">
-                      {formatDate(order.confirmDate)}
-                    </TableCell>
-                    <TableCell align="center">
-                      <Button
-                        size="small"
-                        variant="contained"
-                        onClick={() => handleCreateSettlement(order.id)}
-                        disabled={createMutation.isPending}
-                      >
-                        정산 등록
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {!ordersQuery.isLoading && orders.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6}>
-                      <Typography color="text.secondary">
-                        구매확정 주문이 없습니다.
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                )}
-                {ordersQuery.isLoading && (
-                  <TableRow>
-                    <TableCell colSpan={6} align="center">
-                      <CircularProgress size={20} />
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </Paper>
+              ))}
+              {!ordersQuery.isLoading && orders.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6}>
+                    <Typography color="text.secondary">
+                      구매확정 주문이 없습니다.
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              )}
+              {ordersQuery.isLoading && (
+                <TableRow>
+                  <TableCell colSpan={6} align="center">
+                    <CircularProgress size={20} />
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </DialogTable>
           <Box sx={{ display: "flex", justifyContent: "center" }}>
             <Pagination
               count={ordersTotalPages}
