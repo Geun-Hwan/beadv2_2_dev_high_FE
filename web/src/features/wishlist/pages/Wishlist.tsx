@@ -1,55 +1,169 @@
-import type { ApiResponseDto, FileGroup, Product } from "@moreauction/types";
+import type {
+  ApiResponseDto,
+  FileGroup,
+  Product,
+  ProductRecommendationResponse,
+  ProductRecommendSummaryResponse,
+} from "@moreauction/types";
 import { getProductImageUrls } from "@moreauction/utils";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import {
   Alert,
   Box,
   Button,
-  Card,
-  CardContent,
-  Chip,
   Container,
-  CircularProgress,
-  IconButton,
   Paper,
-  Skeleton,
   Stack,
-  Tooltip,
   Typography,
 } from "@mui/material";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import React, { useMemo, useState } from "react";
+import type { InfiniteData } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import { fileApi } from "@/apis/fileApi";
 import { productApi } from "@/apis/productApi";
-import { wishlistApi, type WishlistEntry } from "@/apis/wishlistApi";
+import {
+  wishlistApi,
+  type PagedWishlistResponse,
+  type WishlistEntry,
+} from "@/apis/wishlistApi";
 import { useAuth } from "@moreauction/auth";
-import { ImageWithFallback } from "@/shared/components/common/ImageWithFallback";
+import WishlistItemRow from "@/features/wishlist/components/WishlistItemRow";
+import WishlistListSkeleton from "@/features/wishlist/components/WishlistListSkeleton";
+import WishlistRecommendationsFloating from "@/features/wishlist/components/WishlistRecommendationsFloating";
 import { queryKeys } from "@/shared/queries/queryKeys";
 import { seedFileGroupCache } from "@/shared/queries/seedFileGroupCache";
 import { getErrorMessage } from "@/shared/utils/getErrorMessage";
+import { activityStorage } from "@/shared/utils/activityStorage";
+
+type WishlistPageResponse = ApiResponseDto<PagedWishlistResponse>;
 
 const Wishlist: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
   const [removingId, setRemovingId] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const listContainerRef = useRef<HTMLDivElement | null>(null);
+  const pageSize = 10;
+  const wishlistQueryKey = useMemo(
+    () => [...queryKeys.wishlist.list(user?.userId), "infinite"] as const,
+    [user?.userId]
+  );
 
-  const wishlistQuery = useQuery({
-    queryKey: queryKeys.wishlist.list(user?.userId),
-    queryFn: async () => {
+  const wishlistQuery = useInfiniteQuery<
+    WishlistPageResponse,
+    Error,
+    InfiniteData<WishlistPageResponse>,
+    typeof wishlistQueryKey,
+    number
+  >({
+    queryKey: wishlistQueryKey,
+    initialPageParam: 0,
+    queryFn: async ({ pageParam = 0 }) => {
       const data = await wishlistApi.getMyWishlist({
-        page: 0,
-        size: 20,
+        page: pageParam,
+        size: pageSize,
       });
-      const page = data.data;
-      const entries = page?.content ?? [];
+      return data;
+    },
+    getNextPageParam: (lastPage) => {
+      const page = lastPage?.data;
+      if (!page || page.last) return undefined;
+      return page.number + 1;
+    },
+    enabled: isAuthenticated && !!user?.userId,
+    staleTime: 30_000,
+  });
 
-      if (entries.length === 0) {
-        return { entries, products: [] as Product[] };
-      }
+  const errorMessage = useMemo(() => {
+    if (!wishlistQuery.isError) return null;
+    return getErrorMessage(
+      wishlistQuery.error,
+      "찜 목록을 불러오는데 실패했습니다."
+    );
+  }, [wishlistQuery.error, wishlistQuery.isError]);
 
+  const removeMutation = useMutation({
+    mutationFn: (productId: string) => wishlistApi.remove(productId),
+    onSuccess: (_, productId) => {
+      queryClient.setQueryData(
+        wishlistQueryKey,
+        (prev: InfiniteData<WishlistPageResponse> | undefined) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            pages: prev.pages.map((page) => ({
+              ...page,
+              data: {
+                ...page.data,
+                content: page.data.content.filter(
+                  (entry) => entry.productId !== productId
+                ),
+              },
+            })),
+          };
+        }
+      );
+    },
+  });
+
+  const handleRemoveWishlist = async (productId: string) => {
+    if (removingId) return;
+    try {
+      setRemovingId(productId);
+      activityStorage.removeWishlistedProduct(productId);
+      await removeMutation.mutateAsync(productId);
+    } catch (err) {
+      console.error("찜 삭제 실패:", err);
+      alert("찜 삭제에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+    } finally {
+      setRemovingId(null);
+    }
+  };
+
+  const pages = wishlistQuery.data?.pages ?? [];
+  const entries = useMemo<WishlistEntry[]>(
+    () => pages.flatMap((page) => page.data?.content ?? []),
+    [pages]
+  );
+  const entryProductIds = useMemo<string[]>(
+    () => entries.map((entry) => entry.productId),
+    [entries]
+  );
+  const totalCount =
+    wishlistQuery.data?.pages?.[0]?.data?.totalElements ?? entries.length;
+  const firstPageEntries = useMemo(
+    () => pages[0]?.data?.content ?? [],
+    [pages]
+  );
+  const recommendationProductIds = useMemo<string[]>(() => {
+    const ids = firstPageEntries
+      .map((entry) => entry.productId)
+      .filter((productId) => productId && productId.length > 0);
+    return Array.from(new Set(ids)).sort();
+  }, [firstPageEntries]);
+
+  useEffect(() => {
+    if (firstPageEntries.length === 0) return;
+    [...firstPageEntries]
+      .reverse()
+      .forEach((entry) =>
+        activityStorage.recordWishlistedProduct(entry.productId)
+      );
+  }, [firstPageEntries]);
+  const productsQuery = useQuery<Product[], Error>({
+    queryKey: [
+      ...queryKeys.products.many(entryProductIds),
+      "wishlist",
+    ],
+    queryFn: async () => {
+      if (entries.length === 0) return [];
       const uniqueProductIds = Array.from(
-        new Set(entries.map((e) => e.productId))
+        new Set(entries.map((entry) => entry.productId))
       );
 
       const cachedProducts = uniqueProductIds
@@ -85,25 +199,13 @@ const Wishlist: React.FC = () => {
           )
         : [];
 
-      // const auctionList = await Promise.all(
-      //   uniqueProductIds.map(async (productId) => {
-      //     try {
-      //       const res = await auctionApi.getAuctionsByProductId(productId);
-      //       return res.data;
-      //     } catch (err) {
-      //       console.error("상품 조회 실패:", productId, err);
-      //       return null;
-      //     }
-      //   })
-      // );
-
       const productMap = new Map(
         [...cachedProducts, ...fetchedProducts]
           .filter((result): result is Product => result !== null)
           .map((product) => [product.id, product])
       );
 
-      const products = entries.map((entry) => {
+      return entries.map((entry) => {
         const product = productMap.get(entry.productId);
         if (product) return product;
         return {
@@ -112,66 +214,53 @@ const Wishlist: React.FC = () => {
           createdAt: undefined,
         } as Product;
       });
-      return { entries, products };
     },
-    enabled: isAuthenticated && !!user?.userId,
+    enabled: entries.length > 0,
     staleTime: 30_000,
   });
+  const products = productsQuery.data ?? [];
 
-  const errorMessage = useMemo(() => {
-    if (!wishlistQuery.isError) return null;
-    return getErrorMessage(
-      wishlistQuery.error,
-      "찜 목록을 불러오는데 실패했습니다."
-    );
-  }, [wishlistQuery.error, wishlistQuery.isError]);
-
-  const removeMutation = useMutation({
-    mutationFn: (productId: string) => wishlistApi.remove(productId),
-    onSuccess: (_, productId) => {
-      queryClient.setQueryData(
-        queryKeys.wishlist.list(user?.userId),
-        (
-          prev:
-            | {
-                entries: WishlistEntry[];
-                products: Product[];
-              }
-            | undefined
-        ) => {
-          if (!prev) return prev;
-          return {
-            entries: prev.entries.filter(
-              (entry) => entry.productId !== productId
-            ),
-            products: prev.products.filter(
-              (product) => product.id !== productId
-            ),
-          };
+  useEffect(() => {
+    if (!loadMoreRef.current) return;
+    if (!wishlistQuery.hasNextPage) return;
+    const element = loadMoreRef.current;
+    const root = listContainerRef.current;
+    const observer = new IntersectionObserver(
+      (entriesList) => {
+        if (
+          entriesList.some((entry) => entry.isIntersecting) &&
+          wishlistQuery.hasNextPage &&
+          !wishlistQuery.isFetchingNextPage
+        ) {
+          wishlistQuery.fetchNextPage();
         }
+      },
+      { rootMargin: "120px", root: root ?? null }
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [
+    wishlistQuery.hasNextPage,
+    wishlistQuery.isFetchingNextPage,
+    wishlistQuery.fetchNextPage,
+  ]);
+  const recommendationsQuery = useQuery<ProductRecommendSummaryResponse, Error>({
+    queryKey: [
+      ...queryKeys.wishlist.recommendations(user?.userId),
+      recommendationProductIds,
+    ],
+    queryFn: async () => {
+      const response = await wishlistApi.getWishlistRecommendations(
+        recommendationProductIds
       );
+      return response.data;
     },
+    enabled: recommendationProductIds.length > 0 && wishlistQuery.isSuccess,
+    staleTime: 30_000,
   });
-
-  const handleRemoveWishlist = async (productId: string) => {
-    if (removingId) return;
-    try {
-      setRemovingId(productId);
-      await removeMutation.mutateAsync(productId);
-    } catch (err) {
-      console.error("찜 삭제 실패:", err);
-      alert("찜 삭제에 실패했습니다. 잠시 후 다시 시도해 주세요.");
-    } finally {
-      setRemovingId(null);
-    }
-  };
-
-  const products = wishlistQuery.data?.products ?? [];
-  const entries = wishlistQuery.data?.entries ?? [];
-  const entryMap = useMemo(
-    () => new Map(entries.map((entry) => [entry.productId, entry])),
-    [entries]
-  );
+  const recommendedItems =
+    recommendationsQuery.data?.items ?? ([] as ProductRecommendationResponse[]);
+  const recommendationSummary = recommendationsQuery.data?.summary ?? "";
 
   const fileGroupIds = useMemo(() => {
     const ids = products
@@ -215,7 +304,12 @@ const Wishlist: React.FC = () => {
     const list = [...cachedFileGroups, ...(fileGroupsQuery.data ?? [])];
     return new Map(list.map((group) => [String(group.fileGroupId), group]));
   }, [cachedFileGroups, fileGroupsQuery.data]);
-  const isImageLoading = wishlistQuery.isLoading || fileGroupsQuery.isLoading;
+  const isImageLoading =
+    wishlistQuery.isLoading ||
+    productsQuery.isLoading ||
+    fileGroupsQuery.isLoading;
+  const isListLoading =
+    wishlistQuery.isLoading || (productsQuery.isLoading && products.length === 0);
 
   if (!isAuthenticated) {
     return (
@@ -242,59 +336,34 @@ const Wishlist: React.FC = () => {
           alignItems={{ xs: "flex-start", sm: "center" }}
           justifyContent="space-between"
           spacing={1}
-          sx={{ mb: 1.5 }}
+          sx={{ mb: 1 }}
         >
           <Typography variant="h4" component="h1">
             찜 목록 (Wishlist)
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            총 {entries.length}개
-          </Typography>
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <Typography variant="body2" color="text.secondary">
+              총 {totalCount}개
+            </Typography>
+          </Stack>
         </Stack>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5 }}>
           찜한 상품을 모아보고, 관심 경매 시작 알림을 받아보세요.
         </Typography>
+        <WishlistRecommendationsFloating
+          summary={recommendationSummary}
+          items={recommendedItems}
+          isLoading={recommendationsQuery.isLoading}
+        />
         <Paper sx={{ p: { xs: 2, sm: 3 }, borderRadius: 3 }}>
-          {wishlistQuery.isLoading &&
-            products.length === 0 &&
-            !errorMessage && (
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: {
-                    xs: "1fr",
-                    sm: "repeat(2, 1fr)",
-                  },
-                  gap: 3,
-                }}
-              >
-                {Array.from({ length: 4 }).map((_, idx) => (
-                  <Card
-                    key={`wishlist-skeleton-${idx}`}
-                    sx={{ overflow: "hidden", borderRadius: 3 }}
-                  >
-                    <Skeleton variant="rectangular" height={180} />
-                    <CardContent
-                      sx={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 1,
-                      }}
-                    >
-                      <Skeleton width="70%" />
-                      <Skeleton width="45%" />
-                    </CardContent>
-                  </Card>
-                ))}
-              </Box>
-            )}
+          {isListLoading && products.length === 0 && !errorMessage && (
+            <WishlistListSkeleton count={4} />
+          )}
 
-          {!wishlistQuery.isLoading && errorMessage && (
+          {!isListLoading && errorMessage && (
             <Alert severity="error">{errorMessage}</Alert>
           )}
-          {!wishlistQuery.isLoading &&
-            !errorMessage &&
-            entries.length === 0 && (
+          {!isListLoading && !errorMessage && entries.length === 0 && (
               <Box
                 sx={{
                   textAlign: "center",
@@ -320,19 +389,17 @@ const Wishlist: React.FC = () => {
                 </Button>
               </Box>
             )}
-          {!wishlistQuery.isLoading && !errorMessage && products.length > 0 && (
+          {!isListLoading && !errorMessage && products.length > 0 && (
             <Box
+              ref={listContainerRef}
               sx={{
-                display: "grid",
-                gridTemplateColumns: {
-                  xs: "1fr",
-                  sm: "repeat(2, 1fr)",
-                },
-                gap: 3,
+                maxHeight: { xs: 560, sm: 640 },
+                overflowY: "auto",
+                pr: 0.5,
               }}
             >
+              <Stack spacing={1.5}>
               {products.map((product) => {
-                const entry = entryMap.get(product.id);
                 const fileGroupId = product.fileGroupId
                   ? String(product.fileGroupId)
                   : null;
@@ -340,172 +407,26 @@ const Wishlist: React.FC = () => {
                   ? getProductImageUrls(fileGroupMap.get(fileGroupId) ?? null)
                   : [];
                 const coverImage = imageUrls[0];
-                const wishDate = entry?.createdAt
-                  ? new Date(entry.createdAt).toLocaleDateString()
-                  : null;
-                const categoryLabel = (() => {
-                  if (!product.categories?.length) return null;
-                  const first = product.categories[0];
-                  if (typeof first === "string") return first;
-                  return first.categoryName || null;
-                })();
 
                 return (
-                  <Card
+                  <WishlistItemRow
                     key={product.id}
-                    sx={{
-                      height: "100%",
-                      display: "flex",
-                      flexDirection: "column",
-                      borderRadius: 3,
-                      border: "1px solid",
-                      borderColor: "divider",
-                      overflow: "hidden",
-                      position: "relative",
-                    }}
-                  >
-                    <ImageWithFallback
-                      src={coverImage}
-                      alt={product.name}
-                      height={180}
-                      loading={isImageLoading}
-                      sx={{ objectFit: "cover" }}
-                    />
-                    <Tooltip title="찜 해제">
-                      <span>
-                        <IconButton
-                          aria-label="remove"
-                          onClick={() => handleRemoveWishlist(product.id)}
-                          disabled={removingId === product.id}
-                          size="small"
-                          sx={{
-                            position: "absolute",
-                            top: 10,
-                            right: 10,
-                            bgcolor: "error.main",
-                            color: "common.white",
-                            boxShadow: 2,
-                            "&:hover": {
-                              bgcolor: "error.dark",
-                            },
-                          }}
-                        >
-                          <DeleteOutlineIcon fontSize="small" />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
-                    {removingId === product.id && (
-                      <Box
-                        sx={{
-                          position: "absolute",
-                          inset: 0,
-                          bgcolor: "rgba(255, 255, 255, 0.7)",
-                          display: "flex",
-                          flexDirection: "column",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: 1,
-                          zIndex: 1,
-                        }}
-                      >
-                        <CircularProgress size={28} />
-                        <Typography variant="caption" color="text.secondary">
-                          찜 해제 중...
-                        </Typography>
-                      </Box>
-                    )}
-                    <CardContent
-                      sx={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 1,
-                        flexGrow: 1,
-                      }}
-                    >
-                      {categoryLabel && (
-                        <Chip
-                          label={categoryLabel}
-                          size="small"
-                          variant="outlined"
-                          sx={{ alignSelf: "flex-start" }}
-                        />
-                      )}
-                      <Typography
-                        fontWeight={700}
-                        component={RouterLink}
-                        to={`/products/${product.id}`}
-                        sx={{
-                          textDecoration: "none",
-                          color: "inherit",
-                          "&:hover": { textDecoration: "underline" },
-                        }}
-                      >
-                        {product.name}
-                      </Typography>
-                      {wishDate && (
-                        <Typography variant="body2" color="text.secondary">
-                          찜한 날짜: {wishDate}
-                        </Typography>
-                      )}
-                      {product.createdAt && (
-                        <Typography variant="caption" color="text.secondary">
-                          등록일:{" "}
-                          {new Date(product.createdAt).toLocaleDateString()}
-                        </Typography>
-                      )}
-                    </CardContent>
-                  </Card>
+                    product={product}
+                    imageUrl={coverImage}
+                    isImageLoading={isImageLoading}
+                    isRemoving={removingId === product.id}
+                    onRemove={() => handleRemoveWishlist(product.id)}
+                  />
                 );
               })}
+              <Box ref={loadMoreRef} sx={{ height: 1 }} />
+              {wishlistQuery.isFetchingNextPage && (
+                <WishlistListSkeleton count={2} />
+              )}
+              </Stack>
             </Box>
           )}
         </Paper>
-        <Box sx={{ mt: 4 }}>
-          <Box sx={{ mb: 1.5 }}>
-            <Typography variant="h6" sx={{ fontWeight: 700 }}>
-              찜 기반 추천
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              찜한 상품과 비슷한 경매를 추천할 예정입니다.
-            </Typography>
-          </Box>
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: {
-                xs: "1fr",
-                sm: "repeat(2, 1fr)",
-              },
-              gap: 3,
-            }}
-          >
-            {Array.from({ length: 2 }).map((_, idx) => (
-              <Card
-                key={`wishlist-reco-${idx}`}
-                sx={{
-                  height: "100%",
-                  display: "flex",
-                  flexDirection: "column",
-                }}
-              >
-                <Skeleton variant="rectangular" height={180} />
-                <CardContent
-                  sx={{
-                    flexGrow: 1,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 1,
-                    mt: 1,
-                  }}
-                >
-                  <Skeleton variant="text" width="80%" />
-                  <Skeleton variant="text" width="60%" />
-                  <Skeleton variant="text" width="50%" />
-                </CardContent>
-              </Card>
-            ))}
-          </Box>
-        </Box>
       </Box>
     </Container>
   );

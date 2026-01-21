@@ -1,16 +1,16 @@
 import type { ApiResponseDto } from "@moreauction/types";
 import type { LoginParams, LoginResponse } from "@moreauction/types";
-import { client } from "@/apis/client";
+import { authClient } from "./client";
 
-export const userApi = {
+export const authApi = {
   login: async (
     params: LoginParams
   ): Promise<ApiResponseDto<LoginResponse>> => {
-    const response = await client.post("/auth/login", params);
+    const response = await authClient.post("/auth/login", params);
     return response.data;
   },
   logout: async (): Promise<ApiResponseDto<null>> => {
-    const response = await client.post("/auth/logout");
+    const response = await authClient.post("/auth/logout");
     return response.data;
   },
 };

@@ -3,7 +3,7 @@ import React, { useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
-import { userApi } from "@/apis/userApi";
+import { authApi } from "@/apis/authApi";
 import { FormContainer } from "@moreauction/ui";
 import AdminShell from "@/shared/components/AdminShell";
 import { useAuth } from "@moreauction/auth";
@@ -31,7 +31,7 @@ const Login: React.FC = () => {
   const redirectTo = (location.state as { from?: string } | null)?.from || "/";
 
   const loginMutation = useMutation({
-    mutationFn: (payload: LoginParams) => userApi.login(payload),
+    mutationFn: (payload: LoginParams) => authApi.login(payload),
     onSuccess: (response) => {
       const res = response.data;
       const roles = (res as LoginResponse).roles;

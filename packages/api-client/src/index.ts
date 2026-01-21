@@ -1,5 +1,9 @@
 import axios, { type AxiosInstance, type AxiosRequestHeaders } from "axios";
-import type { ApiResponseDto } from "@moreauction/types";
+import type {
+  ApiResponseDto,
+  FileGroup,
+  ProductCategory,
+} from "@moreauction/types";
 
 interface CreateApiClientOptions {
   baseUrl: string;
@@ -142,4 +146,61 @@ export const createApiClient = ({
   );
 
   return client;
+};
+
+export const createCategoryApi = (client: AxiosInstance) => ({
+  getCategories: async (): Promise<ApiResponseDto<ProductCategory[]>> => {
+    const response = await client.get("/categories");
+    return response.data;
+  },
+});
+
+export interface UploadedFileInfo {
+  id: string;
+  fileName: string;
+  fileType: string;
+  filePath: string;
+  fileGroupId: string;
+  createdBy?: string;
+  createdAt?: string;
+}
+
+export interface FileGroupUploadResponse {
+  fileGroupId: string;
+  files: UploadedFileInfo[];
+}
+
+export const createFileApi = (client: AxiosInstance) => {
+  const uploadFiles = async (
+    files: File[]
+  ): Promise<ApiResponseDto<FileGroupUploadResponse>> => {
+    if (!files.length) {
+      throw new Error("업로드할 파일이 없습니다.");
+    }
+    const formData = new FormData();
+    files.forEach((file) => formData.append("files", file));
+
+    const response = await client.post("/files", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return response.data;
+  };
+
+  return {
+    uploadFiles,
+    uploadFile: async (file: File) => uploadFiles([file]),
+    getFiles: async (fileGroupId: string): Promise<ApiResponseDto<FileGroup>> => {
+      const response = await client.get(`/files/groups/${fileGroupId}`);
+      return response.data;
+    },
+    getFileGroupsByIds: async (
+      fileGroupIds: string[]
+    ): Promise<ApiResponseDto<FileGroup[]>> => {
+      const ids = fileGroupIds.filter(Boolean).map(encodeURIComponent).join(",");
+      const response = await client.get(`/files/groups/${ids}/many`);
+      return response.data;
+    },
+  };
 };

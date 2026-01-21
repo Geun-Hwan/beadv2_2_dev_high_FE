@@ -3,10 +3,6 @@ import {
   Box,
   Button,
   Container,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   Divider,
   Paper,
   Skeleton,
@@ -18,8 +14,6 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { depositApi } from "@/apis/depositApi";
 import { orderApi } from "@/apis/orderApi";
-import { DepositChargeDialog } from "@/features/mypage/components/DepositChargeDialog";
-import { requestTossPayment } from "@/shared/utils/requestTossPayment";
 import { useAuth } from "@moreauction/auth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -38,22 +32,7 @@ const PendingOrders: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
-
-  const [insufficientOpen, setInsufficientOpen] = useState(false);
-  const [insufficientInfo, setInsufficientInfo] = useState<{
-    balance: number;
-    needed: number;
-    shortage: number;
-    recommendedCharge: number;
-  } | null>(null);
-  const [chargeOpen, setChargeOpen] = useState(false);
-  const [chargeLoading, setChargeLoading] = useState(false);
-  const [chargeAmount, setChargeAmount] = useState("");
-  const [chargeError, setChargeError] = useState<string | null>(null);
-  const [autoPurchaseTarget, setAutoPurchaseTarget] = useState<{
-    orderId: string;
-    amount: number;
-  } | null>(null);
+  const [now, setNow] = useState(0);
 
   const updateUrlState = useCallback(() => {
     const params = new URLSearchParams(location.search);
@@ -94,6 +73,9 @@ const PendingOrders: React.FC = () => {
   useEffect(() => {
     updateUrlState();
   }, [updateUrlState]);
+  useEffect(() => {
+    setNow(Date.now());
+  }, [pendingQuery.dataUpdatedAt]);
 
   const setDepositBalanceCache = useCallback(
     (next: number) => {
@@ -117,90 +99,6 @@ const PendingOrders: React.FC = () => {
     },
     [queryClient]
   );
-
-  const handleCompleteByDeposit = async (orderId: string) => {
-    if (actionLoadingId) return;
-    if (!window.confirm("예치금으로 구매하시겠습니까?")) return;
-    const order = orders.find((o) => o.id === orderId);
-    if (!order) {
-      return;
-    }
-    const payableAmount =
-      Number(order.winningAmount) -
-      (typeof order.depositAmount === "number" ? order.depositAmount : 0);
-    try {
-      setActionLoadingId(orderId);
-      const info = await depositApi.createDeposit({
-        depositOrderId: orderId,
-        amount: payableAmount,
-        type: DepositType.PAYMENT,
-        userId: user?.userId,
-      });
-      alert("구매가 완료되었습니다.");
-      if (typeof info?.data?.balance === "number") {
-        setDepositBalanceCache(info.data.balance);
-      } else {
-        decrementDepositBalance(payableAmount);
-      }
-      queryClient.setQueryData(
-        queryKeys.orders.pendingCount(),
-        (prev: number | undefined) =>
-          Math.max((typeof prev === "number" ? prev : 0) - 1, 0)
-      );
-      queryClient.setQueryData(
-        queryKeys.orders.pending(user?.userId),
-        (prev: OrderResponse[] | undefined) =>
-          (prev ?? []).filter((item) => item.id !== orderId)
-      );
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.orders.pendings(),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.orders.histories(),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.orders.pendingCount(),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.deposit.account(),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.deposit.historyAll(),
-        }),
-      ]);
-    } catch (err: any) {
-      console.error("구매 실패:", err);
-      if (err.status === 400) {
-        try {
-          const account = await depositApi.getAccount();
-          const balance = account?.data?.balance ?? 0;
-          const shortage = Math.max(0, payableAmount - balance);
-          const recommendedCharge = Math.max(
-            1000,
-            Math.ceil(shortage / 100) * 100
-          );
-          setInsufficientInfo({
-            balance,
-            needed: payableAmount,
-            shortage,
-            recommendedCharge,
-          });
-          setAutoPurchaseTarget({ orderId, amount: payableAmount });
-          setInsufficientOpen(true);
-        } catch (accountErr) {
-          console.error("예치금 잔액 조회 실패:", accountErr);
-          alert(
-            "예치금 잔액이 부족합니다. 예치금을 충전한 뒤 다시 구매해 주세요."
-          );
-        }
-      } else {
-        alert(err?.data?.message ?? "구매 처리 중 오류가 발생했습니다.");
-      }
-    } finally {
-      setActionLoadingId(null);
-    }
-  };
 
   return (
     <Container maxWidth="md">
@@ -253,7 +151,7 @@ const PendingOrders: React.FC = () => {
                     ? new Date(order.payLimitDate)
                     : null;
                   const isPayExpired =
-                    payLimitAt != null && Date.now() > payLimitAt.getTime();
+                    payLimitAt != null && now > payLimitAt.getTime();
 
                   return (
                     <Paper
@@ -398,94 +296,6 @@ const PendingOrders: React.FC = () => {
           </Stack>
         </Paper>
       </Box>
-
-      <Dialog
-        open={insufficientOpen}
-        onClose={() => setInsufficientOpen(false)}
-      >
-        <DialogTitle>예치금 잔액이 부족합니다</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" sx={{ mt: 1 }}>
-            현재 잔액: {formatWon(insufficientInfo?.balance ?? 0)}
-          </Typography>
-          <Typography variant="body2">
-            필요 금액: {formatWon(insufficientInfo?.needed ?? 0)}
-          </Typography>
-          <Typography variant="body2">
-            부족 금액: {formatWon(insufficientInfo?.shortage ?? 0)}
-          </Typography>
-          <Typography variant="body2" sx={{ mt: 1 }}>
-            예치금을 충전한 뒤 구매할 수 있어요.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setInsufficientOpen(false)}>닫기</Button>
-          <Button
-            variant="contained"
-            onClick={() => {
-              const amount = insufficientInfo?.recommendedCharge ?? 0;
-              setChargeAmount(amount > 0 ? String(amount) : "");
-              setChargeError(null);
-              setInsufficientOpen(false);
-              setChargeOpen(true);
-            }}
-          >
-            충전하기
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <DepositChargeDialog
-        open={chargeOpen}
-        loading={chargeLoading}
-        amount={chargeAmount}
-        errorText={chargeError}
-        onChangeAmount={setChargeAmount}
-        onClose={() => {
-          if (chargeLoading) return;
-          setChargeOpen(false);
-          setChargeAmount("");
-          setChargeError(null);
-        }}
-        onSubmit={async () => {
-          if (chargeLoading) return;
-          const amount = parseInt(chargeAmount, 10);
-          if (isNaN(amount) || amount < 1000 || amount % 100 !== 0) {
-            setChargeError("충전은 100원 단위로 최소 1,000원부터 가능합니다.");
-            return;
-          }
-
-          setChargeLoading(true);
-          setChargeError(null);
-          try {
-            const depositOrder = await depositApi.createDepositOrder(amount);
-            if (depositOrder?.data?.id) {
-              if (autoPurchaseTarget) {
-                sessionStorage.setItem(
-                  "autoPurchaseAfterCharge",
-                  JSON.stringify({
-                    orderId: autoPurchaseTarget.orderId,
-                    amount: autoPurchaseTarget.amount,
-                    createdAt: Date.now(),
-                  })
-                );
-              }
-              requestTossPayment(
-                depositOrder.data.id,
-                depositOrder.data.amount
-              );
-              setChargeOpen(false);
-            } else {
-              setChargeError("주문 생성에 실패했습니다.");
-            }
-          } catch (chargeErr) {
-            console.error("예치금 충전 주문 생성 실패:", chargeErr);
-            setChargeError("예치금 충전 주문 생성 중 오류가 발생했습니다.");
-          } finally {
-            setChargeLoading(false);
-          }
-        }}
-      />
     </Container>
   );
 };

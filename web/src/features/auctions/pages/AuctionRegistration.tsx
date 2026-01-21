@@ -533,6 +533,7 @@ const AuctionRegistration: React.FC = () => {
                                 theme.palette.mode === "light"
                                   ? "rgba(37, 99, 235, 0.9)"
                                   : "rgba(191, 219, 254, 0.9)",
+                              fontSize: 20,
                             }}
                           />
                           <Box>

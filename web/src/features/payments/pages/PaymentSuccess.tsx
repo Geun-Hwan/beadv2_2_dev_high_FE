@@ -15,7 +15,6 @@ import { auctionApi } from "@/apis/auctionApi";
 import { depositApi } from "@/apis/depositApi";
 import { useAuth } from "@moreauction/auth";
 import { queryKeys } from "@/shared/queries/queryKeys";
-import { DepositType } from "@moreauction/types";
 
 export default function PaymentSuccess() {
   const navigate = useNavigate();
@@ -100,92 +99,6 @@ export default function PaymentSuccess() {
             queryKey: queryKeys.deposit.historyAll(),
           }),
         ]);
-
-        const autoPurchaseRaw = sessionStorage.getItem(
-          "autoPurchaseAfterCharge"
-        );
-        if (autoPurchaseRaw) {
-          try {
-            const parsed = JSON.parse(autoPurchaseRaw) as {
-              orderId?: string;
-              amount?: number;
-              createdAt?: number;
-            };
-            const purchaseOrderId = parsed?.orderId;
-            const purchaseAmount = parsed?.amount;
-            if (purchaseOrderId && typeof purchaseAmount === "number") {
-              try {
-                const info = await depositApi.createDeposit({
-                  depositOrderId: purchaseOrderId,
-                  amount: purchaseAmount,
-                  type: DepositType.PAYMENT,
-                  userId: user?.userId,
-                });
-                if (typeof info?.data?.balance === "number") {
-                  setDepositBalanceCache(info.data.balance);
-                } else {
-                  decrementDepositBalance(purchaseAmount);
-                }
-                queryClient.setQueryData(
-                  queryKeys.orders.pendingCount(),
-                  (prev: number | undefined) =>
-                    Math.max((typeof prev === "number" ? prev : 0) - 1, 0)
-                );
-                queryClient.setQueryData(
-                  queryKeys.orders.pending(user?.userId),
-                  (prev: Array<{ id: string }> | undefined) =>
-                    (prev ?? []).filter((item) => item.id !== purchaseOrderId)
-                );
-                await queryClient.invalidateQueries({
-                  queryKey: queryKeys.orders.pendingCount(),
-                });
-                await Promise.all([
-                  queryClient.invalidateQueries({
-                    queryKey: queryKeys.orders.pendings(),
-                  }),
-                  queryClient.invalidateQueries({
-                    queryKey: queryKeys.orders.pending(user?.userId),
-                    refetchType: "none",
-                  }),
-                  queryClient.invalidateQueries({
-                    queryKey: queryKeys.orders.histories(),
-                  }),
-                  queryClient.invalidateQueries({
-                    queryKey: queryKeys.deposit.account(),
-                  }),
-                  queryClient.invalidateQueries({
-                    queryKey: queryKeys.deposit.historyAll(),
-                  }),
-                ]);
-                redirectPath = "/orders";
-                setStatus("success");
-                setTitle("충전과 구매가 완료되었어요");
-                setDescription(
-                  "예치금 충전 승인 후 주문서 구매까지 처리했습니다. 주문 내역에서 확인할 수 있어요."
-                );
-                setAction({ label: "주문서로 바로가기", path: "/orders" });
-              } catch (purchaseErr) {
-                console.error("자동 구매 처리 실패:", purchaseErr);
-                redirectPath = "/orders";
-                setStatus("success");
-                setTitle("충전은 완료됐지만 구매는 실패했어요");
-                setDescription(
-                  "예치금 충전은 완료됐지만 주문서 구매 처리에 실패했습니다. 주문서에서 다시 구매해 주세요."
-                );
-                setAction({ label: "주문서로 바로가기", path: "/orders" });
-              } finally {
-                sessionStorage.removeItem("autoPurchaseAfterCharge");
-              }
-
-              setTimeout(() => {
-                navigate(redirectPath, { replace: true });
-              }, 5000);
-              return;
-            }
-          } catch (e) {
-            console.error("autoPurchaseAfterCharge 파싱/처리 실패:", e);
-          }
-        }
 
         const autoAuctionRaw = sessionStorage.getItem(
           "autoAuctionDepositAfterCharge"

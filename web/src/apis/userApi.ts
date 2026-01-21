@@ -1,4 +1,8 @@
-import type { ApiResponseDto } from "@moreauction/types";
+import type {
+  ApiResponseDto,
+  UserAddress,
+  UserAddressCreateRequest,
+} from "@moreauction/types";
 import type {
   LoginParams,
   LoginResponse,
@@ -122,6 +126,30 @@ export const userApi = {
    */
   logout: async (): Promise<ApiResponseDto<void>> => {
     const response = await client.post("/auth/logout");
+    return response.data;
+  },
+
+  getAddressList: async (): Promise<ApiResponseDto<UserAddress[]>> => {
+    const response = await client.get("/users/address");
+    return response.data;
+  },
+
+  createAddress: async (
+    params: UserAddressCreateRequest
+  ): Promise<ApiResponseDto<UserAddress>> => {
+    const response = await client.post("/users/address", params);
+    return response.data;
+  },
+
+  modifyAddress: async (
+    addressId: string,
+    params: UserAddressCreateRequest
+  ): Promise<ApiResponseDto<UserAddress>> => {
+    const response = await client.put(`/users/address/${addressId}`, params);
+    return response.data;
+  },
+  deleteAddress: async (addressId: string): Promise<ApiResponseDto<void>> => {
+    const response = await client.delete(`/users/address/${addressId}`);
     return response.data;
   },
 };

@@ -3,6 +3,7 @@ import {
   type SettlementAdminSearchFilter,
 } from "@/apis/adminSettlementApi";
 import { formatDate, formatWon } from "@moreauction/utils";
+import type { SettlementSummary } from "@moreauction/types";
 import {
   Alert,
   Box,
@@ -28,8 +29,8 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import ChangeSettleDialog from "../dialog/ChangeSettleDialog";
 import SettleCreateDialog from "../dialog/SettleCreateDialog";
-
-const PAGE_SIZE = 10;
+import SettlementDetailDialog from "../dialog/SettlementDetailDialog";
+import { PAGE_SIZE } from "@/shared/constant/const";
 
 const AdminSettlements = () => {
   const queryClient = useQueryClient();
@@ -40,6 +41,10 @@ const AdminSettlements = () => {
   );
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [detailTarget, setDetailTarget] = useState<SettlementSummary | null>(
+    null
+  );
+  const [detailOpen, setDetailOpen] = useState(false);
 
   const [runBatchMessage, setRunBatchMessage] = useState<string | null>(null);
   const [runBatchCooldownUntil, setRunBatchCooldownUntil] = useState<
@@ -260,28 +265,43 @@ const AdminSettlements = () => {
               <TableCell align="center">정산 그룹 ID</TableCell>
               <TableCell align="center">판매자 ID</TableCell>
               <TableCell align="center">정산일</TableCell>
-              <TableCell align="center">총액</TableCell>
               <TableCell align="center">정산 예정액</TableCell>
-              <TableCell align="center">수수료 예정액</TableCell>
-              <TableCell align="center">총 지급액</TableCell>
               <TableCell align="center">정산 지급액</TableCell>
-              <TableCell align="center">차감 수수료</TableCell>
               <TableCell align="center">상태</TableCell>
-              <TableCell align="center">등록일</TableCell>
-              <TableCell align="center">수정일</TableCell>
               <TableCell align="center">작업</TableCell>
             </TableRow>
           </TableHead>
-          <TableBody>
+          <TableBody
+            sx={{
+              "& tr:last-child td, & tr:last-child th": { borderBottom: 0 },
+            }}
+          >
+            {settlementsQuery.isLoading && (
+              <TableRow>
+                <TableCell colSpan={8}>
+                  <Typography color="text.secondary">
+                    정산 목록을 불러오는 중...
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            )}
             {errorMessage && (
               <TableRow>
-                <TableCell colSpan={13}>
+                <TableCell colSpan={8}>
                   <Alert severity="error">{errorMessage}</Alert>
                 </TableCell>
               </TableRow>
             )}
             {settlements.map((settlement) => (
-              <TableRow key={settlement.id} hover sx={{ height: 56 }}>
+              <TableRow
+                key={settlement.id}
+                hover
+                sx={{ height: 56, cursor: "pointer" }}
+                onClick={() => {
+                  setDetailTarget(settlement);
+                  setDetailOpen(true);
+                }}
+              >
                 <TableCell align="center">{settlement.id}</TableCell>
                 <TableCell>
                   <Typography
@@ -300,44 +320,22 @@ const AdminSettlements = () => {
                   {formatDate(settlement.settlementDate)}
                 </TableCell>
                 <TableCell align="center">
-                  {formatWon(
-                    settlement.totalFinalAmount + settlement.totalCharge
-                  )}
-                </TableCell>
-                <TableCell align="center">
                   {formatWon(settlement.totalFinalAmount)}
-                </TableCell>
-                <TableCell align="center">
-                  {formatWon(settlement.totalCharge)}
-                </TableCell>
-                <TableCell align="center">
-                  {formatWon(
-                    settlement.paidFinalAmount + settlement.paidCharge
-                  )}
                 </TableCell>
                 <TableCell align="center">
                   {formatWon(settlement.paidFinalAmount)}
                 </TableCell>
                 <TableCell align="center">
-                  {formatWon(settlement.paidCharge)}
-                </TableCell>
-                <TableCell align="center">
                   {settlement.depositStatus ?? "-"}
-                </TableCell>
-                <TableCell align="center">
-                  <Chip size="small" label={formatDate(settlement.createdAt)} />
-                </TableCell>
-                <TableCell align="center">
-                  <Chip
-                    size="small"
-                    label={formatDate(settlement.updateDate)}
-                  />
                 </TableCell>
                 <TableCell align="center">
                   <Button
                     size="small"
                     variant="outlined"
-                    onClick={() => handleOpenGroup(settlement.id)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleOpenGroup(settlement.id);
+                    }}
                   >
                     정산 항목
                   </Button>
@@ -346,7 +344,7 @@ const AdminSettlements = () => {
             ))}
             {showEmpty && (
               <TableRow>
-                <TableCell colSpan={11}>
+                <TableCell colSpan={8}>
                   <Typography color="text.secondary">
                     조건에 해당하는 정산이 없습니다.
                   </Typography>
@@ -372,6 +370,12 @@ const AdminSettlements = () => {
       <ChangeSettleDialog
         selectedGroupId={selectedGroupId}
         setSelectedGroupId={setSelectedGroupId}
+      />
+      <SettlementDetailDialog
+        open={detailOpen}
+        settlement={detailTarget}
+        onClose={() => setDetailOpen(false)}
+        onExited={() => setDetailTarget(null)}
       />
     </Box>
   );

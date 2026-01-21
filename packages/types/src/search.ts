@@ -25,3 +25,23 @@ export interface SimilarProductResponse {
   imageUrl: string | null;
   score: number;
 }
+
+export type ProductRecommendSummaryResponse = {
+  items: ProductRecommendationResponse[];
+  summary: string;
+};
+export interface ProductRecommendationResponse {
+  productId: string;
+  productName: string;
+  categories: string[];
+  description: string;
+  imageUrl: string;
+  startPrice: number;
+  depositAmount: number;
+  status: string;
+  sellerId: string;
+  auctionStartAt: string;
+  auctionEndAt: string;
+  score: number;
+}
+// /recommendation/wishlist

@@ -8,13 +8,13 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  Table,
   TableBody,
   TableCell,
   TableHead,
   TableRow,
   Typography,
 } from "@mui/material";
+import DialogTable from "@/shared/components/DialogTable";
 import { useQuery } from "@tanstack/react-query";
 import React from "react";
 
@@ -45,7 +45,7 @@ const AuctionInfoDialog = ({ auctionListOpen, setAuctionListOpen }: any) => {
           </Typography>
         ) : auctionListQuery.data?.data &&
           auctionListQuery.data.data.length > 0 ? (
-          <Table>
+          <DialogTable>
             <TableHead>
               <TableRow>
                 <TableCell>ID</TableCell>
@@ -62,7 +62,10 @@ const AuctionInfoDialog = ({ auctionListOpen, setAuctionListOpen }: any) => {
                   <TableCell>{auction.id}</TableCell>
                   <TableCell>{auction.startBid?.toLocaleString()}원</TableCell>
                   <TableCell>
-                    {auction.currentBid?.toLocaleString()}원
+                    {auction.currentBid && auction.currentBid !== 0
+                      ? auction.currentBid?.toLocaleString()
+                      : auction.startBid?.toLocaleString()}
+                    원
                   </TableCell>
                   <TableCell>
                     <Chip
@@ -77,12 +80,22 @@ const AuctionInfoDialog = ({ auctionListOpen, setAuctionListOpen }: any) => {
                       size="small"
                     />
                   </TableCell>
-                  <TableCell>{formatDate(auction.auctionStartAt)}</TableCell>
-                  <TableCell>{formatDate(auction.auctionEndAt)}</TableCell>
+                  <TableCell>
+                    <Chip
+                      size="small"
+                      label={formatDate(auction.auctionStartAt)}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      size="small"
+                      label={formatDate(auction.auctionEndAt)}
+                    />
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
-          </Table>
+          </DialogTable>
         ) : (
           <Typography>이 상품에 대한 경매가 없습니다.</Typography>
         )}

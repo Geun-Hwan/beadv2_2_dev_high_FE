@@ -4,8 +4,9 @@ import { updateAccessTokenOutsideReact } from "@moreauction/auth";
 // API 서버의 기본 URL
 // - VITE_API_BASE_URL 없으면 http://localhost:8000
 // - /api/v1은 공통으로 붙음
-const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000")
-  .replace(/\/$/, "");
+const API_ORIGIN = (
+  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000"
+).replace(/\/$/, "");
 const API_BASE_URL = `${API_ORIGIN}/api/v1`;
 
 /**
@@ -16,6 +17,11 @@ const API_BASE_URL = `${API_ORIGIN}/api/v1`;
  * client.get('/users');
  */
 export const client = createApiClient({
+  baseUrl: API_BASE_URL + "/admin",
+  onUpdateToken: updateAccessTokenOutsideReact,
+});
+
+export const authClient = createApiClient({
   baseUrl: API_BASE_URL,
   onUpdateToken: updateAccessTokenOutsideReact,
 });

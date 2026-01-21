@@ -1,5 +1,6 @@
 import { adminAuctionApi } from "@/apis/adminAuctionApi";
 import { adminOrderApi } from "@/apis/adminOrderApi";
+import { COMPLETED_AUCTION_PAGE_SIZE } from "@/shared/constant/const";
 import { AuctionStatus, type AuctionDetailResponse } from "@moreauction/types";
 import { formatDate, formatWon } from "@moreauction/utils";
 import {
@@ -8,7 +9,6 @@ import {
   DialogContent,
   Stack,
   Typography,
-  Table,
   TableHead,
   TableRow,
   TableCell,
@@ -19,6 +19,12 @@ import {
   Pagination,
   DialogActions,
 } from "@mui/material";
+import DialogTable from "@/shared/components/DialogTable";
+import {
+  dialogContentSx,
+  dialogPaperSx,
+  dialogTitleSx,
+} from "@/shared/components/dialogStyles";
 import {
   useQuery,
   keepPreviousData,
@@ -26,8 +32,6 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import React, { useMemo, useState } from "react";
-
-const COMPLETED_AUCTION_PAGE_SIZE = 5;
 
 const OrderCreateDialog = ({ createOrderOpen, setCreateOrderOpen }: any) => {
   const queryClient = useQueryClient();
@@ -90,15 +94,16 @@ const OrderCreateDialog = ({ createOrderOpen, setCreateOrderOpen }: any) => {
       onClose={() => setCreateOrderOpen(false)}
       maxWidth="lg"
       fullWidth
+      PaperProps={{ sx: dialogPaperSx }}
     >
-      <DialogTitle>주문 생성</DialogTitle>
-      <DialogContent>
+      <DialogTitle sx={dialogTitleSx}>주문 생성</DialogTitle>
+      <DialogContent dividers sx={dialogContentSx}>
         <Stack spacing={1.5} sx={{ mt: 1 }}>
           <Typography variant="body2" color="text.secondary">
             종료된 경매(COMPLETED)에서 주문서를 생성합니다.
           </Typography>
 
-          <Table size="small" sx={{ "& th, & td": { py: 1, px: 1 } }}>
+          <DialogTable>
             <TableHead>
               <TableRow>
                 <TableCell align="center">경매 ID</TableCell>
@@ -120,7 +125,7 @@ const OrderCreateDialog = ({ createOrderOpen, setCreateOrderOpen }: any) => {
               )}
 
               {completedAuctions.map((auction) => (
-                <TableRow key={auction.id} hover sx={{ height: 56 }}>
+                <TableRow key={auction.id} hover>
                   <TableCell align="center">{auction.id}</TableCell>
                   <TableCell align="center">
                     {auction.productName ?? "-"}
@@ -178,7 +183,7 @@ const OrderCreateDialog = ({ createOrderOpen, setCreateOrderOpen }: any) => {
                 </TableRow>
               )}
             </TableBody>
-          </Table>
+          </DialogTable>
           <Pagination
             count={Math.max(completedTotalPages, 1)}
             page={completedPage}

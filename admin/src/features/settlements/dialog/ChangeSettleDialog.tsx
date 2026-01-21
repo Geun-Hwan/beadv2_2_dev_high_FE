@@ -1,9 +1,11 @@
 import { adminSettlementApi } from "@/apis/adminSettlementApi";
+import { GROUP_ITEMS_PAGE_SIZE } from "@/shared/constant/const";
 import { SettlementStatus } from "@moreauction/types";
 import { formatDate, formatWon } from "@moreauction/utils";
 import {
   Box,
   Button,
+  Chip,
   CircularProgress,
   Dialog,
   DialogActions,
@@ -11,16 +13,20 @@ import {
   DialogTitle,
   MenuItem,
   Pagination,
-  Paper,
   Select,
   Stack,
-  Table,
   TableBody,
   TableCell,
   TableHead,
   TableRow,
   Typography,
 } from "@mui/material";
+import DialogTable from "@/shared/components/DialogTable";
+import {
+  dialogContentSx,
+  dialogPaperSx,
+  dialogTitleSx,
+} from "@/shared/components/dialogStyles";
 import {
   keepPreviousData,
   useMutation,
@@ -28,7 +34,6 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { useState } from "react";
-const GROUP_ITEMS_PAGE_SIZE = 8;
 const settlementStatusLabels: Record<string, string> = {
   WAITING: "대기",
   COMPLETED: "완료",
@@ -74,7 +79,6 @@ const ChangeSettleDialog = ({ selectedGroupId, setSelectedGroupId }: any) => {
 
   const handleCloseGroup = () => {
     setSelectedGroupId(null);
-    setGroupItemsPage(1);
   };
 
   const handleGroupItemStatusChange = (
@@ -92,78 +96,82 @@ const ChangeSettleDialog = ({ selectedGroupId, setSelectedGroupId }: any) => {
       onClose={handleCloseGroup}
       maxWidth="lg"
       fullWidth
+      PaperProps={{ sx: dialogPaperSx }}
+      TransitionProps={{
+        onExited: () => {
+          setGroupItemsPage(1);
+        },
+      }}
     >
-      <DialogTitle>정산 항목 상태 변경</DialogTitle>
-      <DialogContent dividers>
+      <DialogTitle sx={dialogTitleSx}>정산 항목 상태 변경</DialogTitle>
+      <DialogContent dividers sx={dialogContentSx}>
         <Stack spacing={2}>
-          <Paper variant="outlined">
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell align="center">정산 ID</TableCell>
-                  <TableCell align="center">주문 ID</TableCell>
-                  <TableCell align="center">정산 금액</TableCell>
-                  <TableCell align="center">상태</TableCell>
-                  <TableCell align="center">등록일</TableCell>
-                  <TableCell align="center">완료일</TableCell>
+          <DialogTable>
+            <TableHead>
+              <TableRow>
+                <TableCell align="center">정산 ID</TableCell>
+                <TableCell align="center">주문 ID</TableCell>
+                <TableCell align="center">정산 금액</TableCell>
+                <TableCell align="center">상태</TableCell>
+                <TableCell align="center">등록일</TableCell>
+                <TableCell align="center">완료일</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {groupItems.map((item) => (
+                <TableRow key={item.id} hover>
+                  <TableCell align="center">{item.id}</TableCell>
+                  <TableCell align="center">{item.orderId}</TableCell>
+                  <TableCell align="center">
+                    {formatWon(item.finalAmount)}
+                  </TableCell>
+                  <TableCell align="center">
+                    <Select
+                      size="small"
+                      value={item.status}
+                      onChange={(event) =>
+                        handleGroupItemStatusChange(
+                          item.id,
+                          item.status,
+                          event.target.value as SettlementStatus
+                        )
+                      }
+                      sx={{ minWidth: 130 }}
+                      disabled={item.status === SettlementStatus.COMPLETED}
+                    >
+                      {Object.values(SettlementStatus).map((status) => (
+                        <MenuItem key={status} value={status}>
+                          {settlementStatusLabels[status] ?? status}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </TableCell>
+                  <TableCell align="center">
+                    <Chip size="small" label={formatDate(item.inputDate)} />
+                  </TableCell>
+                  <TableCell align="center">
+                    <Chip size="small" label={formatDate(item.completeDate)} />
+                  </TableCell>
                 </TableRow>
-              </TableHead>
-              <TableBody>
-                {groupItems.map((item) => (
-                  <TableRow key={item.id} hover sx={{ height: 56 }}>
-                    <TableCell align="center">{item.id}</TableCell>
-                    <TableCell align="center">{item.orderId}</TableCell>
-                    <TableCell align="center">
-                      {formatWon(item.finalAmount)}
-                    </TableCell>
-                    <TableCell align="center">
-                      <Select
-                        size="small"
-                        value={item.status}
-                        onChange={(event) =>
-                          handleGroupItemStatusChange(
-                            item.id,
-                            item.status,
-                            event.target.value as SettlementStatus
-                          )
-                        }
-                        sx={{ minWidth: 130 }}
-                        disabled={item.status === SettlementStatus.COMPLETED}
-                      >
-                        {Object.values(SettlementStatus).map((status) => (
-                          <MenuItem key={status} value={status}>
-                            {settlementStatusLabels[status] ?? status}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </TableCell>
-                    <TableCell align="center">
-                      {formatDate(item.inputDate)}
-                    </TableCell>
-                    <TableCell align="center">
-                      {formatDate(item.completeDate)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {!groupItemsQuery.isLoading && groupItems.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6}>
-                      <Typography color="text.secondary">
-                        정산 항목이 없습니다.
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                )}
-                {groupItemsQuery.isLoading && (
-                  <TableRow>
-                    <TableCell colSpan={6} align="center">
-                      <CircularProgress size={20} />
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </Paper>
+              ))}
+              {!groupItemsQuery.isLoading && groupItems.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6}>
+                    <Typography color="text.secondary">
+                      정산 항목이 없습니다.
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              )}
+              {groupItemsQuery.isLoading && (
+                <TableRow>
+                  <TableCell colSpan={6} align="center">
+                    <CircularProgress size={20} />
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </DialogTable>
           <Box sx={{ display: "flex", justifyContent: "center" }}>
             <Pagination
               count={groupItemsTotalPages}

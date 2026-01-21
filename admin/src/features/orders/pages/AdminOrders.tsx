@@ -43,8 +43,8 @@ import {
 } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import OrderCreateDialog from "../dialog/OrderCreateDialog";
-
-const PAGE_SIZE = 10;
+import OrderDetailDialog from "../dialog/OrderDetailDialog";
+import { PAGE_SIZE } from "@/shared/constant/const";
 
 const statusOptions = [
   { value: "all", label: "전체" },
@@ -78,8 +78,9 @@ const AdminOrders = () => {
     {}
   );
   const [createOrderOpen, setCreateOrderOpen] = useState(false);
-  const [completedPage, setCompletedPage] = useState(1);
   const [deleteTarget, setDeleteTarget] = useState<OrderResponse | null>(null);
+  const [detailTarget, setDetailTarget] = useState<OrderResponse | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   const toOffsetDateTime = (value?: string | null) => {
     if (!value) return undefined;
@@ -214,30 +215,6 @@ const AdminOrders = () => {
     },
   });
 
-  const createOrderMutation = useMutation({
-    mutationFn: (payload: {
-      sellerId: string;
-      buyerId: string;
-      productId: string;
-      productName: string;
-      auctionId: string;
-      winningAmount: number;
-      depositAmount: number;
-      winningDate: string;
-    }) => adminOrderApi.createOrder(payload),
-    onSuccess: () => {
-      alert("주문이 생성되었습니다.");
-      queryClient.invalidateQueries({ queryKey: ["admin", "orders"] });
-      queryClient.invalidateQueries({
-        queryKey: ["admin", "auctions", "completed"],
-        refetchType: "none",
-      });
-    },
-    onError: (error: any) => {
-      alert(error?.data?.message ?? "주문 생성에 실패했습니다.");
-    },
-  });
-
   const deleteMutation = useMutation({
     mutationFn: (orderId: string) => adminOrderApi.deleteOrder(orderId),
     onSuccess: (_, orderId) => {
@@ -316,7 +293,7 @@ const AdminOrders = () => {
       >
         <Box>
           <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5 }}>
-            주문 관리
+            구매 관리
           </Typography>
           <Typography variant="body2" color="text.secondary">
             낙찰 주문 상태를 확인하고 업데이트합니다.
@@ -326,7 +303,6 @@ const AdminOrders = () => {
           <Button
             variant="outlined"
             onClick={() => {
-              setCompletedPage(1);
               setCreateOrderOpen(true);
             }}
           >
@@ -524,23 +500,41 @@ const AdminOrders = () => {
               <TableCell align="center">상태</TableCell>
               <TableCell align="center">삭제</TableCell>
               <TableCell align="center">결제기한</TableCell>
-              <TableCell align="center">구매일</TableCell>
-              <TableCell align="center">등록일</TableCell>
-              <TableCell align="center">수정일</TableCell>
               <TableCell align="center">작업</TableCell>
             </TableRow>
           </TableHead>
-          <TableBody>
+          <TableBody
+            sx={{
+              "& tr:last-child td, & tr:last-child th": { borderBottom: 0 },
+            }}
+          >
+            {ordersQuery.isLoading && (
+              <TableRow>
+                <TableCell colSpan={9}>
+                  <Typography color="text.secondary">
+                    구매 목록을 불러오는 중...
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            )}
             {errorMessage && (
               <TableRow>
-                <TableCell colSpan={12}>
+                <TableCell colSpan={9}>
                   <Alert severity="error">{errorMessage}</Alert>
                 </TableCell>
               </TableRow>
             )}
 
             {orders.map((order) => (
-              <TableRow key={order.id} hover sx={{ height: 56 }}>
+              <TableRow
+                key={order.id}
+                hover
+                sx={{ height: 56, cursor: "pointer" }}
+                onClick={() => {
+                  setDetailTarget(order);
+                  setDetailOpen(true);
+                }}
+              >
                 <TableCell align="center">{order.id}</TableCell>
                 <TableCell align="center">{order.productName ?? "-"}</TableCell>
                 <TableCell align="center">{order.buyerId ?? "-"}</TableCell>
@@ -552,6 +546,7 @@ const AdminOrders = () => {
                   <Select
                     size="small"
                     value={order.status}
+                    onClick={(event) => event.stopPropagation()}
                     onChange={(event) =>
                       handleStatusChange(
                         order,
@@ -607,6 +602,7 @@ const AdminOrders = () => {
                         onChange={(event) =>
                           handlePayLimitChange(order.id, event.target.value)
                         }
+                        onClick={(event) => event.stopPropagation()}
                         sx={(theme) => ({
                           minWidth: 150,
                           "& input::-webkit-calendar-picker-indicator": {
@@ -624,7 +620,10 @@ const AdminOrders = () => {
                                 <span>
                                   <IconButton
                                     size="small"
-                                    onClick={() => handlePayLimitSave(order)}
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      handlePayLimitSave(order);
+                                    }}
                                     disabled={
                                       order.deletedYn === true ||
                                       order.deletedYn === "Y" ||
@@ -651,22 +650,6 @@ const AdminOrders = () => {
                   })()}
                 </TableCell>
                 <TableCell align="center">
-                  <Chip
-                    size="small"
-                    label={
-                      order.payCompleteDate
-                        ? formatDate(order.payCompleteDate)
-                        : "-"
-                    }
-                  />
-                </TableCell>
-                <TableCell align="center">
-                  <Chip size="small" label={formatDate(order.createdAt)} />
-                </TableCell>
-                <TableCell align="center">
-                  <Chip size="small" label={formatDate(order.updatedAt)} />
-                </TableCell>
-                <TableCell align="center">
                   <Button
                     size="small"
                     color="error"
@@ -676,7 +659,10 @@ const AdminOrders = () => {
                       deleteMutation.isPending ||
                       !BLOCKED_TARGETS.includes(order.status)
                     }
-                    onClick={() => setDeleteTarget(order)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setDeleteTarget(order);
+                    }}
                   >
                     삭제
                   </Button>
@@ -685,7 +671,7 @@ const AdminOrders = () => {
             ))}
             {showEmpty && (
               <TableRow>
-                <TableCell colSpan={12}>
+                <TableCell colSpan={9}>
                   <Typography color="text.secondary">
                     조건에 해당하는 주문이 없습니다.
                   </Typography>
@@ -699,6 +685,12 @@ const AdminOrders = () => {
       <OrderCreateDialog
         createOrderOpen={createOrderOpen}
         setCreateOrderOpen={setCreateOrderOpen}
+      />
+      <OrderDetailDialog
+        open={detailOpen}
+        order={detailTarget}
+        onClose={() => setDetailOpen(false)}
+        onExited={() => setDetailTarget(null)}
       />
 
       <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>

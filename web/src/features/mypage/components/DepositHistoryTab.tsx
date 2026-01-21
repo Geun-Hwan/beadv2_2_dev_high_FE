@@ -158,7 +158,7 @@ export const DepositHistoryTab: React.FC = () => {
     setChargeError(null);
 
     try {
-      const depositOrder = await depositApi.createDepositOrder(amount);
+      const depositOrder = await depositApi.createDepositOrder({ amount });
 
       if (depositOrder?.data?.id) {
         requestTossPayment(depositOrder.data.id, depositOrder.data.amount);

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { wishlistApi, type WishlistEntry } from "@/apis/wishlistApi";
 import { queryKeys } from "@/shared/queries/queryKeys";
+import { activityStorage } from "@/shared/utils/activityStorage";
 import type { Product, User } from "@moreauction/types";
 
 type UseWishlistToggleParams = {
@@ -128,6 +129,11 @@ export const useWishlistToggle = ({
     wishDesiredRef.current = nextDesired;
     setIsWish(nextDesired);
     updateWishlistCaches(nextDesired);
+    if (nextDesired) {
+      activityStorage.recordWishlistedProduct(productId);
+    } else {
+      activityStorage.removeWishlistedProduct(productId);
+    }
 
     if (wishInFlightRef.current) return;
     wishInFlightRef.current = true;

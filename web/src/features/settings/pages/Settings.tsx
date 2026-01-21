@@ -16,15 +16,18 @@ import {
 } from "@mui/material";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { userApi } from "@/apis/userApi";
 import { ProfileTab } from "@/features/mypage/components/ProfileTab";
+import AddressManager from "@/features/profile/components/AddressManager";
 import { useAuth } from "@moreauction/auth";
 import { queryKeys } from "@/shared/queries/queryKeys";
 
 const Settings: React.FC = () => {
   const { user, updateUser } = useAuth();
   const queryClient = useQueryClient();
-  const [tabValue, setTabValue] = useState(0);
+  const location = useLocation();
+  const navigate = useNavigate();
   const [notifyEmail, setNotifyEmail] = useState(true);
   const [notifyPush, setNotifyPush] = useState(true);
   const [notifyMarketing, setNotifyMarketing] = useState(false);
@@ -47,6 +50,18 @@ const Settings: React.FC = () => {
     staleTime: 60_000,
   });
 
+  const maxTabIndex = 3;
+  const parsedTab = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get("tab");
+    return tabParam ? Number(tabParam) : 0;
+  }, [location.search]);
+
+  const safeTabValue =
+    Number.isFinite(parsedTab) && parsedTab >= 0 && parsedTab <= maxTabIndex
+      ? parsedTab
+      : 0;
+
   const userInfo = profileQuery.data?.data ?? null;
   useEffect(() => {
     if (!userInfo) return;
@@ -56,6 +71,13 @@ const Settings: React.FC = () => {
       phone_number: userInfo.phone_number ?? "",
     });
   }, [userInfo]);
+
+  useEffect(() => {
+    if (safeTabValue === parsedTab) return;
+    const newParams = new URLSearchParams(location.search);
+    newParams.set("tab", String(safeTabValue));
+    navigate(`${location.pathname}?${newParams.toString()}`, { replace: true });
+  }, [location.search, navigate, parsedTab, safeTabValue]);
 
   const profileMutation = useMutation({
     mutationFn: (payload: typeof profileValues) =>
@@ -121,13 +143,19 @@ const Settings: React.FC = () => {
     }
   };
 
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    const newParams = new URLSearchParams(location.search);
+    newParams.set("tab", String(newValue));
+    navigate(`${location.pathname}?${newParams.toString()}`, { replace: true });
+  };
+
   return (
     <Container maxWidth="md">
       <Typography variant="h4" sx={{ my: 4 }}>
         설정
       </Typography>
       <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
-        <Tabs value={tabValue} onChange={(_, next) => setTabValue(next)}>
+        <Tabs value={safeTabValue} onChange={handleTabChange}>
           <Tab label="프로필" />
           <Tab label="비밀번호" />
           <Tab label="주소지" />
@@ -135,7 +163,7 @@ const Settings: React.FC = () => {
         </Tabs>
       </Box>
       <Box sx={{ mt: 3 }}>
-        {tabValue === 0 && (
+        {safeTabValue === 0 && (
           <Box>
             <Box
               sx={{
@@ -157,7 +185,7 @@ const Settings: React.FC = () => {
             <ProfileTab userInfo={userInfo} roles={user?.roles} />
           </Box>
         )}
-        {tabValue === 1 && (
+        {safeTabValue === 1 && (
           <Box>
             <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600 }}>
               비밀번호 변경
@@ -215,7 +243,7 @@ const Settings: React.FC = () => {
             </Stack>
           </Box>
         )}
-        {tabValue === 2 && (
+        {safeTabValue === 2 && (
           <Box>
             <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600 }}>
               주소지 관리
@@ -223,24 +251,12 @@ const Settings: React.FC = () => {
             <Typography variant="body2" color="text.secondary">
               배송지 정보를 등록하고 기본 주소지를 설정하세요.
             </Typography>
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              sx={{ mt: 0.5, display: "block" }}
-            >
-              주소지 관리 기능은 준비 중입니다.
-            </Typography>
-            <Box sx={{ mt: 2, display: "flex", gap: 1, flexWrap: "wrap" }}>
-              <Button variant="outlined" disabled>
-                주소지 등록
-              </Button>
-              <Button variant="outlined" disabled>
-                주소 검색
-              </Button>
+            <Box sx={{ mt: 2 }}>
+              <AddressManager />
             </Box>
           </Box>
         )}
-        {tabValue === 3 && (
+        {safeTabValue === 3 && (
           <Box>
             <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600 }}>
               알림 설정

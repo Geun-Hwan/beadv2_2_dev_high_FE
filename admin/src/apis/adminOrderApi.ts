@@ -53,7 +53,7 @@ export const adminOrderApi = {
   getOrders: async (
     params: OrderListParams
   ): Promise<PagedApiResponse<OrderResponse>> => {
-    const response = await client.get("/admin/orders", {
+    const response = await client.get("/orders", {
       params: {
         page: params.page,
         size: params.size,
@@ -66,7 +66,7 @@ export const adminOrderApi = {
   getOrdersCount: async (
     status?: OrderStatus
   ): Promise<ApiResponseDto<number>> => {
-    const response = await client.get("/admin/orders/count", {
+    const response = await client.get("/orders/count", {
       params: { status },
     });
     return response.data;
@@ -75,7 +75,7 @@ export const adminOrderApi = {
     orderId: string,
     payload: OrderUpdateRequest
   ): Promise<ApiResponseDto<OrderResponse>> => {
-    const response = await client.patch(`/admin/orders`, {
+    const response = await client.patch(`/orders`, {
       id: orderId,
       ...payload,
     });
@@ -84,17 +84,17 @@ export const adminOrderApi = {
   updatePayLimit: async (
     payload: PayLimitUpdateRequest
   ): Promise<ApiResponseDto<OrderResponse>> => {
-    const response = await client.patch(`/admin/orders/pay-limit`, payload);
+    const response = await client.patch(`/orders/pay-limit`, payload);
     return response.data;
   },
   createOrder: async (
     payload: OrderCreateRequest
   ): Promise<ApiResponseDto<OrderResponse>> => {
-    const response = await client.post(`/admin/orders`, payload);
+    const response = await client.post(`/orders`, payload);
     return response.data;
   },
   deleteOrder: async (orderId: string): Promise<ApiResponseDto<null>> => {
-    const response = await client.delete(`/admin/orders/${orderId}`);
+    const response = await client.delete(`/orders/${orderId}`);
     return response.data;
   },
 };

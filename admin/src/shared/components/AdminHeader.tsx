@@ -33,12 +33,20 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
       position="fixed"
       color="inherit"
       elevation={0}
-      sx={{
+      sx={(theme) => ({
         borderBottom: "1px solid",
-        borderColor: "divider",
-        backgroundColor: "background.paper",
-        zIndex: (theme) => theme.zIndex.drawer + 1,
-      }}
+        borderColor:
+          theme.palette.mode === "light"
+            ? "rgba(15, 23, 42, 0.08)"
+            : "rgba(148, 163, 184, 0.3)",
+        backgroundColor:
+          theme.palette.mode === "light"
+            ? "rgba(248, 250, 252, 0.92)"
+            : "rgba(15, 23, 42, 0.92)",
+        backdropFilter: "blur(14px)",
+        color: "text.primary",
+        zIndex: theme.zIndex.drawer + 1,
+      })}
     >
       <Toolbar sx={{ gap: 2 }}>
         {showMenuButton && (

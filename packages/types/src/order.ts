@@ -38,4 +38,5 @@ export interface OrderResponse {
   updatedAt: string;
   depositAmount?: number;
   productName?: string;
+  addressId: string | null;
 }

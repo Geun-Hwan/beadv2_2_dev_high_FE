@@ -31,7 +31,7 @@ const navItems = [
   { label: "회원 관리", to: "/users", icon: <PeopleIcon /> },
   { label: "경매 관리", to: "/auctions", icon: <GavelIcon /> },
   { label: "상품 관리", to: "/products", icon: <InventoryIcon /> },
-  { label: "주문 관리", to: "/orders", icon: <OrdersIcon /> },
+  { label: "구매 관리", to: "/orders", icon: <OrdersIcon /> },
   { label: "정산 관리", to: "/settlements", icon: <SettlementIcon /> },
   { label: "결제 관리", to: "/payments", icon: <PaymentsIcon /> },
 
