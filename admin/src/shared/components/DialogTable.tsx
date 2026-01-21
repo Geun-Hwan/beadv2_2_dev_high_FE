@@ -44,17 +44,46 @@ const baseTableSx: SxProps<Theme> = (theme) => ({
   },
 });
 
+const flattenSx = (sx: SxProps<Theme> | undefined, theme: Theme) => {
+  if (!sx) return {};
+  if (typeof sx === "function") {
+    return sx(theme) as Record<string, unknown>;
+  }
+  if (Array.isArray(sx)) {
+    return sx.reduce<Record<string, unknown>>((acc, item) => {
+      if (!item || typeof item === "boolean") return acc;
+      const next =
+        typeof item === "function"
+          ? (item(theme) as Record<string, unknown>)
+          : (item as Record<string, unknown>);
+      return { ...acc, ...next };
+    }, {});
+  }
+  return sx as Record<string, unknown>;
+};
+
 const DialogTable = ({
   children,
   size = "small",
   tableSx,
   paperSx,
-}: DialogTableProps) => (
-  <Paper variant="outlined" sx={[basePaperSx, paperSx]}>
-    <Table size={size} sx={[baseTableSx, tableSx]}>
-      {children}
-    </Table>
-  </Paper>
-);
+}: DialogTableProps) => {
+  const resolvedPaperSx: SxProps<Theme> = (theme) => ({
+    ...flattenSx(basePaperSx, theme),
+    ...flattenSx(paperSx, theme),
+  });
+  const resolvedTableSx: SxProps<Theme> = (theme) => ({
+    ...flattenSx(baseTableSx, theme),
+    ...flattenSx(tableSx, theme),
+  });
+
+  return (
+    <Paper variant="outlined" sx={resolvedPaperSx}>
+      <Table size={size} sx={resolvedTableSx}>
+        {children}
+      </Table>
+    </Paper>
+  );
+};
 
 export default DialogTable;
