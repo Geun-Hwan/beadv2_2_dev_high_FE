@@ -233,6 +233,8 @@ export const activityStorage = {
     listActivity("participatedAuction", limit).map((entry) => entry.id),
   getRecentWishlistedProductIds: (limit?: number) =>
     listActivity("wishlistedProduct", limit).map((entry) => entry.id),
+  getActivityEntries: (type: ActivityType, limit?: number) =>
+    listActivity(type, limit),
   getTopProductIdsByActivityType,
   getWeightedProductScores,
 };
