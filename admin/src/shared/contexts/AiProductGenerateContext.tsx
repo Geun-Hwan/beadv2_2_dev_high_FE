@@ -75,6 +75,7 @@ export const AiProductGenerateProvider = ({
       abortRef.current = controller;
 
       const run = async () => {
+        let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
         try {
           const token = localStorage.getItem("accessToken");
           if (!token) {
@@ -99,7 +100,7 @@ export const AiProductGenerateProvider = ({
             throw new Error("AI 상품 생성 요청에 실패했습니다.");
           }
 
-          const reader = response.body.getReader();
+          reader = response.body.getReader();
           const decoder = new TextDecoder();
           let buffer = "";
 
@@ -137,7 +138,6 @@ export const AiProductGenerateProvider = ({
                       : "AI 상품 생성이 완료되었습니다.",
                   severity: "success",
                 });
-                setPending(false);
                 return;
               }
 
@@ -157,6 +157,17 @@ export const AiProductGenerateProvider = ({
               "AI 상품 생성에 실패했습니다.",
             severity: "error",
           });
+        } finally {
+          if (reader) {
+            try {
+              await reader.cancel();
+            } catch (cancelError) {
+              console.warn("SSE reader cancel failed:", cancelError);
+            }
+          }
+          if (abortRef.current === controller) {
+            abortRef.current = null;
+          }
           setPending(false);
         }
       };

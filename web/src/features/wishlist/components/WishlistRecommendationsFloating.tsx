@@ -27,7 +27,6 @@ const WishlistRecommendationsFloating: React.FC<
 
   return (
     <Box
-      onMouseLeave={() => setIsRecoHover(false)}
       sx={{
         position: "fixed",
         bottom: { xs: 12, sm: 16 },
@@ -41,11 +40,13 @@ const WishlistRecommendationsFloating: React.FC<
         px: 0.4,
         pb: 0.9,
         pt: 0.2,
+        pointerEvents: "none",
       }}
     >
       <Paper
         variant="outlined"
         onMouseEnter={() => setIsRecoHover(true)}
+        onMouseLeave={() => setIsRecoHover(false)}
         sx={{
           position: "relative",
           px: 1.2,
@@ -56,6 +57,7 @@ const WishlistRecommendationsFloating: React.FC<
           transform: isRecoHover ? "translateY(14px)" : "translateY(0)",
           transition: "opacity 300ms ease, transform 350ms ease",
           cursor: "pointer",
+          pointerEvents: "auto",
           "@keyframes wishlistPulse": {
             "0%": { transform: "scale(0.9)", opacity: 0.6 },
             "70%": { transform: "scale(1.6)", opacity: 0 },
@@ -99,6 +101,8 @@ const WishlistRecommendationsFloating: React.FC<
         </Stack>
       </Paper>
       <Paper
+        onMouseEnter={() => setIsRecoHover(true)}
+        onMouseLeave={() => setIsRecoHover(false)}
         sx={{
           p: { xs: 2, sm: 2.5 },
           borderRadius: 2.5,
