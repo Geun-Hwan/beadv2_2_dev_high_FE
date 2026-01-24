@@ -34,6 +34,9 @@ import PaymentSummaryCard from "@/features/orders/pages/OrderDetail/components/P
 import ShippingInfoCard from "@/features/orders/pages/OrderDetail/components/ShippingInfoCard";
 import AddressManageDialog from "@/features/orders/pages/OrderDetail/components/AddressManageDialog";
 import PaymentDialog from "@/features/orders/pages/OrderDetail/components/PaymentDialog";
+import PurchaseCancelDialog, {
+  type CancelReason,
+} from "@/features/orders/pages/OrderDetail/components/PurchaseCancelDialog";
 
 const OrderDetail: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
@@ -59,6 +62,10 @@ const OrderDetail: React.FC = () => {
   const [orderAddressUpdating, setOrderAddressUpdating] = React.useState(false);
   const [addressError, setAddressError] = React.useState<string | null>(null);
   const [pendingPaymentOpen, setPendingPaymentOpen] = React.useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = React.useState(false);
+  const [cancelReason, setCancelReason] = React.useState<CancelReason | "">("");
+  const [cancelCustomReason, setCancelCustomReason] = React.useState("");
+  const [cancelError, setCancelError] = React.useState<string | null>(null);
   const autoPayHandledRef = React.useRef(false);
   const orderQuery = useQuery({
     queryKey: queryKeys.orders.detail(orderId),
@@ -100,6 +107,12 @@ const OrderDetail: React.FC = () => {
     };
   }, [order, paidOverrideUntil]);
   const isUnpaid = orderDisplay?.status === OrderStatus.UNPAID;
+  const isBuyer = Boolean(
+    user?.userId && orderDisplay?.buyerId === user?.userId
+  );
+  const isSeller = Boolean(
+    user?.userId && orderDisplay?.sellerId === user?.userId
+  );
   const isPayExpired = React.useMemo(() => {
     if (!orderDisplay?.payLimitDate) return false;
     const limitTime = new Date(orderDisplay.payLimitDate).getTime();
@@ -149,7 +162,7 @@ const OrderDetail: React.FC = () => {
             const next = (prev ?? []).map((item) =>
               response.data.isDefault ? { ...item, isDefault: false } : item
             );
-            return [...next, response.data];
+            return [response.data, ...next];
           }
         );
       }
@@ -212,6 +225,7 @@ const OrderDetail: React.FC = () => {
   React.useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.get("pay") !== "1") return;
+    if (!isBuyer) return;
     if (autoPayHandledRef.current) return;
     autoPayHandledRef.current = true;
     params.delete("pay");
@@ -322,17 +336,149 @@ const OrderDetail: React.FC = () => {
     }
   };
 
-  const handleCancelPurchase = async () => {
+  const handleCancelPurchase = () => {
+    if (!isBuyer) return;
     if (!order?.id || !purchaseOrderId || actionLoading) return;
-    const confirmed = window.confirm(
-      "구매를 취소하시겠습니까? 보증금 납부금은 제외하고 지급됩니다."
-    );
-    if (!confirmed) return;
-    alert("구매 취소 요청은 준비 중입니다.");
+    setCancelReason("");
+    setCancelCustomReason("");
+    setCancelError(null);
+    setCancelDialogOpen(true);
+  };
+
+  const handleCloseCancelDialog = () => {
+    if (actionLoading) return;
+    setCancelDialogOpen(false);
+  };
+
+  const handleConfirmCancelPurchase = async () => {
+    if (!isBuyer) return;
+    if (!order?.id || !purchaseOrderId || actionLoading) return;
+    const trimmedCustomReason = cancelCustomReason.trim();
+    if (!cancelReason) {
+      setCancelError("취소 사유를 선택해주세요.");
+      return;
+    }
+    if (cancelReason === "기타(직접 입력)" && !trimmedCustomReason) {
+      setCancelError("취소 사유를 입력해주세요.");
+      return;
+    }
+    setCancelError(null);
+    try {
+      setActionLoading(true);
+      await depositApi.canclePaymentOrders({
+        id: purchaseOrderId,
+        cancelReason:
+          cancelReason === "기타(직접 입력)"
+            ? trimmedCustomReason
+            : cancelReason,
+      });
+      queryClient.setQueryData(
+        queryKeys.orders.detail(order.id),
+        (prev?: OrderResponse) =>
+          prev
+            ? { ...prev, status: OrderStatus.PAID_CANCEL }
+            : prev
+      );
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.orders.detail(order.id),
+          refetchType: "none",
+        }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.orders.histories(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.deposit.account(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.deposit.historyAll(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.deposit.payments(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.deposit.paymentOrder(purchaseOrderId),
+        }),
+      ]);
+      setCancelDialogOpen(false);
+      alert("구매 취소가 접수되었습니다.");
+    } catch (err: any) {
+      console.error("구매 취소 실패:", err);
+      setCancelError(
+        err?.data?.message ?? "구매 취소 처리 중 오류가 발생했습니다."
+      );
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const handleRequestRefund = () => {
     alert("환불 요청 기능은 준비 중입니다.");
+  };
+
+  const handleConfirmPurchase = () => {
+    if (!isBuyer) return;
+    if (orderDisplay?.status !== OrderStatus.SHIP_COMPLETED) return;
+    const confirmed = window.confirm("구매를 확정하시겠습니까?");
+    if (!confirmed) return;
+    setActionLoading(true);
+    const orderIdToUpdate = orderDisplay.id;
+    orderApi
+      .updateOrderStatus(orderIdToUpdate, OrderStatus.CONFIRM_BUY)
+      .then((response) => {
+        const nowIso = new Date().toISOString();
+        const nextOrder =
+          response?.data ??
+          ({
+            ...orderDisplay,
+            status: OrderStatus.CONFIRM_BUY,
+            confirmDate: orderDisplay.confirmDate ?? nowIso,
+            updatedAt: nowIso,
+          } as OrderResponse);
+        queryClient.setQueryData(
+          queryKeys.orders.detail(orderIdToUpdate),
+          nextOrder
+        );
+        if (user?.userId) {
+          queryClient.setQueryData(
+            queryKeys.orders.history("bought", user.userId),
+            (prev?: OrderResponse[]) => {
+              if (!prev) return prev;
+              return prev.map((order) =>
+                order.id === orderIdToUpdate
+                  ? {
+                      ...order,
+                      status: OrderStatus.CONFIRM_BUY,
+                      confirmDate:
+                        nextOrder.confirmDate ?? new Date().toISOString(),
+                      updatedAt:
+                        nextOrder.updatedAt ?? new Date().toISOString(),
+                    }
+                  : order
+              );
+            }
+          );
+        }
+        return Promise.all([
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.orders.histories(),
+          }),
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.orders.detail(orderIdToUpdate),
+            refetchType: "none",
+          }),
+        ]);
+      })
+      .then(() => {
+        alert("구매확정이 완료되었습니다.");
+      })
+      .catch((err: any) => {
+        console.error("구매확정 실패:", err);
+        alert(err?.data?.message ?? "구매확정 처리 중 오류가 발생했습니다.");
+      })
+      .finally(() => {
+        setActionLoading(false);
+      });
   };
 
   const getDepositUsageAmount = () => {
@@ -395,7 +541,10 @@ const OrderDetail: React.FC = () => {
         requestTossPayment(
           depositOrder.data.id,
           paidAmount,
-          "주문 결제"
+          "주문 결제",
+          {
+            successParams: { winningOrderId: order.id },
+          }
         );
         setPaymentDialogOpen(false);
       } else {
@@ -411,6 +560,7 @@ const OrderDetail: React.FC = () => {
   };
 
   const handleOpenPaymentDialog = async () => {
+    if (!isBuyer) return;
     const canProceed = await ensureDefaultAddress();
     if (!canProceed) return;
     if (!orderAddressId) {
@@ -437,6 +587,7 @@ const OrderDetail: React.FC = () => {
   };
 
   const handleOpenAddressManage = () => {
+    if (!isBuyer) return;
     if (!isUnpaid) return;
     setSelectedOrderAddressId(orderAddressId ?? defaultAddress?.id ?? null);
     setAddressManageOpen(true);
@@ -447,6 +598,7 @@ const OrderDetail: React.FC = () => {
   };
 
   const handleOpenAddressCreate = () => {
+    if (!isBuyer) return;
     if (!isUnpaid) return;
     if (isAddressLimitReached) return;
     setAddressManageOpen(false);
@@ -454,6 +606,7 @@ const OrderDetail: React.FC = () => {
   };
 
   const handleSelectOrderAddress = (address: UserAddress) => {
+    if (!isBuyer) return;
     setOrderAddressUpdating(true);
     setSelectedOrderAddressId(address.id);
     updateOrderAddress(address.id)
@@ -468,12 +621,24 @@ const OrderDetail: React.FC = () => {
   const depositUsageAmount = getDepositUsageAmount();
   const pgAmount = Math.max(payableAmount - depositUsageAmount, 0);
   const isPaid = orderDisplay?.status === OrderStatus.PAID;
-  const canCancelPurchase = Boolean(purchaseOrderId) && isPaid;
-  const canRequestRefund = Boolean(purchaseOrderId)
-    ? orderDisplay?.status === OrderStatus.SHIP_STARTED ||
+  const canCancelPurchase = Boolean(purchaseOrderId) && isPaid && isBuyer;
+  const canRequestRefund =
+    isBuyer &&
+    (orderDisplay?.status === OrderStatus.SHIP_STARTED ||
       orderDisplay?.status === OrderStatus.SHIP_COMPLETED ||
-      orderDisplay?.status === OrderStatus.CONFIRM_BUY
-    : false;
+      orderDisplay?.status === OrderStatus.CONFIRM_BUY);
+  const confirmTime = orderDisplay?.updatedAt
+    ? new Date(orderDisplay.updatedAt).getTime()
+    : null;
+  const isConfirmExpired =
+    orderDisplay?.status === OrderStatus.CONFIRM_BUY &&
+    confirmTime !== null &&
+    Number.isFinite(confirmTime) &&
+    Date.now() - confirmTime > 24 * 60 * 60 * 1000;
+  const isRequestRefundDisabled =
+    orderDisplay?.status === OrderStatus.CONFIRM_BUY && isConfirmExpired;
+  const canConfirmPurchase =
+    isBuyer && orderDisplay?.status === OrderStatus.SHIP_COMPLETED;
   const purchaseOrder = purchaseOrderQuery.data?.data ?? null;
 
   return (
@@ -540,23 +705,24 @@ const OrderDetail: React.FC = () => {
                   gap: 2,
                 }}
               >
-                <OrderInfoCard order={orderDisplay} />
+                <OrderInfoCard order={orderDisplay} showBuyerId />
                 <PaymentSummaryCard
                   order={orderDisplay}
                   purchaseOrder={purchaseOrder}
                   payableAmount={payableAmount}
                   isPayExpired={isPayExpired}
-                  isUnpaid={isUnpaid}
+                  isUnpaid={isBuyer && isUnpaid}
                   actionLoading={actionLoading}
                   onOpenPaymentDialog={handleOpenPaymentDialog}
                   canCancelPurchase={canCancelPurchase}
                   canRequestRefund={canRequestRefund}
                   onCancelPurchase={handleCancelPurchase}
                   onRequestRefund={handleRequestRefund}
+                  isRequestRefundDisabled={isRequestRefundDisabled}
                 />
               </Box>
               <ShippingInfoCard
-                isUnpaid={isUnpaid}
+                isUnpaid={isBuyer && isUnpaid}
                 onOpenAddressManage={handleOpenAddressManage}
                 addressLoading={addressQuery.isLoading}
                 displayAddress={displayAddress}
@@ -565,6 +731,9 @@ const OrderDetail: React.FC = () => {
                   displayAddress?.id === defaultAddress?.id
                 }
                 orderAddressId={orderAddressId}
+                canConfirmPurchase={canConfirmPurchase}
+                onConfirmPurchase={handleConfirmPurchase}
+                actionLoading={actionLoading}
               />
             </Stack>
           </>
@@ -641,6 +810,27 @@ const OrderDetail: React.FC = () => {
         onChangeDepositAmount={setUseDepositAmount}
         depositUsageAmount={depositUsageAmount}
         pgAmount={pgAmount}
+      />
+
+      <PurchaseCancelDialog
+        open={cancelDialogOpen}
+        loading={actionLoading}
+        error={cancelError}
+        selectedReason={cancelReason}
+        customReason={cancelCustomReason}
+        onChangeReason={(value) => {
+          setCancelReason(value);
+          setCancelError(null);
+          if (value !== "기타(직접 입력)") {
+            setCancelCustomReason("");
+          }
+        }}
+        onChangeCustomReason={(value) => {
+          setCancelCustomReason(value);
+          setCancelError(null);
+        }}
+        onClose={handleCloseCancelDialog}
+        onConfirm={handleConfirmCancelPurchase}
       />
     </Container>
   );

@@ -29,13 +29,13 @@ export interface AddressFormDialogProps {
 
 const buildInitialValues = (
   values?: Partial<UserAddressCreateRequest>,
-  forceDefault?: boolean
+  forceDefault?: boolean,
 ): UserAddressCreateRequest => ({
   city: values?.city ?? "",
   state: values?.state ?? "",
   zipcode: values?.zipcode ?? "",
   detail: values?.detail ?? "",
-  isDefault: forceDefault ? true : values?.isDefault ?? false,
+  isDefault: forceDefault ? true : (values?.isDefault ?? false),
 });
 
 const AddressFormDialog: React.FC<AddressFormDialogProps> = ({
@@ -50,10 +50,14 @@ const AddressFormDialog: React.FC<AddressFormDialogProps> = ({
   onSubmit,
 }) => {
   const [values, setValues] = React.useState<UserAddressCreateRequest>(
-    buildInitialValues(initialValues, forceDefault)
+    buildInitialValues(initialValues, forceDefault),
   );
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [postcodeOpen, setPostcodeOpen] = React.useState(false);
+  const handleDialogClose = () => {
+    if (loading) return;
+    onClose();
+  };
 
   React.useEffect(() => {
     if (!open) return;
@@ -109,7 +113,13 @@ const AddressFormDialog: React.FC<AddressFormDialogProps> = ({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog
+      open={open}
+      onClose={handleDialogClose}
+      disableEscapeKeyDown={loading}
+      maxWidth="sm"
+      fullWidth
+    >
       <DialogTitle>{title}</DialogTitle>
       <DialogContent dividers>
         <Stack spacing={2}>
@@ -172,7 +182,7 @@ const AddressFormDialog: React.FC<AddressFormDialogProps> = ({
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={loading}>
+        <Button onClick={handleDialogClose} disabled={loading}>
           닫기
         </Button>
         <Button variant="contained" onClick={handleSubmit} disabled={loading}>
@@ -185,7 +195,7 @@ const AddressFormDialog: React.FC<AddressFormDialogProps> = ({
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle>주소 검색</DialogTitle>
+        <DialogTitle>우편번호 검색</DialogTitle>
         <DialogContent dividers sx={{ p: 0 }}>
           <DaumPostcode
             onComplete={handlePostcodeComplete}
