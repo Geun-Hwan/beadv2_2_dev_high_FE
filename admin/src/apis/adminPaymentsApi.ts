@@ -23,6 +23,7 @@ export const adminPaymentsApi = {
     sort?: string | string[];
     userId?: string;
     status?: string;
+    method?: string;
     startFrom?: string;
     startTo?: string;
   }): Promise<ApiResponseDto<PagedDepositPaymentResponse>> => {

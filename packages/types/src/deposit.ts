@@ -57,9 +57,20 @@ export type DepositPaymentStatus =
   | "IN_PROGRESS"
   | "CONFIRMED"
   | "CANCELED"
-  | "FAILED";
+  | "FAILED"
+  | "CONFIRMED_FAILED";
+
+export const DepositPaymentStatuses: Record<string, string> = {
+  READY: "결제 준비",
+  IN_PROGRESS: "결제 진행 중",
+  CONFIRMED: "승인 완료",
+  CANCELED: "결제 취소",
+  FAILED: "결제 실패",
+  CONFIRMED_FAILED: "결제 승인 실패",
+};
 
 export interface DepositPaymentDetail {
+  id: string;
   orderId: string;
   userId: string;
   paymentKey: string;
@@ -69,6 +80,7 @@ export interface DepositPaymentDetail {
   status: DepositPaymentStatus;
   approvalNum?: string | null;
   approvedAt?: string | null;
+  canceledAt?: string | null;
   createdAt?: string | null;
 }
 
