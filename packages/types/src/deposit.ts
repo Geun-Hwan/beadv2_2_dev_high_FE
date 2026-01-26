@@ -14,7 +14,16 @@ export const DepositOrderStatus = {
   PENDING: "PENDING",
   COMPLETED: "COMPLETED",
   FAILED: "FAILED",
+  CANCEL_PENDING: "CANCEL_PENDING",
   CANCELLED: "CANCELLED",
+} as const;
+
+export type DepositOrderType =
+  (typeof DepositOrderTypes)[keyof typeof DepositOrderTypes];
+
+export const DepositOrderTypes = {
+  DEPOSIT_CHARGE: "DEPOSIT_CHARGE",
+  ORDER_PAYMENT: "ORDER_PAYMENT",
 } as const;
 
 export type DepositOrderStatus =
@@ -39,6 +48,8 @@ export interface DepositOrderInfo {
   paidAmount?: number;
   status: DepositOrderStatus;
   createdAt: string;
+  updatedAt: string;
+  type?: DepositOrderType;
 }
 
 export type DepositPaymentStatus =

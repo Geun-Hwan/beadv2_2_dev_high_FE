@@ -1,12 +1,13 @@
 import type {
   ApiResponseDto,
+  CancelPaymentRequest,
   DepositOrderInfo,
   DepositOrderStatus,
   PagedApiResponse,
   PagedDepositPaymentFailureHistoryResponse,
   PagedDepositPaymentResponse,
 } from "@moreauction/types";
-import { client } from "@/apis/client";
+import { authClient, client } from "@/apis/client";
 
 export const adminPaymentsApi = {
   updateDepositOrderStatus: async (params: {
@@ -29,11 +30,14 @@ export const adminPaymentsApi = {
     return res.data;
   },
   getDepositOrders: async (params?: {
+    id?: string;
     page?: number;
     size?: number;
     sort?: string | string[];
     userId?: string;
     status?: string;
+    type?: string;
+    createdAt?: string;
     startFrom?: string;
     startTo?: string;
   }): Promise<ApiResponseDto<PagedApiResponse<DepositOrderInfo>>> => {
@@ -46,6 +50,12 @@ export const adminPaymentsApi = {
     sort?: string | string[];
   }): Promise<ApiResponseDto<PagedDepositPaymentFailureHistoryResponse>> => {
     const res = await client.get("/payments/fail/list", { params });
+    return res.data;
+  },
+  cancelPaymentOrders: async (
+    params: CancelPaymentRequest,
+  ): Promise<ApiResponseDto<DepositOrderInfo>> => {
+    const res = await authClient.post(`/payments/orders/cancel`, params);
     return res.data;
   },
 };

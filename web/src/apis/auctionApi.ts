@@ -29,7 +29,7 @@ import qs from "qs";
 export const auctionApi = {
   // 예시: 경매 목록 가져오기
   getAuctions: async (
-    params: AuctionQueryParams
+    params: AuctionQueryParams,
   ): Promise<ApiResponseDto<PagedAuctionResponse>> => {
     console.log("경매 목록 조회 API 호출:", params);
     const res = await client.get("/auctions", {
@@ -44,7 +44,7 @@ export const auctionApi = {
    * 경매 ID 리스트로 경매 정보를 조회합니다.
    */
   getAuctionsByIds: async (
-    auctionIds: string[]
+    auctionIds: string[],
   ): Promise<ApiResponseDto<AuctionResponse[]>> => {
     const encodedIds = auctionIds.map((id) => encodeURIComponent(id)).join(",");
     const res = await client.get(`/auctions/by-ids`, {
@@ -55,7 +55,7 @@ export const auctionApi = {
 
   // 경매 생성
   createAuction: async (
-    auctionData: AuctionCreationRequest
+    auctionData: AuctionCreationRequest,
   ): Promise<ApiResponseDto<AuctionDetailResponse>> => {
     console.log("경매 생성 API 호출:", auctionData);
     const response = await client.post("/auctions", auctionData);
@@ -65,7 +65,7 @@ export const auctionApi = {
   // 경매 수정
   updateAuction: async (
     auctionId: string,
-    auctionData: AuctionUpdateRequest
+    auctionData: AuctionUpdateRequest,
   ): Promise<ApiResponseDto<AuctionDetailResponse>> => {
     console.log(`경매 수정 API 호출: ${auctionId}`, auctionData);
     const response = await client.put(`/auctions/${auctionId}`, auctionData);
@@ -74,14 +74,14 @@ export const auctionApi = {
 
   // 경매 상세 정보 가져오기
   getAuctionDetail: async (
-    auctionId: string
+    auctionId: string,
   ): Promise<ApiResponseDto<AuctionDetailResponse>> => {
     console.log(`경매 상세 정보 조회 API 호출: ${auctionId}`);
     const response = await client.get(`/auctions/${auctionId}`);
     return response.data;
   },
   getBidBanStatus: async (
-    auctionId: string
+    auctionId: string,
   ): Promise<ApiResponseDto<AuctionBidBanStatusResponse>> => {
     console.log(`경매 입찰 제한 상태 조회 API 호출: ${auctionId}`);
     const response = await client.get(`/auctions/${auctionId}/bid-ban`);
@@ -91,7 +91,7 @@ export const auctionApi = {
   // 입찰 시도
   placeBid: async (
     auctionId: string,
-    bidPrice: number
+    bidPrice: number,
   ): Promise<ApiResponseDto<AuctionBidMessage>> => {
     console.log(`경매 입찰 시도 API 호출: ${auctionId}, 입찰가: ${bidPrice}`);
     const res = await client.post(`/auctions/${auctionId}/bids`, { bidPrice });
@@ -101,7 +101,7 @@ export const auctionApi = {
 
   // 참여 상태 /보증금 환급 여부 / 포기 여부
   checkParticipationStatus: async (
-    auctionId: string
+    auctionId: string,
   ): Promise<ApiResponseDto<AuctionParticipationResponse>> => {
     console.log(`경매 참여 상태 확인 API 호출: ${auctionId}`);
     const res = await client.get(`/auctions/${auctionId}/participation`);
@@ -120,18 +120,18 @@ export const auctionApi = {
 
   createParticipation: async (
     auctionId: string,
-    params: any
+    params: any,
   ): Promise<ApiResponseDto<AuctionParticipationResponse>> => {
     console.log(`경매 참여 등록: ${auctionId}`);
     const res = await client.post(
       `/auctions/${auctionId}/participation`,
-      params
+      params,
     );
     return res.data;
   },
 
   withdrawnParticipation: async (
-    auctionId: string
+    auctionId: string,
   ): Promise<ApiResponseDto<AuctionParticipationResponse>> => {
     console.log(`경매 포기하기: ${auctionId}`);
     const res = await client.put(`/auctions/${auctionId}/withdraw`);
@@ -141,7 +141,7 @@ export const auctionApi = {
   // 경매 입찰 내역 조회 (페이지네이션)
   getAuctionBidHistory: async (
     auctionId: string,
-    params: { page?: number; size?: number }
+    params: { page?: number; size?: number },
   ): Promise<ApiResponseDto<PagedBidHistoryResponse>> => {
     console.log(`경매 입찰 내역 조회 API 호출: ${auctionId}`, params);
     const res = await client.get(`/auctions/${auctionId}/bids/history`, {
@@ -155,7 +155,7 @@ export const auctionApi = {
    * @param productId - 조회할 상품의 ID
    */
   getAuctionsByProductId: async (
-    productId: string
+    productId: string,
   ): Promise<ApiResponseDto<AuctionDetailResponse[]>> => {
     console.log(`상품 관련 경매 내역 조회 API 호출 (ProductID: ${productId})`);
     const response = await client.get(`/auctions/by-product`, {
@@ -200,7 +200,7 @@ export const auctionApi = {
   },
   searchAutocomplete: async (
     prefix: string,
-    size = 10
+    size = 10,
   ): Promise<ApiResponseDto<{ suggestions: string[] }>> => {
     const res = await client.get("/search/autocomplete", {
       params: { prefix, size },
@@ -209,7 +209,7 @@ export const auctionApi = {
   },
   getSimilarProducts: async (
     productId: string,
-    limit = 4
+    limit = 4,
   ): Promise<ApiResponseDto<SimilarProductResponse[]>> => {
     const res = await client.get("/search/similar", {
       params: { productId, limit },
@@ -221,7 +221,7 @@ export const auctionApi = {
    * 경매를 삭제합니다.
    */
   removeAuction: async (
-    auctionId: string
+    auctionId: string,
   ): Promise<ApiResponseDto<AuctionDetailResponse>> => {
     console.log(`경매 삭제 API 호출: ${auctionId}`);
     const response = await client.delete(`/auctions/${auctionId}`);
@@ -229,7 +229,7 @@ export const auctionApi = {
   },
 
   getTopAuctions: async (
-    limit = 10
+    limit = 10,
   ): Promise<ApiResponseDto<AuctionRankingResponse[]>> => {
     console.log(`인기 경매 조회 API 호출`);
     const response = await client.get(`/auctions/top/today`, {
@@ -238,7 +238,7 @@ export const auctionApi = {
     return response.data;
   },
   getAuctionRecommendation: async (
-    productId: string
+    productId: string,
   ): Promise<ApiResponseDto<AuctionRecommendationResponse>> => {
     console.log(`경매 추천 조회 API 호출: ${productId}`);
     const response = await client.get("/auctions/recommendation", {
@@ -251,14 +251,18 @@ export const auctionApi = {
    */
   getAuctionsByStatus: async (
     status: AuctionStatus[],
-    size = 4
+    size = 4,
+    sort?: string[],
   ): Promise<ApiResponseDto<PagedAuctionResponse>> => {
     const res = await client.get("/auctions", {
       params: {
         page: 0,
         size,
         status,
+        sort,
       },
+      paramsSerializer: (params) =>
+        qs.stringify(params, { arrayFormat: "repeat" }),
     });
     return res.data;
   },
