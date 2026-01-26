@@ -69,10 +69,11 @@ const Login: React.FC = () => {
       url.searchParams.set("redirect_uri", googleRedirectUrl);
       url.searchParams.set("response_type", "code");
       url.searchParams.set("scope", "openid email profile");
+      url.searchParams.set("access_type", "offline");
       popupRef.current = window.open(
         url.toString(),
         "oauthLogin",
-        "width=520,height=700,scrollbars=yes"
+        "width=520,height=700,scrollbars=yes",
       );
       return;
     }
@@ -91,7 +92,7 @@ const Login: React.FC = () => {
     popupRef.current = window.open(
       url.toString(),
       "oauthLogin",
-      "width=520,height=700,scrollbars=yes"
+      "width=520,height=700,scrollbars=yes",
     );
   };
 
