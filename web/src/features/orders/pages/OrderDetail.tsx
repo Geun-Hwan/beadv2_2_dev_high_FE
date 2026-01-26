@@ -83,14 +83,13 @@ const OrderDetail: React.FC = () => {
     enabled: Boolean(user?.userId),
     staleTime: 30_000,
   });
-  const addressQuery = useUserAddresses(Boolean(user?.userId));
 
   const errorMessage = useMemo(() => {
     if (!orderId) return "주문 ID가 올바르지 않습니다.";
     if (!orderQuery.isError) return null;
     return getErrorMessage(
       orderQuery.error,
-      "주문 정보를 불러오지 못했습니다."
+      "주문 정보를 불러오지 못했습니다.",
     );
   }, [orderId, orderQuery.error, orderQuery.isError]);
 
@@ -108,11 +107,13 @@ const OrderDetail: React.FC = () => {
   }, [order, paidOverrideUntil]);
   const isUnpaid = orderDisplay?.status === OrderStatus.UNPAID;
   const isBuyer = Boolean(
-    user?.userId && orderDisplay?.buyerId === user?.userId
+    user?.userId && orderDisplay?.buyerId === user?.userId,
   );
   const isSeller = Boolean(
-    user?.userId && orderDisplay?.sellerId === user?.userId
+    user?.userId && orderDisplay?.sellerId === user?.userId,
   );
+  const addressQuery = useUserAddresses(Boolean(user?.userId) && isBuyer);
+
   const isPayExpired = React.useMemo(() => {
     if (!orderDisplay?.payLimitDate) return false;
     const limitTime = new Date(orderDisplay.payLimitDate).getTime();
@@ -122,7 +123,7 @@ const OrderDetail: React.FC = () => {
   const payableAmount =
     orderDisplay && typeof orderDisplay.depositAmount === "number"
       ? Math.max(orderDisplay.winningAmount - orderDisplay.depositAmount, 0)
-      : orderDisplay?.winningAmount ?? 0;
+      : (orderDisplay?.winningAmount ?? 0);
   const depositBalance = depositAccountQuery.data?.data?.balance ?? 0;
   const purchaseOrderQuery = useQuery({
     queryKey: queryKeys.deposit.paymentOrder(purchaseOrderId),
@@ -135,7 +136,7 @@ const OrderDetail: React.FC = () => {
   const isAddressLimitReached = addresses.length >= maxAddressCount;
   const defaultAddress = useMemo(
     () => addresses.find((item) => item.isDefault) ?? null,
-    [addresses]
+    [addresses],
   );
   const hasDefaultAddress = Boolean(defaultAddress);
   const orderAddressId = orderDisplay?.addressId ?? null;
@@ -148,7 +149,7 @@ const OrderDetail: React.FC = () => {
     return addresses.find((item) => item.id === selectedOrderAddressId) ?? null;
   }, [addresses, selectedOrderAddressId]);
   const displayAddress = isUnpaid
-    ? orderAddress ?? selectedOrderAddress ?? defaultAddress
+    ? (orderAddress ?? selectedOrderAddress ?? defaultAddress)
     : orderAddress;
 
   const addressMutation = useMutation({
@@ -160,10 +161,10 @@ const OrderDetail: React.FC = () => {
           queryKeys.user.addresses(),
           (prev: UserAddress[] | undefined) => {
             const next = (prev ?? []).map((item) =>
-              response.data.isDefault ? { ...item, isDefault: false } : item
+              response.data.isDefault ? { ...item, isDefault: false } : item,
             );
             return [response.data, ...next];
-          }
+          },
         );
       }
       setAddressError(null);
@@ -215,11 +216,11 @@ const OrderDetail: React.FC = () => {
       if (response?.data) {
         queryClient.setQueryData(
           queryKeys.orders.detail(order.id),
-          response.data
+          response.data,
         );
       }
     },
-    [order?.id, queryClient]
+    [order?.id, queryClient],
   );
 
   React.useEffect(() => {
@@ -235,7 +236,7 @@ const OrderDetail: React.FC = () => {
         pathname: location.pathname,
         search: nextSearch ? `?${nextSearch}` : "",
       },
-      { replace: true }
+      { replace: true },
     );
     const openAfterCheck = async () => {
       const canProceed = await ensureDefaultAddress();
@@ -259,7 +260,7 @@ const OrderDetail: React.FC = () => {
         const next = Math.max(base - amount, 0);
         localStorage.setItem("depositBalance", String(next));
         return next;
-      }
+      },
     );
   };
 
@@ -293,17 +294,17 @@ const OrderDetail: React.FC = () => {
                 status: OrderStatus.PAID,
                 payCompleteDate: new Date().toISOString(),
               }
-            : prev
+            : prev,
       );
       queryClient.setQueryData(
         queryKeys.orders.pendingCount(),
         (prev: number | undefined) =>
-          Math.max((typeof prev === "number" ? prev : 0) - 1, 0)
+          Math.max((typeof prev === "number" ? prev : 0) - 1, 0),
       );
       queryClient.setQueryData(
         queryKeys.orders.pending(user?.userId),
         (prev: OrderResponse[] | undefined) =>
-          (prev ?? []).filter((item) => item.id !== order.id)
+          (prev ?? []).filter((item) => item.id !== order.id),
       );
       await Promise.all([
         queryClient.invalidateQueries({
@@ -375,9 +376,7 @@ const OrderDetail: React.FC = () => {
       queryClient.setQueryData(
         queryKeys.orders.detail(order.id),
         (prev?: OrderResponse) =>
-          prev
-            ? { ...prev, status: OrderStatus.PAID_CANCEL }
-            : prev
+          prev ? { ...prev, status: OrderStatus.PAID_CANCEL } : prev,
       );
       await Promise.all([
         queryClient.invalidateQueries({
@@ -405,7 +404,7 @@ const OrderDetail: React.FC = () => {
     } catch (err: any) {
       console.error("구매 취소 실패:", err);
       setCancelError(
-        err?.data?.message ?? "구매 취소 처리 중 오류가 발생했습니다."
+        err?.data?.message ?? "구매 취소 처리 중 오류가 발생했습니다.",
       );
     } finally {
       setActionLoading(false);
@@ -427,7 +426,7 @@ const OrderDetail: React.FC = () => {
       };
       queryClient.setQueryData(
         queryKeys.deposit.paymentOrder(purchaseOrderId),
-        response?.data ? response : { data: updatedOrder }
+        response?.data ? response : { data: updatedOrder },
       );
       await Promise.all([
         queryClient.invalidateQueries({
@@ -447,7 +446,7 @@ const OrderDetail: React.FC = () => {
       alert(
         err?.response?.data?.message ??
           err?.data?.message ??
-          "환불 요청 처리 중 오류가 발생했습니다."
+          "환불 요청 처리 중 오류가 발생했습니다.",
       );
     } finally {
       setActionLoading(false);
@@ -475,7 +474,7 @@ const OrderDetail: React.FC = () => {
           } as OrderResponse);
         queryClient.setQueryData(
           queryKeys.orders.detail(orderIdToUpdate),
-          nextOrder
+          nextOrder,
         );
         if (user?.userId) {
           queryClient.setQueryData(
@@ -492,9 +491,9 @@ const OrderDetail: React.FC = () => {
                       updatedAt:
                         nextOrder.updatedAt ?? new Date().toISOString(),
                     }
-                  : order
+                  : order,
               );
-            }
+            },
           );
         }
         return Promise.all([
@@ -572,18 +571,13 @@ const OrderDetail: React.FC = () => {
             deposit: depositUsage,
             winningOrderId: order.id,
             createdAt: Date.now(),
-          })
+          }),
         );
         const paidAmount =
           depositOrder.data.paidAmount ?? depositOrder.data.amount;
-        requestTossPayment(
-          depositOrder.data.id,
-          paidAmount,
-          "주문 결제",
-          {
-            successParams: { winningOrderId: order.id },
-          }
-        );
+        requestTossPayment(depositOrder.data.id, paidAmount, "주문 결제", {
+          successParams: { winningOrderId: order.id },
+        });
         setPaymentDialogOpen(false);
       } else {
         throw new Error("주문 생성에 실패했습니다.");
@@ -729,8 +723,8 @@ const OrderDetail: React.FC = () => {
                     orderDisplay.status === OrderStatus.PAID
                       ? "success"
                       : orderDisplay.status === OrderStatus.UNPAID
-                      ? "warning"
-                      : "default"
+                        ? "warning"
+                        : "default"
                   }
                   variant="outlined"
                 />
@@ -760,20 +754,22 @@ const OrderDetail: React.FC = () => {
                   isRequestRefundDisabled={isRequestRefundDisabled}
                 />
               </Box>
-              <ShippingInfoCard
-                isUnpaid={isBuyer && isUnpaid}
-                onOpenAddressManage={handleOpenAddressManage}
-                addressLoading={addressQuery.isLoading}
-                displayAddress={displayAddress}
-                isDefaultAddress={
-                  Boolean(displayAddress?.id) &&
-                  displayAddress?.id === defaultAddress?.id
-                }
-                orderAddressId={orderAddressId}
-                canConfirmPurchase={canConfirmPurchase}
-                onConfirmPurchase={handleConfirmPurchase}
-                actionLoading={actionLoading}
-              />
+              {isBuyer && (
+                <ShippingInfoCard
+                  isUnpaid={isBuyer && isUnpaid}
+                  onOpenAddressManage={handleOpenAddressManage}
+                  addressLoading={addressQuery.isLoading}
+                  displayAddress={displayAddress}
+                  isDefaultAddress={
+                    Boolean(displayAddress?.id) &&
+                    displayAddress?.id === defaultAddress?.id
+                  }
+                  orderAddressId={orderAddressId}
+                  canConfirmPurchase={canConfirmPurchase}
+                  onConfirmPurchase={handleConfirmPurchase}
+                  actionLoading={actionLoading}
+                />
+              )}
             </Stack>
           </>
         ) : (
