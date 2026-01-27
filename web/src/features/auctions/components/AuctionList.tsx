@@ -60,7 +60,7 @@ const AuctionList: React.FC<AuctionListProps> = ({
   const buildSort = (status: AuctionStatus[]) => {
     // status가 여러개면 “어떤 정렬을 할지”가 애매해지니 우선순위로 결정
     if (status.includes(AuctionStatus.IN_PROGRESS)) return ["auctionEndAt,asc"];
-    if (status.includes(AuctionStatus.READY)) return ["auctionStartAt,desc"];
+    if (status.includes(AuctionStatus.READY)) return ["auctionStartAt,asc"];
     return ["createdAt,desc"];
   };
 
